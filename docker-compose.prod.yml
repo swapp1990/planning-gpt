@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  client:
+    build:
+      context: ./client
+      target: production
+    image: planninggpt-client:3.4
+    container_name: planninggpt-client
+    ports:
+      - 3000:80
+    volumes:
+      - /app/node_modules
+    environment:
+      - NODE_ENV=production
+    logging:
+      options:
+        max-size: "25m"
+        max-file: "100"
+
+  node-server:
+    build:
+      context: ./server
+      target: production
+    image: planninggpt-server:3.4
+    container_name: planninggpt-server
+    ports:
+      - 5000:5000
+    volumes:
+      - ./server:/app
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "25m"
+        max-file: "100"

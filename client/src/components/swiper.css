@@ -1,0 +1,44 @@
+.swiper {
+  position: relative;
+  overflow: hidden;
+}
+
+.swiper-image {
+  display: none;
+  width: 100%;
+  height: auto;
+  transition: all 0.3s ease;
+}
+
+.swiper-text {
+  width: 100%;
+  height: auto;
+}
+
+.swiper-image.active {
+  display: block;
+}
+
+.swiper-dots {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+
+.swiper-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: white;
+}
+
+.swiper-dot.processing {
+  background-color: red;
+}
+
+.swiper-dot.active {
+  background-color: black;
+}

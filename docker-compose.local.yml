@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  client:
+    build:
+      context: ./client
+      target: development
+    image: planninggpt-client-dev:3.4
+    container_name: planninggpt-client-dev
+    ports:
+      - 3000:3000
+    volumes:
+      - ./client:/app
+      - /app/node_modules # Ensures node_modules is not overwritten by the host's volume
+    environment:
+      - NODE_ENV=development
+
+  python-server:
+    build:
+      context: ./server
+    image: planninggpt-server-dev:3.4
+    container_name: planninggpt-server-dev
+    ports:
+      - 5000:5000
+    volumes:
+      - ./server:/app
+    restart: unless-stopped
+    command: flask run --host=0.0.0.0

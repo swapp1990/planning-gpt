@@ -1,0 +1,20 @@
+# exclude everything
+db/*
+!db/.gitignore
+ssh_commands.txt
+
+/server/node_modules
+
+/pipeline/target
+/pipeline/src/main/resources/application-local.yml
+/client/.env
+/server/.env
+.env
+
+server/data/
+client/package-lock.json
+analysis/
+
+/server/testperformance.py
+client/node_modules/
+server/__pycache__/
