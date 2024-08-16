@@ -12,12 +12,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Install watchdog for file change monitoring
 RUN pip install watchdog
+RUN pip install gunicorn
 
 # Make port 5000 available to the world outside this container
 EXPOSE 5000
 
 # Define environment variable
 ENV FLASK_APP=app.py
+ENV FLASK_ENV=development
 
 # Run app.py when the container launches
 CMD ["flask", "run", "--host=0.0.0.0"]
