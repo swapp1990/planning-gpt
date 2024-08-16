@@ -3,7 +3,7 @@ import logging
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import openai
+from openai import OpenAI
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,7 +22,7 @@ api_key = os.getenv('OPENAI_API_KEY')
 if not api_key:
     raise ValueError("No OPENAI_API_KEY found in environment variables")
 
-client = openai.OpenAI(api_key=api_key)
+client = OpenAI(api_key=api_key)
 
 def generate_response(user_query, best_plan):
 	response = client.chat.completions.create(
@@ -126,12 +126,47 @@ def improved_ai_output(prompt, num_plans=4):
 	final_response = generate_response(prompt, best_plan)
 	return final_response
 
+def hermes_ai_output(prompt):
+    openai_api_key = "secret_windowspc_309e863047054352ab0ebb226b5bc10e.fK7Ywbfw07QU8tYBfM0XbmXNGXtL7nl1"
+    openai_api_base = "https://api.lambdalabs.com/v1"
+    client = OpenAI(
+        api_key=openai_api_key,
+        base_url=openai_api_base,
+    )
+    model = "hermes-3-llama-3.1-405b-fp8"
+    chat_completion = client.chat.completions.create(
+        messages=[{
+            "role": "system",
+            "content": "You are a helpful assistant named Hermes, made by Nous Research."
+        }, {
+            "role": "user",
+            "content": "Who won the world series in 2020?"
+        }, {
+            "role":
+            "assistant",
+            "content":
+            "The Los Angeles Dodgers won the World Series in 2020."
+        }, {
+            "role": "user",
+            "content": "Where was it played?"
+        }],
+        model=model,
+    )
+    return chat_completion.choices[0].message.content
+
 @app.route("/generate", methods=["POST"])
 def generate():
 	data = request.get_json()
 	prompt = data.get('prompt')
 	result = improved_ai_output(prompt)
 	return jsonify({'prompt': prompt, 'result': result})
+
+@app.route("/hermes", methods=["POST"])
+def generate_hermes():
+    data = request.get_json()
+    prompt = data.get('prompt')
+    result = hermes_ai_output(prompt)
+    return jsonify({'prompt': prompt, 'result': result})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)
