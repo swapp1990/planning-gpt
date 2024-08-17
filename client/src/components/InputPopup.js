@@ -43,25 +43,29 @@ const InputPopup = ({
       }}
       ref={popupRef}
     >
-      <textarea
-        className="flex-grow p-2 border border-gray-300 rounded-lg"
-        value={promptValue}
-        onChange={(e) => setPromptValue(e.target.value)}
-        placeholder={placeholder}
-        rows={3}
-      />
-      <button
-        onClick={onSubmit}
-        className="bg-blue-500 text-white p-2 rounded-lg mr-2"
-      >
-        {submitLabel}
-      </button>
-      <button
-        onClick={onClose}
-        className="bg-gray-500 text-white p-2 rounded-lg"
-      >
-        {cancelLabel}
-      </button>
+      <div className="flex flex-col">
+        <textarea
+          className="flex-grow p-2 border border-gray-300 rounded-lg"
+          value={promptValue}
+          onChange={(e) => setPromptValue(e.target.value)}
+          placeholder={placeholder}
+          rows={3}
+        />
+        <div className="flex justify-items-start mt-2">
+          <button
+            onClick={onSubmit}
+            className="bg-blue-500 text-white p-2 rounded-lg mr-2"
+          >
+            {submitLabel}
+          </button>
+          <button
+            onClick={onClose}
+            className="bg-gray-500 text-white p-2 rounded-lg"
+          >
+            {cancelLabel}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

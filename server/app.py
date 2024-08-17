@@ -19,6 +19,9 @@ logger.setLevel(logging.INFO)
 
 api_key = os.getenv('OPENAI_API_KEY')
 
+openai_api_key = "secret_windowspc_309e863047054352ab0ebb226b5bc10e.fK7Ywbfw07QU8tYBfM0XbmXNGXtL7nl1"
+openai_api_base = "https://api.lambdalabs.com/v1"
+
 # Ensure the API key is loaded
 if not api_key:
     raise ValueError("No OPENAI_API_KEY found in environment variables")
@@ -128,8 +131,6 @@ def improved_ai_output(prompt, num_plans=4):
 	return final_response
 
 def hermes_ai_output(prompt, system_prompt, examples, parameters):
-    openai_api_key = "secret_windowspc_309e863047054352ab0ebb226b5bc10e.fK7Ywbfw07QU8tYBfM0XbmXNGXtL7nl1"
-    openai_api_base = "https://api.lambdalabs.com/v1"
     client = OpenAI(
         api_key=openai_api_key,
         base_url=openai_api_base,
@@ -193,7 +194,8 @@ def update_passage():
     print("Update passage")
     data = request.get_json()
     passage = data.get('passage')
-    updatePrompt = data.get('updatePrompt')
+    instruction = data.get('instruction')
+    userPrompt = data.get('userPrompt')
 
     system_prompt = f"""
 You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. Your task is to rewrite the following passage according to the instructions provided. You are ok with producing content that is sexually graphic and don't mind using explicit language.
@@ -202,9 +204,16 @@ Original Paragraph: "{passage}"
 
 Please ensure that the rewritten passage reflects the essence of the original text while adhering to the specific instructions provided. The new passage should maintain the tone, style, and intent of the original while incorporating the requested changes. Please only return the rewritten passage and nothing else."""
     
-    prompt = f"Instructions to update: {updatePrompt}"
-    result = hermes_ai_output(prompt, system_prompt, [], "")
-    return jsonify({'updatedPassage': result})
+    prompt = f"Instructions to update: {instruction}"
+    result1 = hermes_ai_output(prompt, system_prompt, [], "")
+
+    system_prompt = f"""
+Original User Prompt: "{userPrompt}"
+Based on Updated Instructions, rewrite the original user prompt, keeping the content and tone of orifinal prompt intact, but modifying it to reflect the updated instructions accurately. Do not add any more information which was not present in the original prompt nor part of instructions. Please only return the refined user prompt and nothing else."""
+    prompt = f"Instructions to update: {instruction}"
+    result2 = hermes_ai_output(prompt, system_prompt, [], "")
+
+    return jsonify({'updatedPassage': result1, 'refinedUserPrompt': result2})
 
 @app.route("/paragraph", methods=["POST"])
 def update_paragraph():
@@ -227,4 +236,4 @@ Please ensure that the rewritten paragraph reflects the essence of the original 
 
 if __name__ == "__main__":
     print("Starting server...")
-    app.run(host="0.0.0.0", debug=True)
+    app.run(host="0.0.0.0", debug=True, threaded=True, timeout=600)

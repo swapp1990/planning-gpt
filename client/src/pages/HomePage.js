@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 
 import InputPopup from "../components/InputPopup";
@@ -216,8 +216,7 @@ She gently closed the music box, the finality of the action echoing in the still
     );
   };
 
-  const AIMessage = ({ message, onParagraphUpdate, onPassageUpdate }) => {
-    const [msgLoading, setMsgLoading] = useState(false);
+  const AIMessage = React.forwardRef(({ message, onParagraphUpdate }, ref) => {
     const [updatedParagraphs, setUpdatedParagraphs] = useState(
       message.content.split("\n\n")
     );
@@ -225,22 +224,19 @@ She gently closed the music box, the finality of the action echoing in the still
     const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
     const [paraUpdatePrompt, setParaUpdatePrompt] = useState("");
     const [selectedParagraphIndex, setSelectedParagraphIndex] = useState(null);
+    const [msgLoading, setMsgLoading] = useState(false);
 
-    const [rewritePopupVisible, setRewritePopupVisible] = useState(false);
-
-    const handleRewritePromptSubmit = async () => {
-      if (loading) return;
-
-      setMsgLoading(true);
-      setRewritePopupVisible(false);
-      setSelectedParagraphIndex(-1);
-
-      const newPassage = await onPassageUpdate(paraUpdatePrompt, message);
-
-      setUpdatedParagraphs(newPassage.split("\n\n"));
-      setMsgLoading(false);
-      setParaUpdatePrompt("");
-    };
+    React.useImperativeHandle(ref, () => ({
+      updateParagraphs(newParagraphs) {
+        setUpdatedParagraphs(newParagraphs);
+      },
+      updateMsgLoading(loading) {
+        setMsgLoading(loading);
+      },
+      updatedSelectedParagraphIndex(index) {
+        setSelectedParagraphIndex(index);
+      },
+    }));
 
     const handleParagraphClick = async (index) => {
       if (loading) return;
@@ -253,7 +249,7 @@ She gently closed the music box, the finality of the action echoing in the still
     const handlePromptSubmit = async () => {
       if (loading || selectedParagraphIndex === null) return;
 
-      setMsgLoading(true);
+      // setMsgLoading(true);
       setPopupVisible(false);
       const paragraph = updatedParagraphs[selectedParagraphIndex];
       const newParagraph = await onParagraphUpdate(
@@ -265,7 +261,7 @@ She gently closed the music box, the finality of the action echoing in the still
       const newParagraphs = [...updatedParagraphs];
       newParagraphs[selectedParagraphIndex] = newParagraph;
       setUpdatedParagraphs(newParagraphs);
-      setMsgLoading(false);
+      // setMsgLoading(false);
 
       setParaUpdatePrompt("");
     };
@@ -275,25 +271,25 @@ She gently closed the music box, the finality of the action echoing in the still
       setMsgLoading(false);
       setPopupVisible(false);
       setParaUpdatePrompt("");
+      setSelectedParagraphIndex(-1);
     };
 
     return (
       <div className="mb-4 text-left bg-gray-300 w-[50%] flex flex-col">
-        <button
-          className="self-end mb-2 p-2 bg-blue-500 text-white rounded-lg"
-          onClick={() => setRewritePopupVisible(true)}
-        >
-          Rewrite
-        </button>
-        {msgLoading && selectedParagraphIndex == -1 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-50">
-            <span className="loader">Loading ...</span>
+        {msgLoading && selectedParagraphIndex === -1 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-75 z-10">
+            <div className="text-center">
+              <span className="loader mb-2">Loading ...</span>
+              <p>Rewriting entire passage...</p>
+            </div>
           </div>
         )}
         {updatedParagraphs.map((paragraph, index) => (
           <div
             key={index}
-            className="inline-block p-2 pr-8 rounded-lg text-black mb-2 cursor-pointer relative transition-all duration-300 ease-in-out transform hover:scale-105"
+            className={`inline-block p-2 pr-8 rounded-lg text-black mb-2 cursor-pointer relative transition-all duration-300 ease-in-out transform hover:scale-105 ${
+              selectedParagraphIndex === index ? "bg-yellow-200" : "bg-gray-100"
+            }`}
             onClick={() => handleParagraphClick(index)}
           >
             {msgLoading && selectedParagraphIndex == index && (
@@ -315,14 +311,63 @@ She gently closed the music box, the finality of the action echoing in the still
           submitLabel="Submit"
           cancelLabel="Cancel"
         />
+      </div>
+    );
+  });
+
+  const UserMessage = ({
+    message,
+    msgIndex,
+    onPassageUpdate,
+    aiMessageRef,
+    onUserPromptUpdate,
+  }) => {
+    const [rewritePopupVisible, setRewritePopupVisible] = useState(false);
+    const [instruction, setInstruction] = useState("");
+
+    const handleRewritePromptSubmit = async () => {
+      if (loading) return;
+
+      setRewritePopupVisible(false);
+
+      if (aiMessageRef.current) {
+        aiMessageRef.current.updateMsgLoading(true);
+        aiMessageRef.current.updatedSelectedParagraphIndex(-1);
+      }
+
+      let response = await onPassageUpdate(instruction, msgIndex, message);
+      let newPassage = response.updatedPassage;
+      let refinedUserPrompt = response.refinedUserPrompt;
+      onUserPromptUpdate(refinedUserPrompt, msgIndex);
+
+      if (aiMessageRef.current) {
+        aiMessageRef.current.updateParagraphs(newPassage.split("\n\n"));
+        aiMessageRef.current.updateMsgLoading(false);
+      }
+      setInstruction("");
+    };
+
+    return (
+      <div className={`mb-4 w-50 text-right`}>
+        <div
+          className={`inline-block p-2 pr-8 w-[50%] rounded-lg bg-blue-500 text-white text-left`}
+        >
+          <ReactMarkdown>{message.content}</ReactMarkdown>
+        </div>
+        <button
+          className="self-end mb-2 p-2 bg-orange-500 text-white rounded-lg"
+          onClick={() => setRewritePopupVisible(true)}
+        >
+          Rewrite
+        </button>
         <InputPopup
           position={{ x: window.innerWidth / 2, y: window.innerHeight / 2 }} // Center the popup
           visible={rewritePopupVisible}
           onClose={() => setRewritePopupVisible(false)}
           onSubmit={handleRewritePromptSubmit}
-          promptValue={paraUpdatePrompt}
-          setPromptValue={setParaUpdatePrompt}
-          placeholder="Enter your prompt to rewrite the passage"
+          promptValue={instruction}
+          setPromptValue={setInstruction}
+          placeholder="Enter your instruction to rewrite the passage"
           submitLabel="Rewrite"
           cancelLabel="Cancel"
         />
@@ -331,6 +376,8 @@ She gently closed the music box, the finality of the action echoing in the still
   };
 
   const ChatComponent = ({ messages }) => {
+    const aiMessageRef = useRef(null);
+
     const onParagraphUpdate = async (paragraph, updatePrompt, fullMessage) => {
       // Replace this with the actual server call
       const response = await fetch("http://localhost:5000/paragraph", {
@@ -349,20 +396,31 @@ She gently closed the music box, the finality of the action echoing in the still
       return data.updatedParagraph;
     };
 
-    const onPassageUpdate = async (updatePrompt, passage) => {
+    const onPassageUpdate = async (instruction, aiMsgIndex, userPrompt) => {
+      const aiPassage = messages[aiMsgIndex - 1];
       const response = await fetch("http://localhost:5000/passage", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          updatePrompt: updatePrompt,
-          passage: passage,
+          instruction: instruction,
+          passage: aiPassage,
+          userPrompt: userPrompt,
         }),
       });
 
       const data = await response.json();
-      return data.updatedPassage;
+      console.log(data);
+      return data;
+    };
+
+    const onUserPromptUpdate = async (refinedUserPrompt, msgIndex) => {
+      setMessages((prevMessages) => {
+        const updatedMessages = [...prevMessages];
+        updatedMessages[msgIndex].content = refinedUserPrompt;
+        return updatedMessages;
+      });
     };
 
     return (
@@ -373,25 +431,17 @@ She gently closed the music box, the finality of the action echoing in the still
               key={index}
               message={msg}
               onParagraphUpdate={onParagraphUpdate}
-              onPassageUpdate={onPassageUpdate}
+              ref={aiMessageRef}
             />
           ) : (
-            <div
+            <UserMessage
               key={index}
-              className={`mb-4 w-50 ${
-                msg.role === "user" ? "text-right" : "text-left"
-              }`}
-            >
-              <div
-                className={`inline-block p-2 pr-8 w-[50%] rounded-lg ${
-                  msg.role === "user"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-300 text-black"
-                }`}
-              >
-                <ReactMarkdown>{msg.content}</ReactMarkdown>
-              </div>
-            </div>
+              message={msg}
+              msgIndex={index}
+              onPassageUpdate={onPassageUpdate}
+              onUserPromptUpdate={onUserPromptUpdate}
+              aiMessageRef={aiMessageRef}
+            />
           )
         )}
       </div>
