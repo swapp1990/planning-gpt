@@ -249,7 +249,7 @@ She gently closed the music box, the finality of the action echoing in the still
     const handlePromptSubmit = async () => {
       if (loading || selectedParagraphIndex === null) return;
 
-      // setMsgLoading(true);
+      setMsgLoading(true);
       setPopupVisible(false);
       const paragraph = updatedParagraphs[selectedParagraphIndex];
       const newParagraph = await onParagraphUpdate(
@@ -261,7 +261,7 @@ She gently closed the music box, the finality of the action echoing in the still
       const newParagraphs = [...updatedParagraphs];
       newParagraphs[selectedParagraphIndex] = newParagraph;
       setUpdatedParagraphs(newParagraphs);
-      // setMsgLoading(false);
+      setMsgLoading(false);
 
       setParaUpdatePrompt("");
     };
