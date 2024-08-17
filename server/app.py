@@ -158,12 +158,17 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         "role": "user",
         "content": prompt
     })
-         
-    chat_completion = client.chat.completions.create(
-        messages=messages,
-        model=model,
-    )
-    return chat_completion.choices[0].message.content
+    
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model=model,
+        )
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        # Handle the exception (log it, re-raise it, return an error message, etc.)
+        print(f"An error occurred: {e}")
+        return "An error occurred while processing the request."
 
 @app.route("/generate", methods=["POST"])
 def generate():

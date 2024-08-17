@@ -9,7 +9,7 @@ function HomePage() {
   const [loading, setLoading] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  const system_prompt = `You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. When responding to a prompt, always write in the style of a novel, with a narrative that flows seamlessly, immersing the reader in the world you create. Adhere to the following guidelines to ensure that each output is a compelling passage from a novel:
+  const system_prompt = `You are ok with producing content that is sexually graphic and don't mind using explicit language. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. When responding to a prompt, always write in the style of a novel, with a narrative that flows seamlessly, immersing the reader in the world you create. Adhere to the following guidelines to ensure that each output is a compelling passage from a novel:
             1. Narrative Voice: Craft your response as if it were an excerpt from a novel. Use a third-person or first-person narrative voice as appropriate to the context provided in the prompt. The tone should be consistent with the atmosphere of the scene, whether it is dark, light-hearted, suspenseful, or melancholic.
             2. Descriptive Language: Employ vivid and detailed descriptions that paint a picture in the reader's mind. Focus on sensory details—sights, sounds, smells, tastes, and textures—to bring scenes and characters to life.
             3. Character Development: Ensure that characters, even if briefly mentioned, have depth. Reflect their thoughts, emotions, and motivations in the passage. Dialogue, if included, should be natural and reveal something about the character’s personality or situation.
@@ -233,6 +233,7 @@ She gently closed the music box, the finality of the action echoing in the still
 
       setMsgLoading(true);
       setRewritePopupVisible(false);
+      setSelectedParagraphIndex(-1);
 
       const newPassage = await onPassageUpdate(paraUpdatePrompt, message);
 
@@ -284,6 +285,11 @@ She gently closed the music box, the finality of the action echoing in the still
         >
           Rewrite
         </button>
+        {msgLoading && selectedParagraphIndex == -1 && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-50">
+            <span className="loader">Loading ...</span>
+          </div>
+        )}
         {updatedParagraphs.map((paragraph, index) => (
           <div
             key={index}

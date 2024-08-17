@@ -43,12 +43,12 @@ const InputPopup = ({
       }}
       ref={popupRef}
     >
-      <input
-        type="text"
+      <textarea
+        className="flex-grow p-2 border border-gray-300 rounded-lg"
         value={promptValue}
         onChange={(e) => setPromptValue(e.target.value)}
-        className="w-full p-2 border border-gray-300 rounded-lg mb-2"
         placeholder={placeholder}
+        rows={3}
       />
       <button
         onClick={onSubmit}
