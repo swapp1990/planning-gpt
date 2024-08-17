@@ -14,6 +14,9 @@ services:
       - /app/node_modules # Ensures node_modules is not overwritten by the host's volume
     environment:
       - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - WDS_SOCKET_HOST=127.0.0.1
 
   python-server:
     build:
@@ -27,4 +30,5 @@ services:
     restart: unless-stopped
     environment:
       - FLASK_ENV=development
-    command: gunicorn --reload --bind 0.0.0.0:5000 app:app
+      - PYTHONUNBUFFERED=1
+    command: gunicorn --reload --bind 0.0.0.0:5000 app:app --capture-output --log-level=debug
