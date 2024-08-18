@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 openai_api_key = os.getenv('LAMBDA_API_KEY')
+print(openai_api_key)
 openai_api_base = "https://api.lambdalabs.com/v1"
 
 @app.before_request
