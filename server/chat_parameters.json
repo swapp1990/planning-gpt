@@ -1,0 +1,52 @@
+{
+  "writing_assistant": [
+    {
+      "title": "Premise",
+      "points": [
+        "Central conflict involving high school students",
+        "Key question or problem explored, such as peer pressure, identity, or relationships"
+      ]
+    },
+    {
+      "title": "Genre",
+      "points": [
+        "Drama with elements of coming-of-age",
+        "Focus on realistic, character-driven narratives"
+      ]
+    },
+    {
+      "title": "Audience",
+      "points": [
+        "Primarily teenagers and young adults",
+        "May also appeal to those interested in high school life or coming-of-age stories"
+      ]
+    },
+    {
+      "title": "Theme",
+      "points": [
+        "Exploration of identity, friendship, and social dynamics",
+        "How the characters navigate the challenges of adolescence"
+      ]
+    }
+  ],
+  "technical_writer": [
+    {
+      "title": "Document Structure",
+      "points": ["Introduction", "Body", "Conclusion"]
+    },
+    {
+      "title": "Target Audience",
+      "points": ["Primary audience", "Secondary audience"]
+    }
+  ],
+  "marketing_copywriter": [
+    {
+      "title": "Campaign Goal",
+      "points": ["Primary objective", "Secondary objectives"]
+    },
+    {
+      "title": "Target Audience",
+      "points": ["Demographics", "Psychographics"]
+    }
+  ]
+}

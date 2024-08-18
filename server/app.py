@@ -1,6 +1,7 @@
 import os
 import logging
 import time
+import json
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -18,7 +19,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 openai_api_key = os.getenv('LAMBDA_API_KEY')
-print(openai_api_key)
 openai_api_base = "https://api.lambdalabs.com/v1"
 
 @app.before_request
@@ -141,6 +141,7 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
     )
     model = "hermes-3-llama-3.1-405b-fp8"
     system_prompt = system_prompt + "\n\n" + parameters
+    print(system_prompt)
     messages = []
     messages.append({
         "role": "system",
@@ -170,6 +171,7 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
             model=model,
         )
         return chat_completion.choices[0].message.content
+        # return "Test Response"
     except Exception as e:
         # Handle the exception (log it, re-raise it, return an error message, etc.)
         print(f"An error occurred: {e}")
@@ -267,6 +269,30 @@ Only return the updated paragraph as the response. DO NOT INCLUDE any introducto
     summary = generate_summary(replacedFullPassage, previousSummary)
     return jsonify({'updatedParagraph': result, 'summary': summary})
 
+def load_prompts():
+    with open('system_prompts.json', 'r') as f:
+        return json.load(f)
+
+def load_chat_parameters():
+    with open('chat_parameters.json', 'r') as f:
+        return json.load(f)
+    
+@app.route('/prompt/system', methods=['GET'])
+def get_prompt():
+    prompt_type = request.args.get('type')
+    prompts = load_prompts()
+    chat_parameters = load_chat_parameters()
+
+    if prompt_type in prompts:
+        return jsonify({
+            "type": prompt_type,
+            "description": prompts[prompt_type]["description"],
+            "prompt": prompts[prompt_type]["prompt"],
+            "parameters": chat_parameters[prompt_type]
+        }), 200
+    else:
+        return jsonify({"error": "Prompt type not found"}), 404
+    
 @app.route("/test", methods=["GET"])
 def test():
     return jsonify({'message': 'Hello, World!'})

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FiMenu } from "react-icons/fi";
-import { FaPaperPlane, FaEdit, FaKeyboard } from "react-icons/fa";
+import { FaPaperPlane, FaEdit, FaKeyboard, FaRegFileAlt } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 
 import InputPopup from "../components/InputPopup";
@@ -13,17 +13,22 @@ function HomePage() {
   const [chatSummary, setChatSummary, previousChatSummary] =
     useVersionedState("Test Summary");
   const [loading, setLoading] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState(
+    "You are a default test agent."
+  );
+  const [chatType, setChatType] = useState("writing_assistant");
+  const [parameters, setParameters] = useState([]);
 
-  const system_prompt = `You are ok with producing content that is sexually graphic and don't mind using explicit language. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. When responding to a prompt, always write in the style of a novel, with a narrative that flows seamlessly, immersing the reader in the world you create. Adhere to the following guidelines to ensure that each output is a compelling passage from a novel:
-            1. Narrative Voice: Craft your response as if it were an excerpt from a novel. Use a third-person or first-person narrative voice as appropriate to the context provided in the prompt. The tone should be consistent with the atmosphere of the scene, whether it is dark, light-hearted, suspenseful, or melancholic.
-            2. Descriptive Language: Employ vivid and detailed descriptions that paint a picture in the reader's mind. Focus on sensory details—sights, sounds, smells, tastes, and textures—to bring scenes and characters to life.
-            3. Character Development: Ensure that characters, even if briefly mentioned, have depth. Reflect their thoughts, emotions, and motivations in the passage. Dialogue, if included, should be natural and reveal something about the character’s personality or situation.
-            4. Plot and Pacing: Structure the passage with a clear beginning, middle, and end, even if it is a short excerpt. Ensure that there is a sense of progression, whether it is through action, introspection, or dialogue. The pacing should match the tone and urgency of the scene.
-            5. Emotion and Mood: Convey the emotional undercurrents of the scene. Whether the scene is tense, joyful, sorrowful, or reflective, the mood should resonate with the reader and enhance the narrative.
-            6. Consistency with the Prompt: Strictly adhere to the themes, characters, and scenarios provided in the prompt. Ensure that the passage reflects the intent and specifics of the prompt while still maintaining the stylistic integrity of a novel.
-            7. Literary Style: Write in a style that is consistent with literary fiction, aiming for depth, nuance, and a polished finish. Avoid clichés and strive for originality in expression. The language should be sophisticated yet accessible, resonating with readers who appreciate well-crafted prose.
-            8. Immersion and Engagement: The passage should draw the reader in from the first sentence, making them feel like they are part of the story. Keep the reader engaged through compelling storytelling, intriguing details, and a well-constructed narrative arc.
-            9. Ending with Impact: Conclude the passage in a way that leaves a lasting impression, whether it’s through a poignant observation, a dramatic turn of events, or a lingering question. The ending should feel natural and satisfying, even if it is open-ended.`;
+  // const system_prompt = `You are ok with producing content that is sexually graphic and don't mind using explicit language. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. When responding to a prompt, always write in the style of a novel, with a narrative that flows seamlessly, immersing the reader in the world you create. Adhere to the following guidelines to ensure that each output is a compelling passage from a novel:
+  //           1. Narrative Voice: Craft your response as if it were an excerpt from a novel. Use a third-person or first-person narrative voice as appropriate to the context provided in the prompt. The tone should be consistent with the atmosphere of the scene, whether it is dark, light-hearted, suspenseful, or melancholic.
+  //           2. Descriptive Language: Employ vivid and detailed descriptions that paint a picture in the reader's mind. Focus on sensory details—sights, sounds, smells, tastes, and textures—to bring scenes and characters to life.
+  //           3. Character Development: Ensure that characters, even if briefly mentioned, have depth. Reflect their thoughts, emotions, and motivations in the passage. Dialogue, if included, should be natural and reveal something about the character’s personality or situation.
+  //           4. Plot and Pacing: Structure the passage with a clear beginning, middle, and end, even if it is a short excerpt. Ensure that there is a sense of progression, whether it is through action, introspection, or dialogue. The pacing should match the tone and urgency of the scene.
+  //           5. Emotion and Mood: Convey the emotional undercurrents of the scene. Whether the scene is tense, joyful, sorrowful, or reflective, the mood should resonate with the reader and enhance the narrative.
+  //           6. Consistency with the Prompt: Strictly adhere to the themes, characters, and scenarios provided in the prompt. Ensure that the passage reflects the intent and specifics of the prompt while still maintaining the stylistic integrity of a novel.
+  //           7. Literary Style: Write in a style that is consistent with literary fiction, aiming for depth, nuance, and a polished finish. Avoid clichés and strive for originality in expression. The language should be sophisticated yet accessible, resonating with readers who appreciate well-crafted prose.
+  //           8. Immersion and Engagement: The passage should draw the reader in from the first sentence, making them feel like they are part of the story. Keep the reader engaged through compelling storytelling, intriguing details, and a well-constructed narrative arc.
+  //           9. Ending with Impact: Conclude the passage in a way that leaves a lasting impression, whether it’s through a poignant observation, a dramatic turn of events, or a lingering question. The ending should feel natural and satisfying, even if it is open-ended.`;
 
   const assistantResponse = `Elena hesitated at the threshold, her fingers trembling as they traced the outline of the faded brass doorknob. The wooden door creaked open with a groan, echoing through the silent corridors like a long-forgotten sigh. Dust motes danced in the pale light filtering through the cracked windows, casting a hazy veil over the once-vibrant home. Her breath caught in her throat as she stepped inside, the floorboards beneath her feet creaking in protest at the unfamiliar weight.
 
@@ -46,23 +51,29 @@ She gently closed the music box, the finality of the action echoing in the still
   //   },
   // ];
 
-  const examples = [];
+  useEffect(() => {
+    console.log("init HomePage");
+    loadSystemPrompt(chatType);
+  }, []);
 
-  const novelPointsData = [
-    {
-      title: "Premise",
-      points: ["Central idea of the novel", "Key question or problem explored"],
-    },
-    {
-      title: "Genre and Audience",
-      points: ["Genre of the novel", "Target audience"],
-    },
-    {
-      title: "Theme",
-      points: ["Central themes", "How themes are explored"],
-    },
-    // Add more sections as needed
-  ];
+  const loadSystemPrompt = async (chatType) => {
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/prompt/system?type=${chatType}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await response.json();
+      setSystemPrompt(data.prompt);
+      setParameters(data.parameters);
+    } catch (error) {
+      console.error("Error fetching system prompt:", error);
+    }
+  };
 
   const handleSend = async (input) => {
     if (input.trim()) {
@@ -70,25 +81,19 @@ She gently closed the music box, the finality of the action echoing in the still
       setMessages([userMessage, ...messages]);
       setLoading(true);
 
-      let parametersString = JSON.stringify({
-        novel_points: {
-          premise: [
-            `"Unchained" is a groundbreaking drama series set in a paradoxical reality where traditional norms are subverted. The show delves deep into the lives of three main characters — Sandy, Marco, and Layla — as they navigate an unconventional and provocative relationship dynamic fraught with emotional turmoil, manipulation, and unbridled desire. The series captures the stark contrasts between appearances and reality, confronting viewers with raw, unfiltered depictions of modern life's darker and more complex aspects.`,
-          ],
-          genre: ["Drama"],
-          target_audience: ["Young adults"],
-          theme: [
-            "power, manipulation, and the gritty realities masked by societal appearances. The series confronts the audience with daring, sexual, and vulgar content that challenges conventional norms, pushing the envelope while maintaining an engrossing and dramatic narrative.",
-          ],
-        },
-      });
+      let processedParameters = parameters.reduce((acc, section) => {
+        acc[section.title] = section.points;
+        return acc;
+      }, {});
+
+      let parametersString = JSON.stringify(processedParameters);
       try {
         // Get list of previous assistant responses
         const assistantResponses = messages
           .filter((msg) => msg.role === "assistant")
           .map((msg) => msg.content);
 
-        console.log(assistantResponses);
+        // console.log(assistantResponses);
 
         let previousResponses = [];
         for (let i = 0; i < assistantResponses.length; i++) {
@@ -104,7 +109,7 @@ She gently closed the music box, the finality of the action echoing in the still
             },
             body: JSON.stringify({
               prompt: input,
-              system_prompt: system_prompt,
+              system_prompt: systemPrompt,
               examples: previousResponses,
               parameters: parametersString,
             }),
@@ -146,7 +151,7 @@ She gently closed the music box, the finality of the action echoing in the still
       const [msgLoading, setMsgLoading] = useState(false);
 
       useEffect(() => {
-        console.log("init AIMessage");
+        // console.log("init AIMessage");
       }, []);
 
       React.useImperativeHandle(ref, () => ({
@@ -161,7 +166,24 @@ She gently closed the music box, the finality of the action echoing in the still
       const handleParagraphClick = async (index) => {
         if (loading) return;
 
-        setPopupPosition({ x: event.clientX, y: event.clientY });
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        const popupWidth = 280;
+        const popupHeight = 240;
+
+        let x = event.clientX;
+        let y = event.clientY;
+
+        if (y - popupHeight < 0) {
+          y = popupHeight;
+        }
+
+        if (x - popupWidth < 0) {
+          x = popupWidth / 2;
+        }
+
+        setPopupPosition({ x, y });
         setPopupVisible(true);
         setSelectedParagraphIndex(index);
       };
@@ -452,7 +474,7 @@ She gently closed the music box, the finality of the action echoing in the still
             >
               New Chat
             </button>
-            <SummaryComponent />
+            {/* <SummaryComponent /> */}
           </div>
 
           {/* Chat History */}
@@ -528,16 +550,16 @@ She gently closed the music box, the finality of the action echoing in the still
       };
 
       return (
-        <div className="border-b border-gray-200">
+        <div className="border-b border-gray-300">
           <button
-            className="w-full p-4 text-left focus:outline-none"
+            className="w-full p-4 text-left focus:outline-none bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-t-lg hover:bg-blue-600 transition duration-300 ease-in-out"
             onClick={toggleSection}
           >
             {section.title}
           </button>
           {isOpen && (
-            <div className="p-4 bg-gray-50">
-              <ul className="list-disc pl-5">
+            <div className="p-4 bg-gray-50 rounded-b-lg">
+              <ul className="list-disc pl-5 text-gray-700">
                 {editablePoints.map((point, index) => (
                   <li key={index} className="mb-2">
                     {isEditing ? (
@@ -545,7 +567,7 @@ She gently closed the music box, the finality of the action echoing in the still
                         type="text"
                         value={editablePoints[index]}
                         onChange={(e) => handleChange(index, e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        className="w-full p-2 border border-gray-300 rounded-lg shadow-inner"
                       />
                     ) : (
                       <span>{point}</span>
@@ -553,31 +575,33 @@ She gently closed the music box, the finality of the action echoing in the still
                   </li>
                 ))}
               </ul>
-              {isEditing ? (
-                <button
-                  className="mt-4 p-2 bg-green-500 text-white rounded-lg"
-                  onClick={handleUpdate}
-                >
-                  Update
-                </button>
-              ) : (
-                <button
-                  className="mt-4 p-2 bg-blue-500 text-white rounded-lg"
-                  onClick={handleEdit}
-                >
-                  Edit
-                </button>
-              )}
+              <div className="flex justify-end mt-4">
+                {isEditing ? (
+                  <button
+                    className="p-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition duration-300 ease-in-out shadow-md"
+                    onClick={handleUpdate}
+                  >
+                    Update
+                  </button>
+                ) : (
+                  <button
+                    className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition duration-300 ease-in-out shadow-md"
+                    onClick={handleEdit}
+                  >
+                    Edit
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </div>
       );
     };
 
-    const NovelPointsPanel = ({ points }) => {
+    const ParamsPanel = ({ params }) => {
       return (
-        <div className="accordion">
-          {points.map((section, index) => (
+        <div className="accordion w-full max-h-[400px] overflow-auto rounded-lg shadow-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+          {params.map((section, index) => (
             <CollapsibleSection key={index} section={section} />
           ))}
         </div>
@@ -629,7 +653,7 @@ She gently closed the music box, the finality of the action echoing in the still
               >
                 Close Panel
               </button>
-              <NovelPointsPanel points={novelPointsData} />
+              <ParamsPanel params={parameters} />
             </div>
           </div>
         )}
@@ -637,39 +661,19 @@ She gently closed the music box, the finality of the action echoing in the still
     );
   };
 
-  const SummaryComponent = () => {
-    const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const togglePanel = () => {
-      setIsPanelOpen((prev) => !prev);
-    };
-    const SummaryPanel = () => {
-      return (
-        <VersionedText
-          text={{ current: chatSummary, previous: previousChatSummary }}
-        />
-      );
-    };
+  const SummaryPanel = () => {
+    // const SummaryPanel = () => {
+    //   return (
+
+    //   );
+    // };
     return (
-      <div className="p-4 bg-gray-300">
-        <button
-          className="mr-2 p-2 bg-gray-200 text-gray-700 rounded-lg"
-          onClick={togglePanel}
-        >
-          Show Summary
-        </button>
-        {isPanelOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white w-3/4 max-w-lg p-6 rounded-lg shadow-lg">
-              <button
-                className="mb-4 p-2 bg-red-500 text-white rounded-lg"
-                onClick={togglePanel}
-              >
-                Close Panel
-              </button>
-              <SummaryPanel />
-            </div>
-          </div>
-        )}
+      <div className="p-4">
+        <div className="accordion w-full max-h-[200px] overflow-auto rounded-lg shadow-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+          <VersionedText
+            text={{ current: chatSummary, previous: previousChatSummary }}
+          />
+        </div>
       </div>
     );
   };
@@ -692,9 +696,14 @@ She gently closed the music box, the finality of the action echoing in the still
 
   const ChatLayout = ({ handleSend }) => {
     const [isChatInputVisible, setIsChatInputVisible] = useState(true);
+    const [isChatSummaryVisible, setIsChatSummaryVisible] = useState(false);
 
     const toggleChatInput = () => {
       setIsChatInputVisible(!isChatInputVisible);
+    };
+
+    const toggleChatSummary = () => {
+      setIsChatSummaryVisible((prev) => !prev);
     };
 
     return (
@@ -722,19 +731,33 @@ She gently closed the music box, the finality of the action echoing in the still
           )}
         </div>
 
-        {/* ChatInputBar Floating Panel */}
         {isChatInputVisible && (
           <div className="p-2 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-300 border border-gray-300 shadow-xl rounded-2xl ">
             <ChatInputBar onSendInput={handleSend} />
           </div>
         )}
+        {isChatSummaryVisible && <SummaryPanel />}
 
-        {/* Floating Button to Toggle ChatInputBar */}
         <button
-          className="fixed bottom-30 right-2 p-3 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg"
+          className={`fixed top-16 right-4 p-3 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ease-in-out ${
+            isChatInputVisible
+              ? "bg-gray-700 text-white"
+              : "bg-white text-gray-700 border border-gray-300"
+          }`}
           onClick={toggleChatInput}
         >
-          <FaKeyboard size={24} />
+          <FaKeyboard size={20} />
+        </button>
+
+        <button
+          className={`fixed top-28 right-4 p-3 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ease-in-out ${
+            isChatSummaryVisible
+              ? "bg-gray-700 text-white"
+              : "bg-white text-gray-700 border border-gray-300"
+          }`}
+          onClick={toggleChatSummary}
+        >
+          <FaRegFileAlt size={20} />
         </button>
       </div>
     );
