@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FiMenu } from "react-icons/fi";
-import { FaPaperPlane, FaEdit } from "react-icons/fa";
+import { FaPaperPlane, FaEdit, FaKeyboard } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 
 import InputPopup from "../components/InputPopup";
@@ -593,38 +593,38 @@ She gently closed the music box, the finality of the action echoing in the still
       }
     };
     return (
-      <div className="px-4 py-2 fixed bottom-0 left-0 right-0 bg-gray-100 mb-14">
-        <div className="flex flex-col sm:flex-row mx-4 sm:mx-20">
+      <div className="px-2 py-2">
+        <div className="flex flex-col sm:flex-row sm:items-center mx-2 sm:mx-10 gap-2">
           <textarea
-            className="flex-grow p-2 border border-gray-300 rounded-lg mb-2 sm:mb-0"
+            className="flex-grow p-3 border border-gray-300 rounded-xl bg-white shadow-inner focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type your message..."
             rows={3} // Adjust the number of rows as needed
           />
-          <div className="flex flex-row justify-between sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-row sm:flex-row items-center justify-between gap-4">
             <button
-              className="mb-2 sm:mb-0 sm:mr-2 p-2 bg-gray-200 text-gray-700 rounded-lg"
+              className="p-3 bg-gradient-to-r from-green-400 to-green-600 text-white rounded-xl shadow-md hover:shadow-lg transition duration-300 ease-in-out"
               onClick={togglePanel}
             >
               Open Panel
             </button>
             <button
-              className=" bg-blue-500 text-white rounded-lg px-4 lg:py-4"
+              className="p-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-xl shadow-md hover:shadow-lg transition duration-300 ease-in-out"
               onClick={() => onSendInput(input)}
             >
-              <FaPaperPlane size={18} />
+              <FaPaperPlane size={20} />
             </button>
           </div>
         </div>
 
         {/* Popup Panel */}
         {isPanelOpen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white w-full sm:w-3/4 max-w-lg p-4 sm:p-6 rounded-lg shadow-lg">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white w-full sm:w-3/4 max-w-lg p-6 rounded-2xl shadow-xl">
               <button
-                className="mb-4 p-2 bg-red-500 text-white rounded-lg"
+                className="mb-4 p-3 bg-red-500 text-white rounded-xl shadow-md hover:shadow-lg transition duration-300 ease-in-out"
                 onClick={togglePanel}
               >
                 Close Panel
@@ -690,15 +690,22 @@ She gently closed the music box, the finality of the action echoing in the still
     setChatSummary(chat.summary);
   };
 
-  return (
-    <div className="flex flex-grow bg-gray-100 h-full">
-      <SideBar
-        chatHistory={chatHistory}
-        onNewChat={onNewChat}
-        onLoadChat={onLoadChat}
-      />
-      <div className="flex flex-col flex-grow bg-gray-100 h-full mb-14">
-        <div className="overflow-y-auto p-4 min-h-[50vh] max-h-[calc(100vh-17rem)] border border-red-300 shadow-lg rounded-lg">
+  const ChatLayout = ({ handleSend }) => {
+    const [isChatInputVisible, setIsChatInputVisible] = useState(true);
+
+    const toggleChatInput = () => {
+      setIsChatInputVisible(!isChatInputVisible);
+    };
+
+    return (
+      <div className="h-[calc(100vh-8rem)] w-screen flex flex-col bg-gray-100 mt-2">
+        <div
+          className={`flex-grow flex flex-col overflow-y-auto p-4 border border-red-300 shadow-lg rounded-lg transition-all duration-300 ${
+            isChatInputVisible
+              ? "max-h-[calc(100vh-19rem)]"
+              : "max-h-[calc(100vh-9rem)]"
+          }`}
+        >
           {loading && (
             <div className="mb-4 text-left">
               <div className="inline-block p-2 rounded-lg bg-gray-300 text-black">
@@ -706,10 +713,41 @@ She gently closed the music box, the finality of the action echoing in the still
               </div>
             </div>
           )}
-          <ChatComponent messages={messages} />
+          {messages.length > 0 ? (
+            <ChatComponent messages={messages} />
+          ) : (
+            <div className="flex-grow flex items-center justify-center text-gray-500">
+              No messages yet.
+            </div>
+          )}
         </div>
-        <ChatInputBar onSendInput={handleSend} />
+
+        {/* ChatInputBar Floating Panel */}
+        {isChatInputVisible && (
+          <div className="p-2 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-300 border border-gray-300 shadow-xl rounded-2xl ">
+            <ChatInputBar onSendInput={handleSend} />
+          </div>
+        )}
+
+        {/* Floating Button to Toggle ChatInputBar */}
+        <button
+          className="fixed bottom-30 right-2 p-3 bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg"
+          onClick={toggleChatInput}
+        >
+          <FaKeyboard size={24} />
+        </button>
       </div>
+    );
+  };
+
+  return (
+    <div className="flex flex-grow bg-gray-100 h-full">
+      <SideBar
+        chatHistory={chatHistory}
+        onNewChat={onNewChat}
+        onLoadChat={onLoadChat}
+      />
+      <ChatLayout handleSend={handleSend} />
     </div>
   );
 }
