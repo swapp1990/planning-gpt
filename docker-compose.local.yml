@@ -31,4 +31,4 @@ services:
     environment:
       - FLASK_ENV=development
       - PYTHONUNBUFFERED=1
-    command: gunicorn --reload --bind 0.0.0.0:5000 app:app --capture-output --log-level=debug
+    command: gunicorn --timeout 600 --reload --bind 0.0.0.0:5000 app:app --capture-output --log-level=debug

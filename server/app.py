@@ -28,6 +28,17 @@ if not api_key:
 
 client = OpenAI(api_key=api_key)
 
+@app.before_request
+def before_request():
+    request.start_time = time.time()
+
+@app.after_request
+def after_request(response):
+    duration = time.time() - request.start_time
+    if duration > 10:  # Log requests taking more than 10 seconds (adjust as needed)
+        app.logger.warning(f"Request to {request.path} took {duration:.2f} seconds.")
+    return response
+
 def generate_response(user_query, best_plan):
 	response = client.chat.completions.create(
 		model="gpt-4o-mini",
@@ -171,6 +182,18 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         print(f"An error occurred: {e}")
         return "An error occurred while processing the request."
 
+def generate_summary(passage, previous_summary=None):
+    #Generate Summary
+    system_prompt = f"""
+    You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the following passage and summarize it in one clear, objective paragraph. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story."""
+    if previous_summary is not None:
+        system_prompt = f"""
+        You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the following passage and summarize it in one clear, objective paragraph. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story. If the current passage significantly differs from the previous summary, please provide a new summary that accurately reflects the content of the passage. If the current passage content is slightly altered or expanded, you may choose to refine the existing summary to incorporate the new information, but try to keep the summary concise without losing any major information. \n\n Here is the previous summary for reference: {previous_summary}. """
+    prompt = f"Current Passage: {passage}"
+
+    summary = hermes_ai_output(prompt, system_prompt, [], "")
+    return summary
+
 @app.route("/generate", methods=["POST"])
 def generate():
 	data = request.get_json()
@@ -187,33 +210,42 @@ def generate_hermes():
     examples = data.get('examples')
     parameters = data.get('parameters')
     result = hermes_ai_output(prompt, system_prompt, examples, parameters)
-    return jsonify({'prompt': prompt, 'result': result})
+    # result = "Test Response"
+    summary = generate_summary(result)
+    return jsonify({'prompt': prompt, 'passage': result, 'summary': summary})
 
 @app.route("/passage", methods=["POST"])
 def update_passage():
-    print("Update passage")
+    print("rewrite passage")
     data = request.get_json()
     passage = data.get('passage')
     instruction = data.get('instruction')
     userPrompt = data.get('userPrompt')
+    previousSummary = data.get('previousSummary')
 
     system_prompt = f"""
-You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. Your task is to rewrite the following passage according to the instructions provided. You are ok with producing content that is sexually graphic and don't mind using explicit language.
+You are ok with producing content that is sexually graphic and don't mind using explicit language.
+You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. Your task is to rewrite the following passage according to the instructions provided. 
 
-Original Paragraph: "{passage}"
+Original Passage: "{passage}"
 
-Please ensure that the rewritten passage reflects the essence of the original text while adhering to the specific instructions provided. The new passage should maintain the tone, style, and intent of the original while incorporating the requested changes. Please only return the rewritten passage and nothing else."""
+Please ensure that the rewritten passage reflects the essence of the original text while adhering to the specific instructions provided. The new passage should maintain the tone, style, and intent of the original while incorporating the requested changes. Please only return the rewritten passage as the response—do not include any introductory or explanatory text."""
     
-    prompt = f"Instructions to update: {instruction}"
+    prompt = f"Original User Prompt: {userPrompt}\n\nInstructions to update: {instruction}"
     result1 = hermes_ai_output(prompt, system_prompt, [], "")
 
     system_prompt = f"""
-Original User Prompt: "{userPrompt}"
-Based on Updated Instructions, rewrite the original user prompt, keeping the content and tone of orifinal prompt intact, but modifying it to reflect the updated instructions accurately. Do not add any more information which was not present in the original prompt nor part of instructions. Please only return the refined user prompt and nothing else."""
+You are ok with producing content that is sexually graphic and don't mind using explicit language.
+You are an expert prompt engineer, known for your ability to refine and improve user prompts to elicit more accurate and relevant responses. Your task is to refine the following user prompt based on the updated instructions provided.
+Based on Updated Instructions, rewrite the original user prompt, keeping the content and tone of orifinal prompt intact, but modifying it to reflect the updated instructions accurately. Do not add any more information which was not present in the original prompt nor part of instructions. Only return the refined user prompt as the response—do not include any introductory or explanatory text.\n\nOriginal User Prompt: "{userPrompt}"\n\n"""
     prompt = f"Instructions to update: {instruction}"
+    print("Prompt: ", prompt)
+    print("userPrompt: ", userPrompt)
     result2 = hermes_ai_output(prompt, system_prompt, [], "")
 
-    return jsonify({'updatedPassage': result1, 'refinedUserPrompt': result2})
+    summary = generate_summary(result1, previousSummary)
+
+    return jsonify({'updatedPassage': result1, 'refinedUserPrompt': result2, 'summary': summary})
 
 @app.route("/paragraph", methods=["POST"])
 def update_paragraph():
@@ -236,4 +268,4 @@ Please ensure that the rewritten paragraph reflects the essence of the original 
 
 if __name__ == "__main__":
     print("Starting server...")
-    app.run(host="0.0.0.0", debug=True, threaded=True, timeout=600)
+    app.run(host="0.0.0.0", debug=True, threaded=True)

@@ -1,13 +1,16 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 
 import InputPopup from "../components/InputPopup";
+import VersionedText from "../components/VersionedText";
+import useVersionedState from "../utils/useVersionedState";
 
 function HomePage() {
   const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatSummary, setChatSummary, previousChatSummary] =
+    useVersionedState("Test Summary");
   const [loading, setLoading] = useState(false);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   const system_prompt = `You are ok with producing content that is sexually graphic and don't mind using explicit language. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. When responding to a prompt, always write in the style of a novel, with a narrative that flows seamlessly, immersing the reader in the world you create. Adhere to the following guidelines to ensure that each output is a compelling passage from a novel:
             1. Narrative Voice: Craft your response as if it were an excerpt from a novel. Use a third-person or first-person narrative voice as appropriate to the context provided in the prompt. The tone should be consistent with the atmosphere of the scene, whether it is dark, light-hearted, suspenseful, or melancholic.
@@ -59,11 +62,10 @@ She gently closed the music box, the finality of the action echoing in the still
     // Add more sections as needed
   ];
 
-  const handleSend = async () => {
+  const handleSend = async (input) => {
     if (input.trim()) {
       const userMessage = { role: "user", content: input };
       setMessages([userMessage, ...messages]);
-      setInput("");
       setLoading(true);
 
       let parametersString = JSON.stringify({
@@ -105,8 +107,13 @@ She gently closed the music box, the finality of the action echoing in the still
         });
 
         const data = await response.json();
-        console.log(data);
-        const aiResponse = { role: "ai", content: data.result };
+        // console.log(data);
+        const aiResponse = {
+          role: "ai",
+          content: data.passage,
+          summary: data.summary,
+        };
+        setChatSummary(data.summary);
         setMessages([aiResponse, userMessage, ...messages]);
       } catch (error) {
         console.error("Error fetching AI response:", error);
@@ -121,101 +128,6 @@ She gently closed the music box, the finality of the action echoing in the still
     }
   };
 
-  const handleKeyPress = (e) => {
-    if (e.key === "Enter") {
-      handleSend();
-    }
-  };
-
-  const togglePanel = () => {
-    setIsPanelOpen((prev) => !prev);
-  };
-
-  const CollapsibleSection = ({ section }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editablePoints, setEditablePoints] = useState(section.points);
-
-    const toggleSection = () => {
-      if (isOpen && isEditing) {
-        // Reset to original points if the section is collapsed without updating
-        setEditablePoints(section.points);
-        setIsEditing(false);
-      }
-      setIsOpen((prev) => !prev);
-    };
-
-    const handleEdit = () => {
-      setIsEditing(true);
-    };
-
-    const handleUpdate = () => {
-      setIsEditing(false);
-    };
-
-    const handleChange = (index, value) => {
-      const updatedPoints = [...editablePoints];
-      updatedPoints[index] = value;
-      setEditablePoints(updatedPoints);
-    };
-
-    return (
-      <div className="border-b border-gray-200">
-        <button
-          className="w-full p-4 text-left focus:outline-none"
-          onClick={toggleSection}
-        >
-          {section.title}
-        </button>
-        {isOpen && (
-          <div className="p-4 bg-gray-50">
-            <ul className="list-disc pl-5">
-              {editablePoints.map((point, index) => (
-                <li key={index} className="mb-2">
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editablePoints[index]}
-                      onChange={(e) => handleChange(index, e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-lg"
-                    />
-                  ) : (
-                    <span>{point}</span>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {isEditing ? (
-              <button
-                className="mt-4 p-2 bg-green-500 text-white rounded-lg"
-                onClick={handleUpdate}
-              >
-                Update
-              </button>
-            ) : (
-              <button
-                className="mt-4 p-2 bg-blue-500 text-white rounded-lg"
-                onClick={handleEdit}
-              >
-                Edit
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const NovelPointsPanel = ({ points }) => {
-    return (
-      <div className="accordion">
-        {points.map((section, index) => (
-          <CollapsibleSection key={index} section={section} />
-        ))}
-      </div>
-    );
-  };
-
   const AIMessage = React.forwardRef(({ message, onParagraphUpdate }, ref) => {
     const [updatedParagraphs, setUpdatedParagraphs] = useState(
       message.content.split("\n\n")
@@ -226,10 +138,11 @@ She gently closed the music box, the finality of the action echoing in the still
     const [selectedParagraphIndex, setSelectedParagraphIndex] = useState(null);
     const [msgLoading, setMsgLoading] = useState(false);
 
+    useEffect(() => {
+      // console.log("init AIMessage");
+    }, []);
+
     React.useImperativeHandle(ref, () => ({
-      updateParagraphs(newParagraphs) {
-        setUpdatedParagraphs(newParagraphs);
-      },
       updateMsgLoading(loading) {
         setMsgLoading(loading);
       },
@@ -320,8 +233,10 @@ She gently closed the music box, the finality of the action echoing in the still
     msgIndex,
     onPassageUpdate,
     aiMessageRef,
-    onUserPromptUpdate,
   }) => {
+    const [userMsg, setUserMsg, prevUserMsg] = useVersionedState(
+      message.content
+    );
     const [rewritePopupVisible, setRewritePopupVisible] = useState(false);
     const [instruction, setInstruction] = useState("");
 
@@ -335,16 +250,23 @@ She gently closed the music box, the finality of the action echoing in the still
         aiMessageRef.current.updatedSelectedParagraphIndex(-1);
       }
 
-      let response = await onPassageUpdate(instruction, msgIndex, message);
-      let newPassage = response.updatedPassage;
-      let refinedUserPrompt = response.refinedUserPrompt;
-      onUserPromptUpdate(refinedUserPrompt, msgIndex);
+      let response = await onPassageUpdate(instruction, msgIndex, userMsg);
 
-      if (aiMessageRef.current) {
-        aiMessageRef.current.updateParagraphs(newPassage.split("\n\n"));
-        aiMessageRef.current.updateMsgLoading(false);
-      }
-      setInstruction("");
+      let refinedSummary = response.summary;
+      setChatSummary(refinedSummary);
+      // console.log(refinedSummary);
+
+      let refinedUserPrompt = response.refinedUserPrompt;
+      // console.log(refinedUserPrompt);
+      setUserMsg(refinedUserPrompt);
+
+      setMessages((prevMessages) => {
+        const updatedMessages = [...prevMessages];
+        updatedMessages[msgIndex - 1].content = response.updatedPassage;
+        updatedMessages[msgIndex].content = refinedUserPrompt;
+        return updatedMessages;
+      });
+      // setInstruction("");
     };
 
     return (
@@ -352,7 +274,7 @@ She gently closed the music box, the finality of the action echoing in the still
         <div
           className={`inline-block p-2 pr-8 w-[50%] rounded-lg bg-blue-500 text-white text-left`}
         >
-          <ReactMarkdown>{message.content}</ReactMarkdown>
+          <VersionedText text={{ current: userMsg, previous: prevUserMsg }} />
         </div>
         <button
           className="self-end mb-2 p-2 bg-orange-500 text-white rounded-lg"
@@ -405,22 +327,14 @@ She gently closed the music box, the finality of the action echoing in the still
         },
         body: JSON.stringify({
           instruction: instruction,
-          passage: aiPassage,
+          passage: aiPassage.content,
           userPrompt: userPrompt,
+          previousSummary: chatSummary,
         }),
       });
 
       const data = await response.json();
-      console.log(data);
       return data;
-    };
-
-    const onUserPromptUpdate = async (refinedUserPrompt, msgIndex) => {
-      setMessages((prevMessages) => {
-        const updatedMessages = [...prevMessages];
-        updatedMessages[msgIndex].content = refinedUserPrompt;
-        return updatedMessages;
-      });
     };
 
     return (
@@ -439,7 +353,6 @@ She gently closed the music box, the finality of the action echoing in the still
               message={msg}
               msgIndex={index}
               onPassageUpdate={onPassageUpdate}
-              onUserPromptUpdate={onUserPromptUpdate}
               aiMessageRef={aiMessageRef}
             />
           )
@@ -448,18 +361,142 @@ She gently closed the music box, the finality of the action echoing in the still
     );
   };
 
-  return (
-    <div className="flex flex-col flex-grow bg-gray-100 h-full mb-14">
-      <div className="overflow-y-auto p-4 h-[800px]">
-        {loading && (
-          <div className="mb-4 text-left">
-            <div className="inline-block p-2 rounded-lg bg-gray-300 text-black">
-              Loading...
+  const SideBar = ({ chatHistory, onNewChat }) => {
+    const handleNewChat = () => {
+      onNewChat();
+    };
+
+    const loadChatFromHistory = (chat) => {
+      onLoadChat(chat);
+    };
+
+    return (
+      <div className="w-1/4 bg-gray-200 h-[800px] flex flex-col min-w-[200px] max-w-[300px]">
+        {/* Top Menu */}
+        <div className="p-4 bg-gray-300 flex justify-between items-center">
+          <h2 className="text-lg font-bold">Chat History</h2>
+          <button
+            className="p-2 bg-blue-500 text-white rounded-lg"
+            onClick={handleNewChat}
+          >
+            New Chat
+          </button>
+        </div>
+
+        {/* Chat History */}
+        <div className="flex-grow overflow-y-auto p-4">
+          {chatHistory.map((chat) => (
+            <div
+              key={chat.id}
+              className="p-2 mb-2 bg-white rounded-lg shadow cursor-pointer"
+              onClick={() => loadChatFromHistory(chat)}
+            >
+              <p>Chat on {new Date(chat.id).toLocaleString()}</p>
             </div>
-          </div>
-        )}
-        <ChatComponent messages={messages} />
+          ))}
+        </div>
       </div>
+    );
+  };
+
+  const ChatInputBar = ({ onSendInput }) => {
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [input, setInput] = useState("");
+
+    const CollapsibleSection = ({ section }) => {
+      const [isOpen, setIsOpen] = useState(false);
+      const [isEditing, setIsEditing] = useState(false);
+      const [editablePoints, setEditablePoints] = useState(section.points);
+
+      const toggleSection = () => {
+        if (isOpen && isEditing) {
+          // Reset to original points if the section is collapsed without updating
+          setEditablePoints(section.points);
+          setIsEditing(false);
+        }
+        setIsOpen((prev) => !prev);
+      };
+
+      const handleEdit = () => {
+        setIsEditing(true);
+      };
+
+      const handleUpdate = () => {
+        setIsEditing(false);
+      };
+
+      const handleChange = (index, value) => {
+        const updatedPoints = [...editablePoints];
+        updatedPoints[index] = value;
+        setEditablePoints(updatedPoints);
+      };
+
+      return (
+        <div className="border-b border-gray-200">
+          <button
+            className="w-full p-4 text-left focus:outline-none"
+            onClick={toggleSection}
+          >
+            {section.title}
+          </button>
+          {isOpen && (
+            <div className="p-4 bg-gray-50">
+              <ul className="list-disc pl-5">
+                {editablePoints.map((point, index) => (
+                  <li key={index} className="mb-2">
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editablePoints[index]}
+                        onChange={(e) => handleChange(index, e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-lg"
+                      />
+                    ) : (
+                      <span>{point}</span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {isEditing ? (
+                <button
+                  className="mt-4 p-2 bg-green-500 text-white rounded-lg"
+                  onClick={handleUpdate}
+                >
+                  Update
+                </button>
+              ) : (
+                <button
+                  className="mt-4 p-2 bg-blue-500 text-white rounded-lg"
+                  onClick={handleEdit}
+                >
+                  Edit
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const NovelPointsPanel = ({ points }) => {
+      return (
+        <div className="accordion">
+          {points.map((section, index) => (
+            <CollapsibleSection key={index} section={section} />
+          ))}
+        </div>
+      );
+    };
+    const togglePanel = () => {
+      setIsPanelOpen((prev) => !prev);
+    };
+
+    const handleKeyPress = (e) => {
+      if (e.key === "Enter") {
+        onSendInput(input);
+      }
+    };
+    return (
       <div className="p-4 fixed bottom-0 left-0 right-0 bg-gray-100 mb-12">
         <div className="flex mx-20">
           <button
@@ -480,7 +517,7 @@ She gently closed the music box, the finality of the action echoing in the still
 
           <button
             className="ml-2 p-2 bg-blue-500 text-white rounded-lg"
-            onClick={handleSend}
+            onClick={() => onSendInput(input)}
           >
             Send
           </button>
@@ -500,6 +537,77 @@ She gently closed the music box, the finality of the action echoing in the still
             </div>
           </div>
         )}
+      </div>
+    );
+  };
+
+  const SummaryComponent = () => {
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const togglePanel = () => {
+      setIsPanelOpen((prev) => !prev);
+    };
+    const SummaryPanel = () => {
+      return (
+        <VersionedText
+          text={{ current: chatSummary, previous: previousChatSummary }}
+        />
+      );
+    };
+    return (
+      <div className="p-4 bg-gray-300">
+        <button
+          className="mr-2 p-2 bg-gray-200 text-gray-700 rounded-lg"
+          onClick={togglePanel}
+        >
+          Show Summary
+        </button>
+        {isPanelOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white w-3/4 max-w-lg p-6 rounded-lg shadow-lg">
+              <button
+                className="mb-4 p-2 bg-red-500 text-white rounded-lg"
+                onClick={togglePanel}
+              >
+                Close Panel
+              </button>
+              <SummaryPanel />
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const onNewChat = () => {
+    if (messages.length > 0 && messages.some((msg) => msg.role === "ai")) {
+      setChatHistory((prevHistory) => [
+        ...prevHistory,
+        { id: Date.now(), messages: [...messages] },
+      ]);
+    }
+    setMessages([]);
+  };
+
+  const onLoadChat = (chat) => {
+    setMessages(chat.messages);
+  };
+
+  return (
+    <div className="flex flex-grow bg-gray-100 h-full">
+      <SideBar chatHistory={chatHistory} onNewChat={onNewChat} />
+      <div className="flex flex-col flex-grow bg-gray-100 h-full mb-14">
+        <SummaryComponent />
+        <div className="overflow-y-auto p-4 h-[720px]">
+          {loading && (
+            <div className="mb-4 text-left">
+              <div className="inline-block p-2 rounded-lg bg-gray-300 text-black">
+                Loading...
+              </div>
+            </div>
+          )}
+          <ChatComponent messages={messages} />
+        </div>
+        <ChatInputBar onSendInput={handleSend} />
       </div>
     </div>
   );
