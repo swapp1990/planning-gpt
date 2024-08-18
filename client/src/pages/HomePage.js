@@ -93,18 +93,21 @@ She gently closed the music box, the finality of the action echoing in the still
           previousResponses.push({ assistant: assistantResponses[i] });
         }
 
-        const response = await fetch("http://localhost:5000/hermes", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            prompt: input,
-            system_prompt: system_prompt,
-            examples: previousResponses,
-            parameters: parametersString,
-          }),
-        });
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/hermes`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              prompt: input,
+              system_prompt: system_prompt,
+              examples: previousResponses,
+              parameters: parametersString,
+            }),
+          }
+        );
 
         const data = await response.json();
         // console.log(data);
@@ -316,18 +319,21 @@ She gently closed the music box, the finality of the action echoing in the still
 
     const onParagraphUpdate = async (paragraph, updatePrompt, fullMessage) => {
       // Replace this with the actual server call
-      const response = await fetch("http://localhost:5000/paragraph", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          paragraph,
-          updatePrompt: updatePrompt,
-          fullMessage: fullMessage,
-          previousSummary: chatSummary,
-        }),
-      });
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/paragraph`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paragraph,
+            updatePrompt: updatePrompt,
+            fullMessage: fullMessage,
+            previousSummary: chatSummary,
+          }),
+        }
+      );
 
       const data = await response.json();
       return data;
@@ -335,7 +341,7 @@ She gently closed the music box, the finality of the action echoing in the still
 
     const onPassageUpdate = async (instruction, aiMsgIndex, userPrompt) => {
       const aiPassage = messages[aiMsgIndex - 1];
-      const response = await fetch("http://localhost:5000/passage", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/passage`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
