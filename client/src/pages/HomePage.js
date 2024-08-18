@@ -377,13 +377,40 @@ She gently closed the music box, the finality of the action echoing in the still
     );
   };
 
-  const SideBar = ({ chatHistory, onNewChat }) => {
+  const SideBar = ({ chatHistory, onNewChat, onLoadChat }) => {
     const handleNewChat = () => {
       onNewChat();
     };
 
     const loadChatFromHistory = (chat) => {
       onLoadChat(chat);
+    };
+
+    const handleSaveHistory = () => {
+      const json = JSON.stringify(chatHistory, null, 2);
+      const blob = new Blob([json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "chat_history.json";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      console.log("Chat history saved!");
+    };
+
+    const handleLoadHistory = (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const loadedHistory = JSON.parse(e.target.result);
+          console.log(loadedHistory);
+          setChatHistory(loadedHistory);
+          // onLoadChat(loadedHistory);
+        };
+        reader.readAsText(file);
+      }
     };
 
     return (
@@ -410,6 +437,29 @@ She gently closed the music box, the finality of the action echoing in the still
               <p>Chat on {new Date(chat.id).toLocaleString()}</p>
             </div>
           ))}
+        </div>
+
+        {/* Save and Load Buttons */}
+        <div className="p-4 bg-gray-300 flex justify-between items-center">
+          <button
+            className="p-2 bg-green-500 text-white rounded-lg"
+            onClick={handleSaveHistory}
+          >
+            Save History
+          </button>
+          <input
+            type="file"
+            accept=".json"
+            className="hidden"
+            id="load-history"
+            onChange={handleLoadHistory}
+          />
+          <label
+            htmlFor="load-history"
+            className="p-2 bg-purple-500 text-white rounded-lg cursor-pointer"
+          >
+            Load History
+          </label>
         </div>
       </div>
     );
@@ -598,19 +648,25 @@ She gently closed the music box, the finality of the action echoing in the still
     if (messages.length > 0 && messages.some((msg) => msg.role === "ai")) {
       setChatHistory((prevHistory) => [
         ...prevHistory,
-        { id: Date.now(), messages: [...messages] },
+        { id: Date.now(), messages: [...messages], summary: chatSummary },
       ]);
     }
     setMessages([]);
+    setChatSummary("Test Summary");
   };
 
   const onLoadChat = (chat) => {
     setMessages(chat.messages);
+    setChatSummary(chat.summary);
   };
 
   return (
     <div className="flex flex-grow bg-gray-100 h-full">
-      <SideBar chatHistory={chatHistory} onNewChat={onNewChat} />
+      <SideBar
+        chatHistory={chatHistory}
+        onNewChat={onNewChat}
+        onLoadChat={onLoadChat}
+      />
       <div className="flex flex-col flex-grow bg-gray-100 h-full mb-14">
         <SummaryComponent />
         <div className="overflow-y-auto p-4 h-[720px]">
