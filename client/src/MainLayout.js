@@ -14,7 +14,7 @@ export default function MainLayout({ children }) {
         <div class="flex-grow flex flex-col mt-12 overflow-auto">
           {children}
         </div>
-        <BottomNavigation />
+        {/* <BottomNavigation /> */}
       </div>
     </>
   );
