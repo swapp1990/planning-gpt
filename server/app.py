@@ -266,6 +266,10 @@ Only return the updated paragraph as the response. DO NOT INCLUDE any introducto
     summary = generate_summary(replacedFullPassage, previousSummary)
     return jsonify({'updatedParagraph': result, 'summary': summary})
 
+@app.route("/test", methods=["GET"])
+def test():
+    return jsonify({'message': 'Hello, World!'})
+
 if __name__ == "__main__":
     print("Starting server...")
     app.run(host="0.0.0.0", debug=True, threaded=True)
