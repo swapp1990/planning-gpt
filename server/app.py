@@ -17,16 +17,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-api_key = os.getenv('OPENAI_API_KEY')
-
 openai_api_key = os.getenv('LAMBDA_API_KEY')
 openai_api_base = "https://api.lambdalabs.com/v1"
-
-# Ensure the API key is loaded
-if not api_key:
-    raise ValueError("No OPENAI_API_KEY found in environment variables")
-
-client = OpenAI(api_key=api_key)
 
 @app.before_request
 def before_request():
