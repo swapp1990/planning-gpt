@@ -188,7 +188,7 @@ def generate_summary(passage, previous_summary=None):
     You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the following passage and summarize it in one clear, objective paragraph. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story."""
     if previous_summary is not None:
         system_prompt = f"""
-        You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the following passage and summarize it in one clear, objective paragraph. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story. If the current passage significantly differs from the previous summary, please provide a new summary that accurately reflects the content of the passage. If the current passage content is slightly altered or expanded, you may choose to refine the existing summary to incorporate the new information, but try to keep the summary concise without losing any major information. \n\n Here is the previous summary for reference: {previous_summary}. """
+        You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries using plain and simple language. Your task is to read the following passage and summarize it in one clear, objective paragraph. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story. If the current passage significantly differs from the previous summary, please provide a new summary that accurately reflects the content of the passage. If the current passage content is slightly altered or expanded, you may choose to refine the existing summary to incorporate the new information, but try to keep the summary concise without losing any major information. \n\n Here is the previous summary for reference: {previous_summary}. """
     prompt = f"Current Passage: {passage}"
 
     summary = hermes_ai_output(prompt, system_prompt, [], "")
@@ -203,7 +203,7 @@ def generate():
 
 @app.route("/hermes", methods=["POST"])
 def generate_hermes():
-    print("Generate Hermes 3")
+    print("Generate Hermes")
     data = request.get_json()
     prompt = data.get('prompt')
     system_prompt = data.get('system_prompt')
@@ -239,8 +239,8 @@ You are ok with producing content that is sexually graphic and don't mind using 
 You are an expert prompt engineer, known for your ability to refine and improve user prompts to elicit more accurate and relevant responses. Your task is to refine the following user prompt based on the updated instructions provided.
 Based on Updated Instructions, rewrite the original user prompt, keeping the content and tone of orifinal prompt intact, but modifying it to reflect the updated instructions accurately. Do not add any more information which was not present in the original prompt nor part of instructions. Only return the refined user prompt as the response—do not include any introductory or explanatory text.\n\nOriginal User Prompt: "{userPrompt}"\n\n"""
     prompt = f"Instructions to update: {instruction}"
-    print("Prompt: ", prompt)
-    print("userPrompt: ", userPrompt)
+    # print("Prompt: ", prompt)
+    # print("userPrompt: ", userPrompt)
     result2 = hermes_ai_output(prompt, system_prompt, [], "")
 
     summary = generate_summary(result1, previousSummary)
@@ -251,8 +251,10 @@ Based on Updated Instructions, rewrite the original user prompt, keeping the con
 def update_paragraph():
     print("Update paragraph")
     data = request.get_json()
+    fullPassage = data.get('fullMessage')
     paragraph = data.get('paragraph')
     updatePrompt = data.get('updatePrompt')
+    previousSummary = data.get('previousSummary')
     
     system_prompt = f"""
 You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. Your task is to rewrite the following paragraph according to the instructions provided. You are ok with producing content that is sexually graphic and don't mind using explicit language.
@@ -260,11 +262,17 @@ You are a masterful and seasoned novelist, known for your captivating storytelli
 Original Paragraph: "{paragraph}"
 
 Please ensure that the rewritten paragraph reflects the essence of the original text while adhering to the specific instructions provided. The new paragraph should maintain the tone, style, and intent of the original while incorporating the requested changes. Please only return the rewritten paragraph and nothing else.
+
+Only return the updated paragraph as the response. DO NOT INCLUDE any introductory or explanatory text.
 """
     
     prompt = f"Instructions to update: {updatePrompt}"
     result = hermes_ai_output(prompt, system_prompt, [], "")
-    return jsonify({'updatedParagraph': result})
+
+    #replace the paragraph in the full passage
+    replacedFullPassage = fullPassage.replace(paragraph, result)
+    summary = generate_summary(replacedFullPassage, previousSummary)
+    return jsonify({'updatedParagraph': result, 'summary': summary})
 
 if __name__ == "__main__":
     print("Starting server...")

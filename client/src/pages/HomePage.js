@@ -128,105 +128,119 @@ She gently closed the music box, the finality of the action echoing in the still
     }
   };
 
-  const AIMessage = React.forwardRef(({ message, onParagraphUpdate }, ref) => {
-    const [updatedParagraphs, setUpdatedParagraphs] = useState(
-      message.content.split("\n\n")
-    );
-    const [popupVisible, setPopupVisible] = useState(false);
-    const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
-    const [paraUpdatePrompt, setParaUpdatePrompt] = useState("");
-    const [selectedParagraphIndex, setSelectedParagraphIndex] = useState(null);
-    const [msgLoading, setMsgLoading] = useState(false);
-
-    useEffect(() => {
-      // console.log("init AIMessage");
-    }, []);
-
-    React.useImperativeHandle(ref, () => ({
-      updateMsgLoading(loading) {
-        setMsgLoading(loading);
-      },
-      updatedSelectedParagraphIndex(index) {
-        setSelectedParagraphIndex(index);
-      },
-    }));
-
-    const handleParagraphClick = async (index) => {
-      if (loading) return;
-
-      setPopupPosition({ x: event.clientX, y: event.clientY });
-      setPopupVisible(true);
-      setSelectedParagraphIndex(index);
-    };
-
-    const handlePromptSubmit = async () => {
-      if (loading || selectedParagraphIndex === null) return;
-
-      setMsgLoading(true);
-      setPopupVisible(false);
-      const paragraph = updatedParagraphs[selectedParagraphIndex];
-      const newParagraph = await onParagraphUpdate(
-        paragraph,
-        paraUpdatePrompt,
-        message
+  const AIMessage = React.forwardRef(
+    ({ message, msgIndex, onParagraphUpdate }, ref) => {
+      const [updatedParagraphs, setUpdatedParagraphs] = useState(
+        message.content.split("\n\n")
       );
+      const [popupVisible, setPopupVisible] = useState(false);
+      const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
+      const [paraUpdatePrompt, setParaUpdatePrompt] = useState("");
+      const [selectedParagraphIndex, setSelectedParagraphIndex] =
+        useState(null);
+      const [msgLoading, setMsgLoading] = useState(false);
 
-      const newParagraphs = [...updatedParagraphs];
-      newParagraphs[selectedParagraphIndex] = newParagraph;
-      setUpdatedParagraphs(newParagraphs);
-      setMsgLoading(false);
+      useEffect(() => {
+        console.log("init AIMessage");
+      }, []);
 
-      setParaUpdatePrompt("");
-    };
+      React.useImperativeHandle(ref, () => ({
+        updateMsgLoading(loading) {
+          setMsgLoading(loading);
+        },
+        updatedSelectedParagraphIndex(index) {
+          setSelectedParagraphIndex(index);
+        },
+      }));
 
-    const handlePromptCancel = () => {
-      if (loading || selectedParagraphIndex === null) return;
-      setMsgLoading(false);
-      setPopupVisible(false);
-      setParaUpdatePrompt("");
-      setSelectedParagraphIndex(-1);
-    };
+      const handleParagraphClick = async (index) => {
+        if (loading) return;
 
-    return (
-      <div className="mb-4 text-left bg-gray-300 w-[50%] flex flex-col">
-        {msgLoading && selectedParagraphIndex === -1 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-75 z-10">
-            <div className="text-center">
-              <span className="loader mb-2">Loading ...</span>
-              <p>Rewriting entire passage...</p>
-            </div>
-          </div>
-        )}
-        {updatedParagraphs.map((paragraph, index) => (
-          <div
-            key={index}
-            className={`inline-block p-2 pr-8 rounded-lg text-black mb-2 cursor-pointer relative transition-all duration-300 ease-in-out transform hover:scale-105 ${
-              selectedParagraphIndex === index ? "bg-yellow-200" : "bg-gray-100"
-            }`}
-            onClick={() => handleParagraphClick(index)}
-          >
-            {msgLoading && selectedParagraphIndex == index && (
-              <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-50">
-                <span className="loader">Loading ...</span>
+        setPopupPosition({ x: event.clientX, y: event.clientY });
+        setPopupVisible(true);
+        setSelectedParagraphIndex(index);
+      };
+
+      const handlePromptSubmit = async () => {
+        if (loading || selectedParagraphIndex === null) return;
+
+        setMsgLoading(true);
+        setPopupVisible(false);
+        const paragraph = updatedParagraphs[selectedParagraphIndex];
+        let response = await onParagraphUpdate(
+          paragraph,
+          paraUpdatePrompt,
+          message.content
+        );
+
+        const newParagraphs = [...updatedParagraphs];
+        newParagraphs[selectedParagraphIndex] = response.updatedParagraph;
+        // console.log(response.updatedParagraph);
+        // setUpdatedParagraphs(newParagraphs);
+        setMessages((prevMessages) => {
+          const updatedMessages = [...prevMessages];
+          updatedMessages[msgIndex].content = newParagraphs.join("\n\n");
+          return updatedMessages;
+        });
+
+        console.log(response.summary);
+        setChatSummary(response.summary);
+        setMsgLoading(false);
+
+        setParaUpdatePrompt("");
+      };
+
+      const handlePromptCancel = () => {
+        if (loading || selectedParagraphIndex === null) return;
+        setMsgLoading(false);
+        setPopupVisible(false);
+        setParaUpdatePrompt("");
+        setSelectedParagraphIndex(-1);
+      };
+
+      return (
+        <div className="mb-4 text-left bg-gray-300 w-[50%] flex flex-col">
+          {msgLoading && selectedParagraphIndex === -1 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-75 z-10">
+              <div className="text-center">
+                <span className="loader mb-2">Loading ...</span>
+                <p>Rewriting entire passage...</p>
               </div>
-            )}
-            <ReactMarkdown>{paragraph}</ReactMarkdown>
-          </div>
-        ))}
-        <InputPopup
-          position={popupPosition}
-          visible={popupVisible}
-          onClose={handlePromptCancel}
-          onSubmit={handlePromptSubmit}
-          promptValue={paraUpdatePrompt}
-          setPromptValue={setParaUpdatePrompt}
-          placeholder="Enter your prompt to update selected paragraph"
-          submitLabel="Submit"
-          cancelLabel="Cancel"
-        />
-      </div>
-    );
-  });
+            </div>
+          )}
+          {updatedParagraphs.map((paragraph, index) => (
+            <div
+              key={index}
+              className={`inline-block p-2 pr-8 rounded-lg text-black mb-2 cursor-pointer relative transition-all duration-300 ease-in-out transform hover:scale-105 ${
+                selectedParagraphIndex === index
+                  ? "bg-yellow-200"
+                  : "bg-gray-100"
+              }`}
+              onClick={() => handleParagraphClick(index)}
+            >
+              {msgLoading && selectedParagraphIndex == index && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-50">
+                  <span className="loader">Loading ...</span>
+                </div>
+              )}
+              <ReactMarkdown>{paragraph}</ReactMarkdown>
+            </div>
+          ))}
+          <InputPopup
+            position={popupPosition}
+            visible={popupVisible}
+            onClose={handlePromptCancel}
+            onSubmit={handlePromptSubmit}
+            promptValue={paraUpdatePrompt}
+            setPromptValue={setParaUpdatePrompt}
+            placeholder="Enter your prompt to update selected paragraph"
+            submitLabel="Submit"
+            cancelLabel="Cancel"
+          />
+        </div>
+      );
+    }
+  );
 
   const UserMessage = ({
     message,
@@ -311,11 +325,12 @@ She gently closed the music box, the finality of the action echoing in the still
           paragraph,
           updatePrompt: updatePrompt,
           fullMessage: fullMessage,
+          previousSummary: chatSummary,
         }),
       });
 
       const data = await response.json();
-      return data.updatedParagraph;
+      return data;
     };
 
     const onPassageUpdate = async (instruction, aiMsgIndex, userPrompt) => {
@@ -344,6 +359,7 @@ She gently closed the music box, the finality of the action echoing in the still
             <AIMessage
               key={index}
               message={msg}
+              msgIndex={index}
               onParagraphUpdate={onParagraphUpdate}
               ref={aiMessageRef}
             />
