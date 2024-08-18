@@ -19,7 +19,7 @@ logger.setLevel(logging.INFO)
 
 api_key = os.getenv('OPENAI_API_KEY')
 
-openai_api_key = "secret_windowspc_309e863047054352ab0ebb226b5bc10e.fK7Ywbfw07QU8tYBfM0XbmXNGXtL7nl1"
+openai_api_key = os.getenv('LAMBDA_API_KEY')
 openai_api_base = "https://api.lambdalabs.com/v1"
 
 # Ensure the API key is loaded
