@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
+import { FiMenu } from "react-icons/fi";
+import { FaPaperPlane, FaEdit } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 
 import InputPopup from "../components/InputPopup";
@@ -202,7 +204,7 @@ She gently closed the music box, the finality of the action echoing in the still
       };
 
       return (
-        <div className="mb-4 text-left bg-gray-300 w-[50%] flex flex-col">
+        <div className="mb-4 text-left bg-gray-300 w-[90%] lg:w-[50%] flex flex-col">
           {msgLoading && selectedParagraphIndex === -1 && (
             <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-75 z-10">
               <div className="text-center">
@@ -214,10 +216,10 @@ She gently closed the music box, the finality of the action echoing in the still
           {updatedParagraphs.map((paragraph, index) => (
             <div
               key={index}
-              className={`inline-block p-2 pr-8 rounded-lg text-black mb-2 cursor-pointer relative transition-all duration-300 ease-in-out transform hover:scale-105 ${
+              className={`inline-block p-4 pr-10 rounded-lg mb-4 cursor-pointer relative transition-all duration-300 ease-in-out transform hover:scale-105 text-white shadow-lg ${
                 selectedParagraphIndex === index
-                  ? "bg-yellow-200"
-                  : "bg-gray-100"
+                  ? "bg-gradient-to-r from-green-400 to-blue-400 border-l-4 border-green-500"
+                  : "bg-gradient-to-r from-purple-500 to-pink-600"
               }`}
               onClick={() => handleParagraphClick(index)}
             >
@@ -289,16 +291,17 @@ She gently closed the music box, the finality of the action echoing in the still
     return (
       <div className={`mb-4 w-50 text-right`}>
         <div
-          className={`inline-block p-2 pr-8 w-[50%] rounded-lg bg-blue-500 text-white text-left`}
+          className={`inline-block p-4 pr-10 w-[90%] lg:w-[50%] rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg relative `}
         >
           <VersionedText text={{ current: userMsg, previous: prevUserMsg }} />
+          <button
+            className="absolute bottom-4 right-4 p-3 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600 transition duration-300 ease-in-out shadow-md"
+            onClick={() => setRewritePopupVisible(true)}
+          >
+            <FaEdit size={20} />
+          </button>
         </div>
-        <button
-          className="self-end mb-2 p-2 bg-orange-500 text-white rounded-lg"
-          onClick={() => setRewritePopupVisible(true)}
-        >
-          Rewrite
-        </button>
+
         <InputPopup
           position={{ x: window.innerWidth / 2, y: window.innerHeight / 2 }} // Center the popup
           visible={rewritePopupVisible}
@@ -384,6 +387,11 @@ She gently closed the music box, the finality of the action echoing in the still
   };
 
   const SideBar = ({ chatHistory, onNewChat, onLoadChat }) => {
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const toggleSidebar = () => {
+      setIsSidebarOpen((prev) => !prev);
+    };
+
     const handleNewChat = () => {
       onNewChat();
     };
@@ -420,52 +428,68 @@ She gently closed the music box, the finality of the action echoing in the still
     };
 
     return (
-      <div className="w-1/4 bg-gray-200 h-[800px] flex flex-col min-w-[200px] max-w-[300px]">
-        {/* Top Menu */}
-        <div className="p-4 bg-gray-300 flex justify-between items-center">
-          <h2 className="text-lg font-bold">Chat History</h2>
-          <button
-            className="p-2 bg-blue-500 text-white rounded-lg"
-            onClick={handleNewChat}
-          >
-            New Chat
-          </button>
-        </div>
+      <div>
+        {/* Sidebar Toggle Button */}
+        <button
+          className="fixed top-6 left-0 transform -translate-y-1/2 translate-x-2 p-3 bg-blue-500 text-white rounded-full z-50 shadow-lg"
+          onClick={toggleSidebar}
+        >
+          <FiMenu size={16} />
+        </button>
 
-        {/* Chat History */}
-        <div className="flex-grow overflow-y-auto p-4">
-          {chatHistory.map((chat) => (
-            <div
-              key={chat.id}
-              className="p-2 mb-2 bg-white rounded-lg shadow cursor-pointer"
-              onClick={() => loadChatFromHistory(chat)}
+        {/* Sidebar */}
+        <div
+          className={`fixed top-18 left-0 h-full bg-gray-200 transform ${
+            isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          } transition-transform duration-300 ease-in-out w-full sm:w-1/4 sm:max-w-[300px] z-40`}
+        >
+          {/* Top Menu */}
+          <div className="p-4 bg-gray-300 flex justify-between items-center">
+            <h2 className="text-lg font-bold">Chat History</h2>
+            <button
+              className="p-2 bg-blue-500 text-white rounded-lg"
+              onClick={onNewChat}
             >
-              <p>Chat on {new Date(chat.id).toLocaleString()}</p>
-            </div>
-          ))}
-        </div>
+              New Chat
+            </button>
+            <SummaryComponent />
+          </div>
 
-        {/* Save and Load Buttons */}
-        <div className="p-4 bg-gray-300 flex justify-between items-center">
-          <button
-            className="p-2 bg-green-500 text-white rounded-lg"
-            onClick={handleSaveHistory}
-          >
-            Save History
-          </button>
-          <input
-            type="file"
-            accept=".json"
-            className="hidden"
-            id="load-history"
-            onChange={handleLoadHistory}
-          />
-          <label
-            htmlFor="load-history"
-            className="p-2 bg-purple-500 text-white rounded-lg cursor-pointer"
-          >
-            Load History
-          </label>
+          {/* Chat History */}
+          <div className="flex-grow overflow-y-auto p-4">
+            {chatHistory.map((chat) => (
+              <div
+                key={chat.id}
+                className="p-2 mb-2 bg-white rounded-lg shadow cursor-pointer"
+                onClick={() => loadChatFromHistory(chat)}
+              >
+                <p>Chat on {new Date(chat.id).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Save and Load Buttons */}
+          <div className="p-4 bg-gray-300 flex justify-between items-center">
+            <button
+              className="p-2 bg-green-500 text-white rounded-lg"
+              onClick={handleSaveHistory}
+            >
+              Save History
+            </button>
+            <input
+              type="file"
+              accept=".json"
+              className="hidden"
+              id="load-history"
+              onChange={handleLoadHistory}
+            />
+            <label
+              htmlFor="load-history"
+              className="p-2 bg-purple-500 text-white rounded-lg cursor-pointer"
+            >
+              Load History
+            </label>
+          </div>
         </div>
       </div>
     );
@@ -569,36 +593,36 @@ She gently closed the music box, the finality of the action echoing in the still
       }
     };
     return (
-      <div className="p-4 fixed bottom-0 left-0 right-0 bg-gray-100 mb-12">
-        <div className="flex mx-20">
-          <button
-            className="mr-2 p-2 bg-gray-200 text-gray-700 rounded-lg"
-            onClick={togglePanel}
-          >
-            Open Panel
-          </button>
-
+      <div className="px-4 py-2 fixed bottom-0 left-0 right-0 bg-gray-100 mb-14">
+        <div className="flex flex-col sm:flex-row mx-4 sm:mx-20">
           <textarea
-            className="flex-grow p-2 border border-gray-300 rounded-lg"
+            className="flex-grow p-2 border border-gray-300 rounded-lg mb-2 sm:mb-0"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type your message..."
-            rows={4} // Adjust the number of rows as needed
+            rows={3} // Adjust the number of rows as needed
           />
-
-          <button
-            className="ml-2 p-2 bg-blue-500 text-white rounded-lg"
-            onClick={() => onSendInput(input)}
-          >
-            Send
-          </button>
+          <div className="flex flex-row justify-between sm:flex-row sm:items-center sm:justify-between">
+            <button
+              className="mb-2 sm:mb-0 sm:mr-2 p-2 bg-gray-200 text-gray-700 rounded-lg"
+              onClick={togglePanel}
+            >
+              Open Panel
+            </button>
+            <button
+              className=" bg-blue-500 text-white rounded-lg px-4 lg:py-4"
+              onClick={() => onSendInput(input)}
+            >
+              <FaPaperPlane size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Popup Panel */}
         {isPanelOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white w-3/4 max-w-lg p-6 rounded-lg shadow-lg">
+            <div className="bg-white w-full sm:w-3/4 max-w-lg p-4 sm:p-6 rounded-lg shadow-lg">
               <button
                 className="mb-4 p-2 bg-red-500 text-white rounded-lg"
                 onClick={togglePanel}
@@ -674,8 +698,7 @@ She gently closed the music box, the finality of the action echoing in the still
         onLoadChat={onLoadChat}
       />
       <div className="flex flex-col flex-grow bg-gray-100 h-full mb-14">
-        <SummaryComponent />
-        <div className="overflow-y-auto p-4 h-[720px]">
+        <div className="overflow-y-auto p-4 min-h-[50vh] max-h-[calc(100vh-17rem)] border border-red-300 shadow-lg rounded-lg">
           {loading && (
             <div className="mb-4 text-left">
               <div className="inline-block p-2 rounded-lg bg-gray-300 text-black">
