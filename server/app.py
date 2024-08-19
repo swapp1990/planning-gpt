@@ -141,7 +141,6 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
     )
     model = "hermes-3-llama-3.1-405b-fp8"
     system_prompt = system_prompt + "\n\n" + parameters
-    print(system_prompt)
     messages = []
     messages.append({
         "role": "system",

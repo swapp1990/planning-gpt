@@ -99,8 +99,6 @@ She gently closed the music box, the finality of the action echoing in the still
           .filter((msg) => msg.role === "assistant")
           .map((msg) => msg.content);
 
-        // console.log(assistantResponses);
-
         let previousResponses = [];
         for (let i = 0; i < assistantResponses.length; i++) {
           previousResponses.push({ assistant: assistantResponses[i] });
@@ -216,7 +214,6 @@ She gently closed the music box, the finality of the action echoing in the still
           return updatedMessages;
         });
 
-        console.log(response.summary);
         setChatSummary(response.summary);
         setMsgLoading(false);
 
@@ -452,8 +449,6 @@ She gently closed the music box, the finality of the action echoing in the still
     };
 
     const handleLoadHistory = async () => {
-      //stop event propagation
-
       try {
         const response = await fetch(
           `${process.env.REACT_APP_API_URL}/history/load`,
@@ -705,6 +700,8 @@ She gently closed the music box, the finality of the action echoing in the still
     );
   };
 
+  const [currentChatId, setCurrentChatId] = useState(Date.now());
+
   const onNewChat = () => {
     if (messages.length > 0 && messages.some((msg) => msg.role === "ai")) {
       setChatHistory((prevHistory) => [
@@ -714,11 +711,13 @@ She gently closed the music box, the finality of the action echoing in the still
     }
     setMessages([]);
     setChatSummary("Test Summary");
+    setCurrentChatId(Date.now());
   };
 
   const onLoadChat = (chat) => {
     setMessages(chat.messages);
     setChatSummary(chat.summary);
+    setCurrentChatId(chat.id);
   };
 
   const ChatLayout = ({ handleSend }) => {
@@ -735,11 +734,32 @@ She gently closed the music box, the finality of the action echoing in the still
 
     const saveChat = () => {
       if (messages.length > 0 && messages.some((msg) => msg.role === "ai")) {
-        setChatHistory([]);
-        setChatHistory((prevHistory) => [
-          ...prevHistory,
-          { id: Date.now(), messages: [...messages], summary: chatSummary },
-        ]);
+        setChatHistory((prevHistory) => {
+          const existingChatIndex = prevHistory.findIndex(
+            (chat) => chat.id === currentChatId
+          );
+
+          if (existingChatIndex !== -1) {
+            // Replace the existing chat history entry
+            const updatedHistory = [...prevHistory];
+            updatedHistory[existingChatIndex] = {
+              id: currentChatId,
+              messages: [...messages],
+              summary: chatSummary,
+            };
+            return updatedHistory;
+          } else {
+            // Add a new chat history entry
+            return [
+              ...prevHistory,
+              {
+                id: currentChatId,
+                messages: [...messages],
+                summary: chatSummary,
+              },
+            ];
+          }
+        });
       }
     };
 
