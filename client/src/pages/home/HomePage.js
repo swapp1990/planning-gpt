@@ -6,12 +6,15 @@ import {
   FaKeyboard,
   FaRegFileAlt,
   FaSave,
+  FaSpinner,
 } from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 
-import InputPopup from "../components/InputPopup";
-import VersionedText from "../components/VersionedText";
-import useVersionedState from "../utils/useVersionedState";
+import InputPopup from "../../components/InputPopup";
+import VersionedText from "../../components/VersionedText";
+import useVersionedState from "../../utils/useVersionedState";
+import AssistantChat from "./AssistantChat";
+import UserChat from "./UserChat";
 
 function HomePage() {
   const [messages, setMessages] = useState([]);
@@ -24,17 +27,6 @@ function HomePage() {
   );
   const [chatType, setChatType] = useState("writing_assistant");
   const [parameters, setParameters] = useState([]);
-
-  // const system_prompt = `You are ok with producing content that is sexually graphic and don't mind using explicit language. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. When responding to a prompt, always write in the style of a novel, with a narrative that flows seamlessly, immersing the reader in the world you create. Adhere to the following guidelines to ensure that each output is a compelling passage from a novel:
-  //           1. Narrative Voice: Craft your response as if it were an excerpt from a novel. Use a third-person or first-person narrative voice as appropriate to the context provided in the prompt. The tone should be consistent with the atmosphere of the scene, whether it is dark, light-hearted, suspenseful, or melancholic.
-  //           2. Descriptive Language: Employ vivid and detailed descriptions that paint a picture in the reader's mind. Focus on sensory details—sights, sounds, smells, tastes, and textures—to bring scenes and characters to life.
-  //           3. Character Development: Ensure that characters, even if briefly mentioned, have depth. Reflect their thoughts, emotions, and motivations in the passage. Dialogue, if included, should be natural and reveal something about the character’s personality or situation.
-  //           4. Plot and Pacing: Structure the passage with a clear beginning, middle, and end, even if it is a short excerpt. Ensure that there is a sense of progression, whether it is through action, introspection, or dialogue. The pacing should match the tone and urgency of the scene.
-  //           5. Emotion and Mood: Convey the emotional undercurrents of the scene. Whether the scene is tense, joyful, sorrowful, or reflective, the mood should resonate with the reader and enhance the narrative.
-  //           6. Consistency with the Prompt: Strictly adhere to the themes, characters, and scenarios provided in the prompt. Ensure that the passage reflects the intent and specifics of the prompt while still maintaining the stylistic integrity of a novel.
-  //           7. Literary Style: Write in a style that is consistent with literary fiction, aiming for depth, nuance, and a polished finish. Avoid clichés and strive for originality in expression. The language should be sophisticated yet accessible, resonating with readers who appreciate well-crafted prose.
-  //           8. Immersion and Engagement: The passage should draw the reader in from the first sentence, making them feel like they are part of the story. Keep the reader engaged through compelling storytelling, intriguing details, and a well-constructed narrative arc.
-  //           9. Ending with Impact: Conclude the passage in a way that leaves a lasting impression, whether it’s through a poignant observation, a dramatic turn of events, or a lingering question. The ending should feel natural and satisfying, even if it is open-ended.`;
 
   const assistantResponse = `Elena hesitated at the threshold, her fingers trembling as they traced the outline of the faded brass doorknob. The wooden door creaked open with a groan, echoing through the silent corridors like a long-forgotten sigh. Dust motes danced in the pale light filtering through the cracked windows, casting a hazy veil over the once-vibrant home. Her breath caught in her throat as she stepped inside, the floorboards beneath her feet creaking in protest at the unfamiliar weight.
 
@@ -59,8 +51,18 @@ She gently closed the music box, the finality of the action echoing in the still
 
   useEffect(() => {
     console.log("init HomePage");
-    loadSystemPrompt(chatType);
+    init();
   }, []);
+
+  const init = async () => {
+    await loadSystemPrompt(chatType);
+
+    // simulateStreamingResponse();
+
+    setTimeout(() => {
+      // sendTestStreamingResponse();
+    }, 1000);
+  };
 
   const loadSystemPrompt = async (chatType) => {
     try {
@@ -82,6 +84,7 @@ She gently closed the music box, the finality of the action echoing in the still
   };
 
   const handleSend = async (input) => {
+    console.log(input);
     if (input.trim()) {
       const userMessage = { role: "user", content: input };
       setMessages([userMessage, ...messages]);
@@ -93,254 +96,359 @@ She gently closed the music box, the finality of the action echoing in the still
       }, {});
 
       let parametersString = JSON.stringify(processedParameters);
-      try {
-        // Get list of previous assistant responses
-        const assistantResponses = messages
-          .filter((msg) => msg.role === "assistant")
-          .map((msg) => msg.content);
+      // Get list of previous assistant responses
+      const assistantResponses = messages
+        .filter((msg) => msg.role === "assistant")
+        .map((msg) => msg.content);
 
-        let previousResponses = [];
-        for (let i = 0; i < assistantResponses.length; i++) {
-          previousResponses.push({ assistant: assistantResponses[i] });
-        }
+      let previousResponses = [];
+      // for (let i = 0; i < assistantResponses.length; i++) {
+      //   previousResponses.push({ assistant: assistantResponses[i] });
+      // }
 
-        const response = await fetch(
-          `${process.env.REACT_APP_API_URL}/hermes`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              prompt: input,
-              system_prompt: systemPrompt,
-              examples: previousResponses,
-              parameters: parametersString,
-            }),
-          }
-        );
-
-        const data = await response.json();
-        // console.log(data);
-        const aiResponse = {
-          role: "ai",
-          content: data.passage,
-          summary: data.summary,
-        };
-        setChatSummary(data.summary);
-        setMessages([aiResponse, userMessage, ...messages]);
-      } catch (error) {
-        console.error("Error fetching AI response:", error);
-        const aiErrorResponse = {
-          role: "ai",
-          content: "Sorry, something went wrong. Please try again later.",
-        };
-        setMessages([...messages, userMessage, aiErrorResponse]);
-      } finally {
-        setLoading(false);
-      }
+      generateAssistantResponse(input, systemPrompt, previousResponses, "");
     }
   };
 
-  const AIMessage = React.forwardRef(
-    ({ message, msgIndex, onParagraphUpdate }, ref) => {
-      const [updatedParagraphs, setUpdatedParagraphs] = useState(
-        message.content.split("\n\n")
-      );
-      const [popupVisible, setPopupVisible] = useState(false);
-      const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
-      const [paraUpdatePrompt, setParaUpdatePrompt] = useState("");
-      const [selectedParagraphIndex, setSelectedParagraphIndex] =
-        useState(null);
-      const [msgLoading, setMsgLoading] = useState(false);
+  const generateAssistantResponse = async (
+    input,
+    systemPrompt,
+    previousResponses,
+    parametersString
+  ) => {
+    // console.log(input);
+    try {
+      const aiResponse = {
+        role: "ai",
+        content: "",
+        summary: "",
+        streaming: true,
+      };
 
-      useEffect(() => {
-        // console.log("init AIMessage");
-      }, []);
-
-      React.useImperativeHandle(ref, () => ({
-        updateMsgLoading(loading) {
-          setMsgLoading(loading);
+      setMessages((prevMessages) => [aiResponse, ...prevMessages]);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/hermes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        updatedSelectedParagraphIndex(index) {
-          setSelectedParagraphIndex(index);
-        },
-      }));
-
-      const handleParagraphClick = async (index) => {
-        if (loading) return;
-
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-
-        const popupWidth = 280;
-        const popupHeight = 240;
-
-        let x = event.clientX;
-        let y = event.clientY;
-
-        if (y - popupHeight < 0) {
-          y = popupHeight;
-        }
-
-        if (x - popupWidth < 0) {
-          x = popupWidth / 2;
-        }
-
-        setPopupPosition({ x, y });
-        setPopupVisible(true);
-        setSelectedParagraphIndex(index);
-      };
-
-      const handlePromptSubmit = async () => {
-        if (loading || selectedParagraphIndex === null) return;
-
-        setMsgLoading(true);
-        setPopupVisible(false);
-        const paragraph = updatedParagraphs[selectedParagraphIndex];
-        let response = await onParagraphUpdate(
-          paragraph,
-          paraUpdatePrompt,
-          message.content
-        );
-
-        const newParagraphs = [...updatedParagraphs];
-        newParagraphs[selectedParagraphIndex] = response.updatedParagraph;
-        // console.log(response.updatedParagraph);
-        // setUpdatedParagraphs(newParagraphs);
-        setMessages((prevMessages) => {
-          const updatedMessages = [...prevMessages];
-          updatedMessages[msgIndex].content = newParagraphs.join("\n\n");
-          return updatedMessages;
-        });
-
-        setChatSummary(response.summary);
-        setMsgLoading(false);
-
-        setParaUpdatePrompt("");
-      };
-
-      const handlePromptCancel = () => {
-        if (loading || selectedParagraphIndex === null) return;
-        setMsgLoading(false);
-        setPopupVisible(false);
-        setParaUpdatePrompt("");
-        setSelectedParagraphIndex(-1);
-      };
-
-      return (
-        <div className="mb-4 text-left bg-gray-300 w-[90%] lg:w-[50%] flex flex-col">
-          {msgLoading && selectedParagraphIndex === -1 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-75 z-10">
-              <div className="text-center">
-                <span className="loader mb-2">Loading ...</span>
-                <p>Rewriting entire passage...</p>
-              </div>
-            </div>
-          )}
-          {updatedParagraphs.map((paragraph, index) => (
-            <div
-              key={index}
-              className={`inline-block p-4 pr-10 rounded-lg mb-4 cursor-pointer relative transition-all duration-300 ease-in-out transform hover:scale-105 text-white shadow-lg ${
-                selectedParagraphIndex === index
-                  ? "bg-gradient-to-r from-green-400 to-blue-400 border-l-4 border-green-500"
-                  : "bg-gradient-to-r from-purple-500 to-pink-600"
-              }`}
-              onClick={() => handleParagraphClick(index)}
-            >
-              {msgLoading && selectedParagraphIndex == index && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-50">
-                  <span className="loader">Loading ...</span>
-                </div>
-              )}
-              <ReactMarkdown>{paragraph}</ReactMarkdown>
-            </div>
-          ))}
-          <InputPopup
-            position={popupPosition}
-            visible={popupVisible}
-            onClose={handlePromptCancel}
-            onSubmit={handlePromptSubmit}
-            promptValue={paraUpdatePrompt}
-            setPromptValue={setParaUpdatePrompt}
-            placeholder="Enter your prompt to update selected paragraph"
-            submitLabel="Submit"
-            cancelLabel="Cancel"
-          />
-        </div>
-      );
-    }
-  );
-
-  const UserMessage = ({
-    message,
-    msgIndex,
-    onPassageUpdate,
-    aiMessageRef,
-  }) => {
-    const [userMsg, setUserMsg, prevUserMsg] = useVersionedState(
-      message.content
-    );
-    const [rewritePopupVisible, setRewritePopupVisible] = useState(false);
-    const [instruction, setInstruction] = useState("");
-
-    const handleRewritePromptSubmit = async () => {
-      if (loading) return;
-
-      setRewritePopupVisible(false);
-
-      if (aiMessageRef.current) {
-        aiMessageRef.current.updateMsgLoading(true);
-        aiMessageRef.current.updatedSelectedParagraphIndex(-1);
-      }
-
-      let response = await onPassageUpdate(instruction, msgIndex, userMsg);
-
-      let refinedSummary = response.summary;
-      setChatSummary(refinedSummary);
-      // console.log(refinedSummary);
-
-      let refinedUserPrompt = response.refinedUserPrompt;
-      // console.log(refinedUserPrompt);
-      setUserMsg(refinedUserPrompt);
-
-      setMessages((prevMessages) => {
-        const updatedMessages = [...prevMessages];
-        updatedMessages[msgIndex - 1].content = response.updatedPassage;
-        updatedMessages[msgIndex].content = refinedUserPrompt;
-        return updatedMessages;
+        body: JSON.stringify({
+          prompt: input,
+          system_prompt: systemPrompt,
+          examples: previousResponses,
+          parameters: parametersString,
+        }),
       });
-      // setInstruction("");
-    };
 
-    return (
-      <div className={`mb-4 w-50 text-right`}>
-        <div
-          className={`inline-block p-4 pr-10 w-[90%] lg:w-[50%] rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg relative `}
-        >
-          <VersionedText text={{ current: userMsg, previous: prevUserMsg }} />
-          <button
-            className="absolute bottom-4 right-4 p-3 bg-orange-500 text-white rounded-full flex items-center justify-center hover:bg-orange-600 transition duration-300 ease-in-out shadow-md"
-            onClick={() => setRewritePopupVisible(true)}
-          >
-            <FaEdit size={20} />
-          </button>
-        </div>
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let partialText = "";
+      while (true) {
+        const { done, value } = await reader.read();
 
-        <InputPopup
-          position={{ x: window.innerWidth / 2, y: window.innerHeight / 2 }} // Center the popup
-          visible={rewritePopupVisible}
-          onClose={() => setRewritePopupVisible(false)}
-          onSubmit={handleRewritePromptSubmit}
-          promptValue={instruction}
-          setPromptValue={setInstruction}
-          placeholder="Enter your instruction to rewrite the passage"
-          submitLabel="Rewrite"
-          cancelLabel="Cancel"
-        />
-      </div>
-    );
+        if (done) {
+          console.log("Stream complete");
+
+          break;
+        }
+
+        partialText += decoder.decode(value, { stream: true });
+        const lines = partialText.split("\n\n");
+        partialText = lines.pop();
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            let chunk = line.replace("data: ", "");
+            if (chunk.startsWith("[DONE]")) {
+              // console.log("Final response:", chunk.replace("[DONE] ", ""));
+              console.log(chunk);
+              setMessages((prevMessages) =>
+                prevMessages.map((msg, index) =>
+                  index === 0
+                    ? {
+                        ...msg,
+                        content: msg.content + " " + chunk,
+                        streaming: false,
+                      }
+                    : msg
+                )
+              );
+            } else {
+              // console.log("Partial response:", chunk);
+              chunk += "\n\n";
+              // const aiResponse = {
+              //   role: "ai",
+              //   content: data.passage,
+              //   summary: data.summary,
+              // };
+              // setMessages([aiResponse, userMessage, ...messages]);
+              setMessages((prevMessages) =>
+                prevMessages.map((msg, index) =>
+                  index === 0
+                    ? {
+                        ...msg,
+                        content: msg.content + " " + chunk,
+                        streaming: true,
+                      }
+                    : msg
+                )
+              );
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching AI response:", error);
+      // const aiErrorResponse = {
+      //   role: "ai",
+      //   content: "Sorry, something went wrong. Please try again later.",
+      // };
+      // setMessages([...messages, userMessage, aiErrorResponse]);
+    } finally {
+      // setLoading(false);
+    }
   };
+
+  const sendTestStreamingResponse = () => {
+    const userMessage = {
+      role: "user",
+      content: "Alex is talking with his friend Samuel",
+    };
+    setMessages([userMessage, ...messages]);
+
+    generateAssistantResponse(userMessage.content, systemPrompt, [], "");
+  };
+
+  const simulateStreamingResponse = () => {
+    // Simulate adding paragraphs to the first message after 1 second
+    const interval = setInterval(() => {
+      setMessages((prevMessages) => {
+        if (prevMessages.length === 0) {
+          let userChat = {
+            role: "user",
+            content: "Alex is talking with his friend Layla",
+          };
+          let aiChat = {
+            role: "ai",
+            content: "AI is responding to Alex's conversation",
+            streaming: true,
+          };
+          return [userChat, aiChat];
+        }
+
+        if (
+          prevMessages.length > 0 &&
+          prevMessages[1].content.split("\n\n").length < 14
+        ) {
+          // Add more paragraphs
+          let exampleParagraph = `Elena hesitated at the threshold, her fingers trembling as they traced the outline of the faded brass doorknob. The wooden door creaked open with a groan, echoing through the silent corridors like a long-forgotten sigh. Dust motes danced in the pale light filtering through the cracked windows, casting a hazy veil over the once-vibrant home. Her breath caught in her throat as she stepped inside, the floorboards beneath her`;
+
+          let paragraphText = `Added paragraph ${
+            prevMessages[1].content.split("\n\n").length
+          } - ${exampleParagraph}`;
+
+          const aiMessage = {
+            role: "ai",
+            content: prevMessages[1].content + "\n\n" + paragraphText,
+            streaming:
+              prevMessages[1].content.split("\n\n").length == 13 ? false : true,
+          };
+
+          const newMessages = [...prevMessages];
+          newMessages[1] = aiMessage;
+
+          return newMessages;
+        } else {
+          clearInterval(interval);
+          return prevMessages;
+        }
+      });
+    }, 1000);
+  };
+
+  // const AIMessage = React.forwardRef(
+  //   ({ message, msgIndex, onParagraphUpdate }, ref) => {
+  //     const [updatedParagraphs, setUpdatedParagraphs] = useState(
+  //       message.content.split("\n\n")
+  //     );
+  //     const [popupVisible, setPopupVisible] = useState(false);
+  //     const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });
+  //     const [paraUpdatePrompt, setParaUpdatePrompt] = useState("");
+  //     const [selectedParagraphIndex, setSelectedParagraphIndex] =
+  //       useState(null);
+  //     const [msgLoading, setMsgLoading] = useState(false);
+
+  //     const messageRef = useRef(null);
+  //     const scrollPosition = useRef(0);
+
+  //     useEffect(() => {
+  //       if (messageRef.current) {
+  //         scrollPosition.current = messageRef.current.scrollTop;
+  //       }
+  //     }, [updatedParagraphs]);
+
+  //     useEffect(() => {
+  //       if (messageRef.current) {
+  //         messageRef.current.scrollTop = scrollPosition.current;
+  //       }
+  //     }, [updatedParagraphs]);
+
+  //     useEffect(() => {
+  //       // console.log("init AIMessage");
+  //     }, []);
+
+  //     React.useImperativeHandle(ref, () => ({
+  //       updateMsgLoading(loading) {
+  //         setMsgLoading(loading);
+  //       },
+  //       updatedSelectedParagraphIndex(index) {
+  //         setSelectedParagraphIndex(index);
+  //       },
+  //     }));
+
+  //     const handleParagraphClick = async (index) => {
+  //       if (loading) return;
+
+  //       const viewportWidth = window.innerWidth;
+  //       const viewportHeight = window.innerHeight;
+
+  //       const popupWidth = 280;
+  //       const popupHeight = 240;
+
+  //       let x = event.clientX;
+  //       let y = event.clientY;
+
+  //       if (y - popupHeight < 0) {
+  //         y = popupHeight;
+  //       }
+
+  //       if (x - popupWidth < 0) {
+  //         x = popupWidth / 2;
+  //       }
+
+  //       setPopupPosition({ x, y });
+  //       setPopupVisible(true);
+  //       setSelectedParagraphIndex(index);
+  //     };
+
+  //     const handlePromptSubmit = async () => {
+  //       if (loading || selectedParagraphIndex === null) return;
+
+  //       setMsgLoading(true);
+  //       setPopupVisible(false);
+  //       const paragraph = updatedParagraphs[selectedParagraphIndex];
+  //       let response = await onParagraphUpdate(
+  //         paragraph,
+  //         paraUpdatePrompt,
+  //         message.content
+  //       );
+
+  //       const newParagraphs = [...updatedParagraphs];
+  //       newParagraphs[selectedParagraphIndex] = response.updatedParagraph;
+  //       // console.log(response.updatedParagraph);
+  //       // setUpdatedParagraphs(newParagraphs);
+  //       setMessages((prevMessages) => {
+  //         const updatedMessages = [...prevMessages];
+  //         updatedMessages[msgIndex].content = newParagraphs.join("\n\n");
+  //         return updatedMessages;
+  //       });
+
+  //       setChatSummary(response.summary);
+  //       setMsgLoading(false);
+
+  //       setParaUpdatePrompt("");
+  //     };
+
+  //     const handlePromptCancel = () => {
+  //       if (loading || selectedParagraphIndex === null) return;
+  //       setMsgLoading(false);
+  //       setPopupVisible(false);
+  //       setParaUpdatePrompt("");
+  //       setSelectedParagraphIndex(-1);
+  //     };
+
+  //     return (
+  //       <div className="mb-4 text-left bg-gray-300 w-[90%] lg:w-[50%] flex flex-col">
+  //         {msgLoading && selectedParagraphIndex === -1 && (
+  //           <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-75 z-10">
+  //             <div className="text-center">
+  //               <FaSpinner className="animate-spin text-gray-600" size={32} />
+  //             </div>
+  //           </div>
+  //         )}
+  //         {updatedParagraphs.map(
+  //           (paragraph, index) =>
+  //             paragraph !== "" && (
+  //               <div
+  //                 key={index}
+  //                 className={`inline-block p-4 pr-10 rounded-lg mb-4 cursor-pointer relative transition-all duration-300 ease-in-out transform hover:scale-105 text-white shadow-lg ${
+  //                   selectedParagraphIndex === index
+  //                     ? "bg-gradient-to-r from-green-400 to-blue-400 border-l-4 border-green-500"
+  //                     : "bg-gradient-to-r from-purple-500 to-pink-600"
+  //                 }`}
+  //                 onClick={() => handleParagraphClick(index)}
+  //               >
+  //                 {msgLoading && selectedParagraphIndex == index && (
+  //                   <div className="absolute inset-0 flex items-center justify-center bg-gray-300 bg-opacity-50">
+  //                     <FaSpinner
+  //                       className="animate-spin text-gray-600"
+  //                       size={32}
+  //                     />
+  //                   </div>
+  //                 )}
+  //                 <ReactMarkdown>{paragraph}</ReactMarkdown>
+  //               </div>
+  //             )
+  //         )}
+
+  //       </div>
+  //     );
+  //   }
+  // );
+
+  // const UserMessage = ({
+  //   message,
+  //   msgIndex,
+  //   onPassageUpdate,
+  //   aiMessageRef,
+  // }) => {
+  //   const [userMsg, setUserMsg, prevUserMsg] = useVersionedState(
+  //     message.content
+  //   );
+  //   const [rewritePopupVisible, setRewritePopupVisible] = useState(false);
+  //   const [instruction, setInstruction] = useState("");
+
+  //   const handleRewritePromptSubmit = async () => {
+  //     if (loading) return;
+
+  //     setRewritePopupVisible(false);
+
+  //     if (aiMessageRef.current) {
+  //       aiMessageRef.current.updateMsgLoading(true);
+  //       aiMessageRef.current.updatedSelectedParagraphIndex(-1);
+  //     }
+
+  //     let response = await onPassageUpdate(instruction, msgIndex, userMsg);
+
+  //     let refinedSummary = response.summary;
+  //     setChatSummary(refinedSummary);
+  //     // console.log(refinedSummary);
+
+  //     let refinedUserPrompt = response.refinedUserPrompt;
+  //     // console.log(refinedUserPrompt);
+  //     setUserMsg(refinedUserPrompt);
+
+  //     setMessages((prevMessages) => {
+  //       const updatedMessages = [...prevMessages];
+  //       updatedMessages[msgIndex - 1].content = response.updatedPassage;
+  //       updatedMessages[msgIndex].content = refinedUserPrompt;
+  //       return updatedMessages;
+  //     });
+  //     // setInstruction("");
+  //   };
+
+  // };
+
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(null);
 
   const ChatComponent = ({ messages }) => {
     const aiMessageRef = useRef(null);
@@ -386,18 +494,76 @@ She gently closed the music box, the finality of the action echoing in the still
       return data;
     };
 
+    const MessageComponent = ({ paragraphs, isLoading }) => {
+      return (
+        <div className="p-4 border-b border-gray-200">
+          {paragraphs.map((paragraph, index) => (
+            <p key={index} className="h-32 text-gray-800 mb-2">
+              {paragraph}
+            </p>
+          ))}
+          {isLoading && (
+            <div className="mt-2 flex justify-center">
+              <FaSpinner className="animate-spin text-gray-600" size={32} />
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    //simulate adding streaming ai messages
+    useEffect(() => {
+      const interval = setInterval(() => {
+        if (messages.length == 0) {
+          //add initial message
+        }
+        if (
+          messages.length > 0 &&
+          messages[0].content.split("\n\n").length < 14
+        ) {
+          //add more paragraphs
+          setLoadingMessageIndex(0);
+          let exampleParagraph = `Elena hesitated at the threshold, her fingers trembling as they traced the outline of the faded brass doorknob. The wooden door creaked open with a groan, echoing through the silent corridors like a long-forgotten sigh. Dust motes danced in the pale light filtering through the cracked windows, casting a hazy veil over the once-vibrant home. Her breath caught in her throat as she stepped inside, the floorboards beneath her`;
+
+          let paragraphText = `Added paragraph ${
+            messages[0].content.split("\n\n").length
+          } - ${exampleParagraph}`;
+          const aiMessage = {
+            role: "ai",
+            content: messages[0].content + "\n\n" + paragraphText,
+          };
+          //set message at index 0
+          setMessages((prevMessages) => {
+            const newMessages = [...prevMessages];
+            newMessages[0] = aiMessage;
+            return newMessages;
+          });
+        } else {
+          clearInterval(interval);
+        }
+        setLoadingMessageIndex(null);
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }, [messages]);
+
     return (
       <div>
         {messages.map((msg, index) =>
           msg.role === "ai" ? (
-            <AIMessage
+            <MessageComponent
               key={index}
-              message={msg}
-              msgIndex={index}
-              onParagraphUpdate={onParagraphUpdate}
-              ref={aiMessageRef}
+              paragraphs={msg.content.split("\n\n")}
+              isLoading={loadingMessageIndex === index}
             />
           ) : (
+            // <AIMessage
+            //   key={index}
+            //   message={msg}
+            //   msgIndex={index}
+            //   onParagraphUpdate={onParagraphUpdate}
+            //   ref={aiMessageRef}
+            // />
             <UserMessage
               key={index}
               message={msg}
@@ -764,21 +930,14 @@ She gently closed the music box, the finality of the action echoing in the still
     };
 
     return (
-      <div className="h-[calc(100vh-8rem)] w-screen flex flex-col bg-gray-100 mt-2">
-        <div
+      <div>
+        {/* <div
           className={`flex-grow flex flex-col overflow-y-auto p-4 border border-red-300 shadow-lg rounded-lg transition-all duration-300 ${
             isChatInputVisible
               ? "max-h-[calc(100vh-19rem)]"
               : "max-h-[calc(100vh-9rem)]"
           }`}
         >
-          {loading && (
-            <div className="mb-4 text-left">
-              <div className="inline-block p-2 rounded-lg bg-gray-300 text-black">
-                Loading...
-              </div>
-            </div>
-          )}
           {messages.length > 0 ? (
             <ChatComponent messages={messages} />
           ) : (
@@ -786,7 +945,7 @@ She gently closed the music box, the finality of the action echoing in the still
               No messages yet.
             </div>
           )}
-        </div>
+        </div> */}
 
         {isChatInputVisible && (
           <div className="p-2 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-300 border border-gray-300 shadow-xl rounded-2xl ">
@@ -827,6 +986,35 @@ She gently closed the music box, the finality of the action echoing in the still
     );
   };
 
+  const onParagraphUpdate = async (msgIndex, paraIndex, instruction) => {
+    let fullMessage = messages[msgIndex].content;
+    let paragraph = messages[msgIndex].content.split("\n\n")[paraIndex];
+    // Replace this with the actual server call
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/paragraph`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        paragraph,
+        updatePrompt: instruction,
+        fullMessage: fullMessage,
+        previousSummary: chatSummary,
+      }),
+    });
+
+    const data = await response.json();
+    const newParagraphs = fullMessage.split("\n\n");
+    newParagraphs[paraIndex] = data.updatedParagraph;
+
+    setMessages((prevMessages) => {
+      const updatedMessages = [...prevMessages];
+      updatedMessages[msgIndex].content = newParagraphs.join("\n\n");
+      return updatedMessages;
+    });
+    return data;
+  };
+
   return (
     <div className="flex flex-grow bg-gray-100 h-full">
       <SideBar
@@ -834,7 +1022,27 @@ She gently closed the music box, the finality of the action echoing in the still
         onNewChat={onNewChat}
         onLoadChat={onLoadChat}
       />
-      <ChatLayout handleSend={handleSend} />
+
+      <div className="h-[calc(100vh-8rem)] w-screen flex flex-col bg-gray-100 mt-2">
+        <div
+          className={`flex-grow flex flex-col overflow-y-auto p-4 border border-red-300 shadow-lg rounded-lg transition-all duration-300 max-h-[calc(100vh-19rem)]`}
+        >
+          {messages.map((msg, index) =>
+            msg.role === "ai" ? (
+              <AssistantChat
+                key={index}
+                msgIndex={index}
+                paragraphs={msg.content.split("\n\n")}
+                streaming={msg.streaming}
+                onParagraphUpdate={onParagraphUpdate}
+              />
+            ) : (
+              <UserChat key={index} paragraphs={msg.content.split("\n\n")} />
+            )
+          )}
+        </div>
+        <ChatLayout handleSend={handleSend} />
+      </div>
     </div>
   );
 }

@@ -11,7 +11,8 @@ import store from "./stores";
 import MainLayout from "./MainLayout";
 
 import BottomNavigation from "./components/BottomNavigation";
-import HomePage from "./pages/HomePage";
+import HomePage from "./pages/home/HomePage";
+import TestPage from "./pages/TestPage";
 import Login from "./pages/Login";
 
 function App() {

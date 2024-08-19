@@ -3,7 +3,7 @@ import logging
 import time
 import json
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify,Response, stream_with_context
 from flask_cors import CORS
 from openai import OpenAI
 
@@ -170,11 +170,72 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
             model=model,
         )
         return chat_completion.choices[0].message.content
-        # return "Test Response"
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return "An error occurred while processing the request."
+
+def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
+    client = OpenAI(
+        api_key=openai_api_key,
+        base_url=openai_api_base,
+    )
+    if(prompt is None or len(prompt) == 0):
+        yield "Please provide a valid prompt."
+        return
+    model = "hermes-3-llama-3.1-405b-fp8"
+    print(system_prompt[:10])
+    system_prompt = system_prompt + "\n\n" + parameters
+    messages = []
+    messages.append({
+        "role": "system",
+        "content": system_prompt
+    })
+
+    if examples is not None or len(examples) > 0:
+        for example in examples:
+            messages.append({
+                "role": "user",
+                "content": example["user"]
+            })
+            messages.append({
+                "role": "assistant",
+                "content": example["assistant"]
+            })
+
+    #add user prompt
+    messages.append({
+        "role": "user",
+        "content": prompt
+    })
+
+    print(messages)
+    
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model=model,
+            stream=True
+        )
+
+        final_response = ""
+        paragraph = ""
+        for chunk in chat_completion:
+            # print(chunk.choices[0].delta)
+            # print(chunk.choices[0].delta.content)
+            msg = chunk.choices[0].delta.content or ""
+            paragraph += msg
+            if "\n\n" in msg:
+                # print(paragraph)
+                final_response += paragraph
+                yield paragraph
+                paragraph = ""
+        print(final_response)
+        # return chat_completion.choices[0].message.content
+        yield "[DONE] " + final_response
     except Exception as e:
         # Handle the exception (log it, re-raise it, return an error message, etc.)
         print(f"An error occurred: {e}")
-        return "An error occurred while processing the request."
+        yield "An error occurred while processing the request."
 
 def generate_summary(passage, previous_summary=None):
     #Generate Summary
@@ -203,9 +264,19 @@ def generate_hermes():
     system_prompt = data.get('system_prompt')
     examples = data.get('examples')
     parameters = data.get('parameters')
-    result = hermes_ai_output(prompt, system_prompt, examples, parameters)
+
+    def generate():
+        try:
+            for chunk in hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
+                yield f"data: {chunk}\n\n"
+        except Exception as e:
+            yield f"data: An error occurred: {e}\n\n"
+
+    # result = hermes_ai_output(prompt, system_prompt, examples, parameters)
     # result = "Test Response"
-    summary = generate_summary(result)
+    # summary = generate_summary(result)
+
+    return Response(stream_with_context(generate()), content_type='text/event-stream')
     return jsonify({'prompt': prompt, 'passage': result, 'summary': summary})
 
 @app.route("/passage", methods=["POST"])
