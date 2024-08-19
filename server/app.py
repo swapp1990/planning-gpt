@@ -269,6 +269,30 @@ Only return the updated paragraph as the response. DO NOT INCLUDE any introducto
     summary = generate_summary(replacedFullPassage, previousSummary)
     return jsonify({'updatedParagraph': result, 'summary': summary})
 
+CHAT_HISTORY_FILE = 'chat_history.json'
+@app.route('/history/save', methods=['POST'])
+def save_chat_history():
+    data = request.json  # Get JSON data from request
+    try:
+        with open(CHAT_HISTORY_FILE, 'w') as f:
+            json.dump(data, f, indent=4)
+        return jsonify({"message": "Chat history saved successfully!"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# Endpoint to load chat history
+@app.route('/history/load', methods=['GET'])
+def load_chat_history():
+    try:
+        if os.path.exists(CHAT_HISTORY_FILE):
+            with open(CHAT_HISTORY_FILE, 'r') as f:
+                chat_history = json.load(f)
+            return jsonify(chat_history), 200
+        else:
+            return jsonify({"error": "No chat history found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 def load_prompts():
     with open('system_prompts.json', 'r') as f:
         return json.load(f)

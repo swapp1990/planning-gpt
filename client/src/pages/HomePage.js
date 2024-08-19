@@ -1,6 +1,12 @@
 import React, { useState, useRef, useEffect } from "react";
 import { FiMenu } from "react-icons/fi";
-import { FaPaperPlane, FaEdit, FaKeyboard, FaRegFileAlt } from "react-icons/fa";
+import {
+  FaPaperPlane,
+  FaEdit,
+  FaKeyboard,
+  FaRegFileAlt,
+  FaSave,
+} from "react-icons/fa";
 import ReactMarkdown from "react-markdown";
 
 import InputPopup from "../components/InputPopup";
@@ -422,30 +428,52 @@ She gently closed the music box, the finality of the action echoing in the still
       onLoadChat(chat);
     };
 
-    const handleSaveHistory = () => {
-      const json = JSON.stringify(chatHistory, null, 2);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "chat_history.json";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      console.log("Chat history saved!");
+    const handleSaveHistory = async () => {
+      try {
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/history/save`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(chatHistory),
+          }
+        );
+
+        if (response.ok) {
+          console.log("Chat history saved!");
+        } else {
+          console.error("Failed to save chat history:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error saving chat history:", error);
+      }
     };
 
-    const handleLoadHistory = (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const loadedHistory = JSON.parse(e.target.result);
-          console.log(loadedHistory);
-          setChatHistory(loadedHistory);
-          // onLoadChat(loadedHistory);
-        };
-        reader.readAsText(file);
+    const handleLoadHistory = async () => {
+      //stop event propagation
+
+      try {
+        const response = await fetch(
+          `${process.env.REACT_APP_API_URL}/history/load`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setChatHistory(data);
+          console.log("Chat history loaded!");
+        } else {
+          console.error("Failed to load chat history:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error loading chat history:", error);
       }
     };
 
@@ -494,23 +522,22 @@ She gently closed the music box, the finality of the action echoing in the still
           <div className="p-4 bg-gray-300 flex justify-between items-center">
             <button
               className="p-2 bg-green-500 text-white rounded-lg"
-              onClick={handleSaveHistory}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleSaveHistory();
+              }}
             >
               Save History
             </button>
-            <input
-              type="file"
-              accept=".json"
-              className="hidden"
-              id="load-history"
-              onChange={handleLoadHistory}
-            />
-            <label
-              htmlFor="load-history"
-              className="p-2 bg-purple-500 text-white rounded-lg cursor-pointer"
+            <button
+              className="p-2 bg-blue-500 text-white rounded-lg"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLoadHistory();
+              }}
             >
               Load History
-            </label>
+            </button>
           </div>
         </div>
       </div>
@@ -706,6 +733,16 @@ She gently closed the music box, the finality of the action echoing in the still
       setIsChatSummaryVisible((prev) => !prev);
     };
 
+    const saveChat = () => {
+      if (messages.length > 0 && messages.some((msg) => msg.role === "ai")) {
+        setChatHistory([]);
+        setChatHistory((prevHistory) => [
+          ...prevHistory,
+          { id: Date.now(), messages: [...messages], summary: chatSummary },
+        ]);
+      }
+    };
+
     return (
       <div className="h-[calc(100vh-8rem)] w-screen flex flex-col bg-gray-100 mt-2">
         <div
@@ -758,6 +795,13 @@ She gently closed the music box, the finality of the action echoing in the still
           onClick={toggleChatSummary}
         >
           <FaRegFileAlt size={20} />
+        </button>
+
+        <button
+          className={`fixed top-40 right-4 p-3 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 ease-in-out bg-white text-gray-700 border border-gray-300`}
+          onClick={saveChat}
+        >
+          <FaSave size={20} />
         </button>
       </div>
     );
