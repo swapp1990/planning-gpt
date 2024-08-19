@@ -22,9 +22,7 @@ function HomePage() {
   const [chatSummary, setChatSummary, previousChatSummary] =
     useVersionedState("Test Summary");
   const [loading, setLoading] = useState(false);
-  const [systemPrompt, setSystemPrompt] = useState(
-    "You are a default test agent."
-  );
+  const [systemPrompts, setSystemPrompts] = useState([]);
   const [chatType, setChatType] = useState("writing_assistant");
   const [parameters, setParameters] = useState([]);
 
@@ -55,7 +53,7 @@ She gently closed the music box, the finality of the action echoing in the still
   }, []);
 
   const init = async () => {
-    await loadSystemPrompt(chatType);
+    await loadSystemPrompts(chatType);
 
     // simulateStreamingResponse();
 
@@ -64,7 +62,7 @@ She gently closed the music box, the finality of the action echoing in the still
     }, 1000);
   };
 
-  const loadSystemPrompt = async (chatType) => {
+  const loadSystemPrompts = async (chatType) => {
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/prompt/system?type=${chatType}`,
@@ -76,8 +74,14 @@ She gently closed the music box, the finality of the action echoing in the still
         }
       );
       const data = await response.json();
-      setSystemPrompt(data.prompt);
-      setParameters(data.parameters);
+      setSystemPrompts(data.prompts);
+      let parameters = [];
+      parameters.push({
+        title: "System Prompts",
+        points: data.prompts,
+      });
+      parameters = [...parameters, ...data.parameters];
+      setParameters(parameters);
     } catch (error) {
       console.error("Error fetching system prompt:", error);
     }
@@ -106,7 +110,7 @@ She gently closed the music box, the finality of the action echoing in the still
       //   previousResponses.push({ assistant: assistantResponses[i] });
       // }
 
-      generateAssistantResponse(input, systemPrompt, previousResponses, "");
+      generateAssistantResponse(input, systemPrompts[0], previousResponses, "");
     }
   };
 
@@ -997,7 +1001,8 @@ She gently closed the music box, the finality of the action echoing in the still
       },
       body: JSON.stringify({
         paragraph,
-        updatePrompt: instruction,
+        systemPrompt: systemPrompts[0] + "\n" + systemPrompts[1],
+        instruction: instruction,
         fullMessage: fullMessage,
         previousSummary: chatSummary,
       }),

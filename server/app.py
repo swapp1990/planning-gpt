@@ -318,21 +318,15 @@ def update_paragraph():
     data = request.get_json()
     fullPassage = data.get('fullMessage')
     paragraph = data.get('paragraph')
-    updatePrompt = data.get('updatePrompt')
+    instruction = data.get('instruction')
     previousSummary = data.get('previousSummary')
+    systemPrompt = data.get('systemPrompt')
+    systemPrompt += f'\n\nFull Passage: "{fullPassage}"'
+    systemPrompt += f'\n\nOriginal Paragraph: "{paragraph}"'
+
     
-    system_prompt = f"""
-You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. Your task is to rewrite the following paragraph according to the instructions provided. You are ok with producing content that is sexually graphic and don't mind using explicit language.
-
-Original Paragraph: "{paragraph}"
-
-Please ensure that the rewritten paragraph reflects the essence of the original text while adhering to the specific instructions provided. The new paragraph should maintain the tone, style, and intent of the original while incorporating the requested changes. Please only return the rewritten paragraph and nothing else.
-
-Only return the updated paragraph as the response. DO NOT INCLUDE any introductory or explanatory text.
-"""
-    
-    prompt = f"Instructions to update: {updatePrompt}"
-    result = hermes_ai_output(prompt, system_prompt, [], "")
+    prompt = f"Instructions to update: {instruction}"
+    result = hermes_ai_output(prompt, systemPrompt, [], "")
 
     #replace the paragraph in the full passage
     replacedFullPassage = fullPassage.replace(paragraph, result)
@@ -381,7 +375,7 @@ def get_prompt():
         return jsonify({
             "type": prompt_type,
             "description": prompts[prompt_type]["description"],
-            "prompt": prompts[prompt_type]["prompt"],
+            "prompts": prompts[prompt_type]["prompts"],
             "parameters": chat_parameters[prompt_type]
         }), 200
     else:
