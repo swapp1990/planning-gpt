@@ -12,6 +12,7 @@ import MainLayout from "./MainLayout";
 
 import BottomNavigation from "./components/BottomNavigation";
 import HomePage from "./pages/home/HomePage";
+import BookView from "./pages/ebook/BookView";
 import TestPage from "./pages/TestPage";
 import Login from "./pages/Login";
 
@@ -23,7 +24,7 @@ function App() {
           <MainLayout>
             <Switch>
               <Route path="/login" component={Login} />
-              <Route path="/" exact component={HomePage} />
+              <Route path="/" exact component={BookView} />
             </Switch>
           </MainLayout>
         </Router>
