@@ -171,7 +171,7 @@ const Paragraph = ({
   paragraphIndex,
 }) => {
   return (
-    <div className={`mb-4 ${isSelected ? "bg-blue-50 rounded-t-lg" : ""}`}>
+    <div className={`mb-0 ${isSelected ? "bg-blue-50 rounded-t-lg" : ""}`}>
       <p
         className={`p-2 rounded-t-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer`}
         onClick={() => onSelect(chapterId, paragraphIndex)}

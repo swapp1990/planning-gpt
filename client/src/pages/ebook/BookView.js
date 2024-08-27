@@ -14,9 +14,14 @@ import Chapter from "./Chapter";
 import Sidebar from "./Sidebar";
 
 function BookView() {
+  const [chatType, setChatType] = useState("writing_assistant");
+  const [systemPrompts, setSystemPrompts] = useState([]);
+  const [parameters, setParameters] = useState([]);
+
   const [currentChapter, setCurrentChapter] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedParagraphs, setSelectedParagraphs] = useState({});
+
   const totalChapters = 10;
   const chapterRefs = useRef([]);
 
@@ -41,12 +46,47 @@ function BookView() {
   );
 
   useEffect(() => {
+    console.log("init BookView");
+    init();
+  }, []);
+
+  useEffect(() => {
     if (chapterRefs.current[currentChapter - 1]) {
       chapterRefs.current[currentChapter - 1].scrollIntoView({
         behavior: "smooth",
       });
     }
   }, [currentChapter]);
+
+  const init = async () => {
+    await loadSystemPrompts(chatType);
+  };
+
+  const loadSystemPrompts = async (chatType) => {
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/prompt/system?type=${chatType}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      const data = await response.json();
+      setSystemPrompts(data.prompts);
+      console.log(data.prompts);
+      let parameters = [];
+      parameters.push({
+        title: "System Prompts",
+        points: data.prompts,
+      });
+      parameters = [...parameters, ...data.parameters];
+      setParameters(parameters);
+    } catch (error) {
+      console.error("Error fetching system prompt:", error);
+    }
+  };
 
   const navigateChapter = (chapterNumber) => {
     setCurrentChapter(chapterNumber);
@@ -98,27 +138,51 @@ function BookView() {
     console.log("Paragraph index:", paragraphIndex);
     console.log("With prompt:", prompt);
 
-    await new Promise((resolve) => {
-      setTimeout(() => {
-        const data = { paragraph: prompt };
-        setChapters((prevChapters) => {
-          const newChapters = [...prevChapters];
-          const chapterIndex = newChapters.findIndex(
-            (chapter) => chapter.id === chapterId
-          );
-          if (chapterIndex !== -1) {
-            const paragraphs = newChapters[chapterIndex].content.split("\n\n");
-            paragraphs[paragraphIndex] = data.paragraph;
-            newChapters[chapterIndex].content = paragraphs.join("\n\n");
-          }
-          return newChapters;
-        });
-        closeMenu(chapterId);
-        resolve();
-      }, 2000);
-    });
+    let paragraph =
+      chapters[chapterId - 1].content.split("\n\n")[paragraphIndex];
+    console.log(paragraph);
 
-    return { newParagraph: prompt };
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/paragraph`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paragraph,
+            systemPrompt: systemPrompts[0] + "\n" + systemPrompts[1],
+            instruction: prompt,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      console.log(data);
+      if (data.updatedParagraph === undefined) {
+        return { error: "ERror" };
+      }
+
+      setChapters((prevChapters) => {
+        const newChapters = [...prevChapters];
+        const chapterIndex = newChapters.findIndex(
+          (chapter) => chapter.id === chapterId
+        );
+        if (chapterIndex !== -1) {
+          const paragraphs = newChapters[chapterIndex].content.split("\n\n");
+          paragraphs[paragraphIndex] = data.updatedParagraph;
+          newChapters[chapterIndex].content = paragraphs.join("\n\n");
+        }
+        return newChapters;
+      });
+      closeMenu(chapterId);
+
+      return { newParagraph: data.updatedParagraph };
+    } catch (error) {
+      console.error("Error fetching rewritten paragraph:", error);
+      return { error: "ERror" };
+    }
   };
 
   const closeMenu = (chapterId) => {

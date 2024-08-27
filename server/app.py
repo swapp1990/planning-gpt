@@ -316,22 +316,25 @@ Based on Updated Instructions, rewrite the original user prompt, keeping the con
 def update_paragraph():
     print("Update paragraph")
     data = request.get_json()
-    fullPassage = data.get('fullMessage')
+    # fullPassage = data.get('fullMessage')
     paragraph = data.get('paragraph')
     instruction = data.get('instruction')
-    previousSummary = data.get('previousSummary')
+    # previousSummary = data.get('previousSummary')
     systemPrompt = data.get('systemPrompt')
-    systemPrompt += f'\n\nFull Passage: "{fullPassage}"'
+    # systemPrompt += f'\n\nFull Passage: "{fullPassage}"'
     systemPrompt += f'\n\nOriginal Paragraph: "{paragraph}"'
 
-    
     prompt = f"Instructions to update: {instruction}"
     result = hermes_ai_output(prompt, systemPrompt, [], "")
 
+    #if result has \n\n then get the following paragraph
+    if "\n\n" in result:
+        result = result.split("\n\n")[1]
+    #     print("Result: ", result)
     #replace the paragraph in the full passage
-    replacedFullPassage = fullPassage.replace(paragraph, result)
-    summary = generate_summary(replacedFullPassage, previousSummary)
-    return jsonify({'updatedParagraph': result, 'summary': summary})
+    # replacedFullPassage = fullPassage.replace(paragraph, result)
+    # summary = generate_summary(replacedFullPassage, previousSummary)
+    return jsonify({'updatedParagraph': result})
 
 CHAT_HISTORY_FILE = 'chat_history.json'
 @app.route('/history/save', methods=['POST'])
