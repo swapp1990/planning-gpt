@@ -17,31 +17,28 @@ function BookView() {
   const [currentChapter, setCurrentChapter] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedParagraphs, setSelectedParagraphs] = useState({});
-  const [isRewriteOpen, setIsRewriteOpen] = useState(false);
   const totalChapters = 10;
   const chapterRefs = useRef([]);
 
   // Sample chapters (unchanged)
-  const chapters = Array.from({ length: totalChapters }, (_, i) => ({
-    id: i + 1,
-    title: `Chapter ${i + 1}`,
-    summary: `This is a detailed summary of Chapter ${
-      i + 1
-    }. It provides an overview of the key points discussed in this chapter, including main ideas, important concepts, and notable events. The summary aims to give readers a quick understanding of the chapter's content before diving into the full text.`.repeat(
-      2
-    ),
-    content: `This is the first paragraph for Chapter ${
-      i + 1
-    }. It introduces the main topic of the chapter and delves into its significance, providing an insightful introduction that sets the stage for the discussion that follows. The complexities of the subject are outlined, with emphasis on how they interconnect with broader themes.\n\n
-  
-	This is the second paragraph. It goes into more detail about the subject matter, exploring various facets of the topic and presenting different perspectives. The paragraph provides in-depth analysis and critical insights, supported by relevant examples and case studies that illustrate the key points.\n\n
-  
-	This is the third paragraph. It provides examples and elaborates on key points, offering a comprehensive examination of the chapter's themes. The discussion is enriched with historical context and contemporary relevance, making connections to related concepts and ideas that enhance the reader's understanding.\n\n
-  
-	This is the fourth paragraph. It starts to wrap up the chapter's content by synthesizing the main arguments and reflecting on their implications. The paragraph highlights the most significant findings and suggests areas for further inquiry or consideration, encouraging readers to think critically about the material.\n\n
-  
-	This is the final paragraph. It summarizes the main takeaways from the chapter, reinforcing the key messages and leaving the reader with a clear understanding of the chapter's core insights. The conclusion ties the chapter back to the overarching themes of the book, providing a sense of closure and continuity as the reader progresses to the next chapter.`,
-  }));
+  const [chapters, setChapters] = useState(
+    Array.from({ length: totalChapters }, (_, i) => ({
+      id: i + 1,
+      title: `Chapter ${i + 1}`,
+      summary: `This is a detailed summary of Chapter ${
+        i + 1
+      }. It provides an overview of the key points discussed in this chapter, including main ideas, important concepts, and notable events. The summary aims to give readers a quick understanding of the chapter's content before diving into the full text.`.repeat(
+        2
+      ),
+      content: `This is the first paragraph for Chapter ${
+        i + 1
+      }. It introduces the main topic of the chapter and delves into its significance, providing an insightful introduction that sets the stage for the discussion that follows. The complexities of the subject are outlined, with emphasis on how they interconnect with broader themes.\n\n
+    This is the second paragraph. It goes into more detail about the subject matter, exploring various facets of the topic and presenting different perspectives. The paragraph provides in-depth analysis and critical insights, supported by relevant examples and case studies that illustrate the key points.\n\n
+    This is the third paragraph. It provides examples and elaborates on key points, offering a comprehensive examination of the chapter's themes. The discussion is enriched with historical context and contemporary relevance, making connections to related concepts and ideas that enhance the reader's understanding.\n\n
+    This is the fourth paragraph. It starts to wrap up the chapter's content by synthesizing the main arguments and reflecting on their implications. The paragraph highlights the most significant findings and suggests areas for further inquiry or consideration, encouraging readers to think critically about the material.\n\n
+    This is the final paragraph. It summarizes the main takeaways from the chapter, reinforcing the key messages and leaving the reader with a clear understanding of the chapter's core insights. The conclusion ties the chapter back to the overarching themes of the book, providing a sense of closure and continuity as the reader progresses to the next chapter.`,
+    }))
+  );
 
   useEffect(() => {
     if (chapterRefs.current[currentChapter - 1]) {
@@ -66,15 +63,62 @@ function BookView() {
       }
       return newSelected;
     });
-    setIsRewriteOpen(false);
   };
 
-  const handleRewrite = (chapterId, paragraphIndex, prompt) => {
+  const handleContParagraph = async (chapterId, paragraphIndex, prompt) => {
+    console.log("Add paragraph in chapter:", chapterId);
+    console.log("Paragraph index:", paragraphIndex);
+    console.log("With prompt:", prompt);
+
+    await new Promise((resolve) => {
+      setTimeout(() => {
+        const data = { paragraph: prompt };
+        setChapters((prevChapters) => {
+          const newChapters = [...prevChapters];
+          const chapterIndex = newChapters.findIndex(
+            (chapter) => chapter.id === chapterId
+          );
+          if (chapterIndex !== -1) {
+            const paragraphs = newChapters[chapterIndex].content.split("\n\n");
+            paragraphs.splice(paragraphIndex + 1, 0, data.paragraph);
+            newChapters[chapterIndex].content = paragraphs.join("\n\n");
+            return newChapters;
+          }
+        });
+        closeMenu(chapterId);
+        resolve();
+      }, 2000);
+    });
+
+    return { newParagraph: prompt };
+  };
+
+  const handleRewrite = async (chapterId, paragraphIndex, prompt) => {
     console.log("Rewrite paragraph in chapter:", chapterId);
     console.log("Paragraph index:", paragraphIndex);
     console.log("With prompt:", prompt);
-    // Implement rewrite logic here
-    closeMenu(chapterId);
+
+    await new Promise((resolve) => {
+      setTimeout(() => {
+        const data = { paragraph: prompt };
+        setChapters((prevChapters) => {
+          const newChapters = [...prevChapters];
+          const chapterIndex = newChapters.findIndex(
+            (chapter) => chapter.id === chapterId
+          );
+          if (chapterIndex !== -1) {
+            const paragraphs = newChapters[chapterIndex].content.split("\n\n");
+            paragraphs[paragraphIndex] = data.paragraph;
+            newChapters[chapterIndex].content = paragraphs.join("\n\n");
+          }
+          return newChapters;
+        });
+        closeMenu(chapterId);
+        resolve();
+      }, 2000);
+    });
+
+    return { newParagraph: prompt };
   };
 
   const closeMenu = (chapterId) => {
@@ -83,7 +127,32 @@ function BookView() {
       delete newSelected[chapterId];
       return newSelected;
     });
-    setIsRewriteOpen(false);
+  };
+
+  const handleAddParagraph = async (chapterId, newParagraphPrompt) => {
+    // Wrap setTimeout in a Promise and await it
+    await new Promise((resolve) => {
+      setTimeout(() => {
+        setChapters((prevChapters) => {
+          const newChapters = [...prevChapters];
+          const chapterIndex = newChapters.findIndex(
+            (chapter) => chapter.id === chapterId
+          );
+          if (chapterIndex !== -1) {
+            const trimmedNewParagraph = newParagraphPrompt.trim();
+            newChapters[chapterIndex].content =
+              newChapters[chapterIndex].content.trim() +
+              `\n\n${trimmedNewParagraph}`;
+            // console.log(newChapters[chapterIndex].content);
+          }
+          return newChapters;
+        });
+        resolve(); // Resolve the promise after the timeout
+      }, 2000);
+    });
+
+    // Return the result after the timeout
+    return { newParagraph: newParagraphPrompt };
   };
 
   const Footer = () => {
@@ -150,10 +219,10 @@ function BookView() {
                 chapter={chapter}
                 onParagraphSelect={handleParagraphSelect}
                 selectedParagraph={selectedParagraphs[chapter.id]}
-                isRewriteOpen={isRewriteOpen}
-                setIsRewriteOpen={setIsRewriteOpen}
                 onRewrite={handleRewrite}
+                onContParagraph={handleContParagraph}
                 onCloseMenu={closeMenu}
+                onAddParagraph={handleAddParagraph}
               />
             ))}
           </div>
