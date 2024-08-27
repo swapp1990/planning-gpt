@@ -10,226 +10,14 @@ import {
   FaCheck,
 } from "react-icons/fa";
 
-const ParagraphMenu = ({
-  onClose,
-  onRewrite,
-  isRewriteOpen,
-  setIsRewriteOpen,
-}) => {
-  const [rewritePrompt, setRewritePrompt] = useState("");
-  const handleRewriteClick = () => {
-    setIsRewriteOpen(!isRewriteOpen);
-  };
-
-  const handleSubmitRewrite = () => {
-    onRewrite(rewritePrompt);
-    setIsRewriteOpen(false);
-    setRewritePrompt("");
-  };
-
-  const handleCancelRewrite = () => {
-    setIsRewriteOpen(false);
-    setRewritePrompt("");
-  };
-  return (
-    <div className="bg-gray-100 p-2 rounded-b-lg border-t border-gray-200">
-      <div className="flex space-x-2 mb-2">
-        <button
-          onClick={handleRewriteClick}
-          className={`p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 ${
-            isRewriteOpen ? "bg-blue-100" : ""
-          }`}
-          title="Rewrite"
-        >
-          <FaPen className="text-blue-500" />
-        </button>
-        <button
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          title="Copy"
-        >
-          <FaCopy className="text-green-500" />
-        </button>
-        <button
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          title="Delete"
-        >
-          <FaTrash className="text-red-500" />
-        </button>
-        <button
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          title="Share"
-        >
-          <FaShareAlt className="text-purple-500" />
-        </button>
-        <button
-          onClick={onClose}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          title="Close"
-        >
-          &times;
-        </button>
-      </div>
-      {isRewriteOpen && (
-        <div className="mt-2">
-          <textarea
-            className="w-full p-2 border rounded-md"
-            rows="3"
-            placeholder="Enter your rewrite prompt..."
-            value={rewritePrompt}
-            onChange={(e) => setRewritePrompt(e.target.value)}
-          />
-          <div className="flex justify-end mt-2 space-x-2">
-            <button
-              onClick={handleCancelRewrite}
-              className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmitRewrite}
-              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 flex items-center"
-            >
-              <FaCheck size={16} className="mr-1" />
-              Submit
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const Paragraph = ({
-  content,
-  onSelect,
-  isSelected,
-  isRewriteOpen,
-  setIsRewriteOpen,
-  onRewrite,
-  onCloseMenu,
-}) => {
-  return (
-    <div className={`mb-2 ${isSelected ? "bg-blue-50 rounded-t-lg" : ""}`}>
-      <p
-        className={`p-2 rounded-t-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer`}
-        onClick={() => onSelect(content)}
-      >
-        {content}
-      </p>
-      {isSelected && (
-        <ParagraphMenu
-          onClose={onCloseMenu}
-          onRewrite={onRewrite}
-          isRewriteOpen={isRewriteOpen}
-          setIsRewriteOpen={setIsRewriteOpen}
-        />
-      )}
-    </div>
-  );
-};
-
-const Chapter = React.forwardRef(
-  (
-    {
-      chapter,
-      onParagraphSelect,
-      selectedParagraph,
-      isRewriteOpen,
-      setIsRewriteOpen,
-      onRewrite,
-      onCloseMenu,
-    },
-    ref
-  ) => {
-    const paragraphs = chapter.content.split("\n\n").map((p) => p.trim());
-
-    return (
-      <div ref={ref} className="mb-8 p-2 bg-white rounded-lg shadow-md">
-        <h2 className="text-3xl font-bold mb-4 text-gray-800">
-          {chapter.title}
-        </h2>
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold mb-2 text-gray-700">Summary</h3>
-          <div className="bg-gray-100 p-4 rounded-md h-24 overflow-y-auto relative">
-            <p className="text-gray-600 pr-2">{chapter.summary}</p>
-          </div>
-        </div>
-        <div className="prose max-w-none">
-          {paragraphs.map((paragraph, index) => (
-            <Paragraph
-              key={index}
-              content={paragraph}
-              onSelect={onParagraphSelect}
-              isSelected={selectedParagraph === paragraph}
-              isRewriteOpen={isRewriteOpen}
-              setIsRewriteOpen={setIsRewriteOpen}
-              onRewrite={onRewrite}
-              onCloseMenu={onCloseMenu}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-);
-
-// Updated Sidebar component
-const Sidebar = ({
-  chapters,
-  currentChapter,
-  navigateChapter,
-  isOpen,
-  onClose,
-}) => {
-  return (
-    <>
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={onClose}
-        ></div>
-      )}
-      <nav
-        className={`fixed top-0 bottom-0 left-0 w-64 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-semibold">Chapters</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            &times;
-          </button>
-        </div>
-        <ul className="p-4 overflow-auto h-full">
-          {chapters.map((chapter) => (
-            <li key={chapter.id} className="mb-2">
-              <button
-                onClick={() => navigateChapter(chapter.id)}
-                className={`w-full text-left p-2 rounded ${
-                  currentChapter === chapter.id
-                    ? "bg-blue-500 text-white"
-                    : "hover:bg-gray-100"
-                }`}
-              >
-                {chapter.title}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    </>
-  );
-};
+import Chapter from "./Chapter";
+import Sidebar from "./Sidebar";
 
 function BookView() {
   const [currentChapter, setCurrentChapter] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [selectedParagraph, setSelectedParagraph] = useState(null);
+  const [selectedParagraphs, setSelectedParagraphs] = useState({});
   const [isRewriteOpen, setIsRewriteOpen] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const totalChapters = 10;
   const chapterRefs = useRef([]);
 
@@ -268,24 +56,33 @@ function BookView() {
     setIsSidebarOpen(false);
   };
 
-  const handleParagraphSelect = (content) => {
-    if (selectedParagraph === content) {
-      setSelectedParagraph(null);
-      setIsRewriteOpen(false);
-    } else {
-      setSelectedParagraph(content);
-      setIsRewriteOpen(false);
-    }
+  const handleParagraphSelect = (chapterId, paragraphIndex) => {
+    setSelectedParagraphs((prev) => {
+      const newSelected = { ...prev };
+      if (newSelected[chapterId] === paragraphIndex) {
+        delete newSelected[chapterId];
+      } else {
+        newSelected[chapterId] = paragraphIndex;
+      }
+      return newSelected;
+    });
+    setIsRewriteOpen(false);
   };
 
-  const handleRewrite = () => {
-    console.log("Rewrite paragraph:", selectedParagraph);
+  const handleRewrite = (chapterId, paragraphIndex, prompt) => {
+    console.log("Rewrite paragraph in chapter:", chapterId);
+    console.log("Paragraph index:", paragraphIndex);
+    console.log("With prompt:", prompt);
     // Implement rewrite logic here
-    closeMenu();
+    closeMenu(chapterId);
   };
 
-  const closeMenu = () => {
-    setSelectedParagraph(null);
+  const closeMenu = (chapterId) => {
+    setSelectedParagraphs((prev) => {
+      const newSelected = { ...prev };
+      delete newSelected[chapterId];
+      return newSelected;
+    });
     setIsRewriteOpen(false);
   };
 
@@ -352,7 +149,7 @@ function BookView() {
                 ref={(el) => (chapterRefs.current[index] = el)}
                 chapter={chapter}
                 onParagraphSelect={handleParagraphSelect}
-                selectedParagraph={selectedParagraph}
+                selectedParagraph={selectedParagraphs[chapter.id]}
                 isRewriteOpen={isRewriteOpen}
                 setIsRewriteOpen={setIsRewriteOpen}
                 onRewrite={handleRewrite}
@@ -361,14 +158,6 @@ function BookView() {
             ))}
           </div>
         </main>
-        {selectedParagraph && (
-          <ParagraphMenu
-            top={menuPosition.top}
-            left={menuPosition.left}
-            onClose={closeMenu}
-            onRewrite={handleRewrite}
-          />
-        )}
       </div>
       <Footer />
     </div>
