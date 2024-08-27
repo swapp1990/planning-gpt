@@ -78,7 +78,7 @@ She gently closed the music box, the finality of the action echoing in the still
       let parameters = [];
       parameters.push({
         title: "System Prompts",
-        points: data.prompts,
+        points: data.prompts
       });
       parameters = [...parameters, ...data.parameters];
       setParameters(parameters);
