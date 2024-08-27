@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 function BottomNavigation() {
   const username = useSelector((state) => state.user.username);
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 w-full h-16 bg-white border-t border-gray-200 dark:bg-gray-700 dark:border-gray-600">
+    <div className="w-full h-16 bg-white border-t border-gray-200 dark:bg-gray-700 dark:border-gray-600">
       <div className="grid h-full max-w-lg grid-cols-4 mx-auto font-medium">
         <Link
           to="/home"
@@ -17,7 +17,7 @@ function BottomNavigation() {
             Home
           </span>
         </Link>
-        {/* <Link
+        <Link
           to="/wallet"
           className="inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 dark:hover:bg-gray-800 group"
         >
@@ -26,6 +26,7 @@ function BottomNavigation() {
             Wallet
           </span>
         </Link>
+        {/* 
         <Link
           to="/create"
           className="inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 dark:hover:bg-gray-800 group"

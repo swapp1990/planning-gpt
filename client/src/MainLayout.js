@@ -24,13 +24,13 @@ export default function MainLayout({ children }) {
     <>
       <div className="flex flex-col" style={{ height: windowHeight }}>
         {/* <Header onToggleSidebar={handleToggleClick} /> */}
-        <header className="bg-blue-600 text-white p-4 shadow-md h-16 flex-shrink-0">
+        <header className="bg-blue-600 text-white shadow-md h-8 flex-shrink-0">
           Test Header
         </header>
         <div class="flex-grow overflow-auto">{children}</div>
-        {/* <BottomNavigation /> */}
-        <footer className="bg-gray-200 p-4 shadow-md h-16 flex-shrink-0">
-          Test Footer
+        {/*  */}
+        <footer className="bg-gray-200 shadow-md flex-shrink-0">
+          <BottomNavigation />
         </footer>
       </div>
     </>

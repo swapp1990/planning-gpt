@@ -24,6 +24,7 @@ function App() {
           <MainLayout>
             <Switch>
               <Route path="/login" component={Login} />
+              <Route path="/home" exact component={BookView} />
               <Route path="/" exact component={BookView} />
             </Switch>
           </MainLayout>
