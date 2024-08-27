@@ -10,24 +10,15 @@ import {
   FaCheck,
 } from "react-icons/fa";
 
-const Paragraph = ({ content, onSelect, isSelected }) => {
-  return (
-    <p
-      className={`p-2 rounded transition-colors duration-200 hover:bg-gray-100 cursor-pointer ${
-        isSelected ? "bg-blue-100" : ""
-      }`}
-      onClick={() => onSelect(content)}
-    >
-      {content}
-    </p>
-  );
-};
-
-const ParagraphMenu = ({ top, left, onClose, onRewrite }) => {
-  const [isRewriteOpen, setIsRewriteOpen] = useState(false);
+const ParagraphMenu = ({
+  onClose,
+  onRewrite,
+  isRewriteOpen,
+  setIsRewriteOpen,
+}) => {
   const [rewritePrompt, setRewritePrompt] = useState("");
   const handleRewriteClick = () => {
-    setIsRewriteOpen(true);
+    setIsRewriteOpen(!isRewriteOpen);
   };
 
   const handleSubmitRewrite = () => {
@@ -41,11 +32,8 @@ const ParagraphMenu = ({ top, left, onClose, onRewrite }) => {
     setRewritePrompt("");
   };
   return (
-    <div
-      className="absolute bg-white rounded-lg shadow-lg p-2 z-50 flex flex-col"
-      style={{ top: `${top}px`, left: `${left}px` }}
-    >
-      <div className="p-2 flex space-x-2">
+    <div className="bg-gray-100 p-2 rounded-b-lg border-t border-gray-200">
+      <div className="flex space-x-2 mb-2">
         <button
           onClick={handleRewriteClick}
           className={`p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 ${
@@ -82,7 +70,7 @@ const ParagraphMenu = ({ top, left, onClose, onRewrite }) => {
         </button>
       </div>
       {isRewriteOpen && (
-        <div className="p-2 border-t">
+        <div className="mt-2">
           <textarea
             className="w-full p-2 border rounded-md"
             rows="3"
@@ -111,12 +99,52 @@ const ParagraphMenu = ({ top, left, onClose, onRewrite }) => {
   );
 };
 
+const Paragraph = ({
+  content,
+  onSelect,
+  isSelected,
+  isRewriteOpen,
+  setIsRewriteOpen,
+  onRewrite,
+  onCloseMenu,
+}) => {
+  return (
+    <div className={`mb-2 ${isSelected ? "bg-blue-50 rounded-t-lg" : ""}`}>
+      <p
+        className={`p-2 rounded-t-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer`}
+        onClick={() => onSelect(content)}
+      >
+        {content}
+      </p>
+      {isSelected && (
+        <ParagraphMenu
+          onClose={onCloseMenu}
+          onRewrite={onRewrite}
+          isRewriteOpen={isRewriteOpen}
+          setIsRewriteOpen={setIsRewriteOpen}
+        />
+      )}
+    </div>
+  );
+};
+
 const Chapter = React.forwardRef(
-  ({ chapter, onParagraphSelect, selectedParagraph }, ref) => {
-    const paragraphs = chapter.content.split(". ").map((p) => p.trim() + ".");
+  (
+    {
+      chapter,
+      onParagraphSelect,
+      selectedParagraph,
+      isRewriteOpen,
+      setIsRewriteOpen,
+      onRewrite,
+      onCloseMenu,
+    },
+    ref
+  ) => {
+    const paragraphs = chapter.content.split("\n\n").map((p) => p.trim());
 
     return (
-      <div ref={ref} className="mb-8 p-6 bg-white rounded-lg shadow-md">
+      <div ref={ref} className="mb-8 p-2 bg-white rounded-lg shadow-md">
         <h2 className="text-3xl font-bold mb-4 text-gray-800">
           {chapter.title}
         </h2>
@@ -133,6 +161,10 @@ const Chapter = React.forwardRef(
               content={paragraph}
               onSelect={onParagraphSelect}
               isSelected={selectedParagraph === paragraph}
+              isRewriteOpen={isRewriteOpen}
+              setIsRewriteOpen={setIsRewriteOpen}
+              onRewrite={onRewrite}
+              onCloseMenu={onCloseMenu}
             />
           ))}
         </div>
@@ -196,6 +228,7 @@ function BookView() {
   const [currentChapter, setCurrentChapter] = useState(1);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedParagraph, setSelectedParagraph] = useState(null);
+  const [isRewriteOpen, setIsRewriteOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const totalChapters = 10;
   const chapterRefs = useRef([]);
@@ -236,15 +269,13 @@ function BookView() {
   };
 
   const handleParagraphSelect = (content) => {
-    const selection = window.getSelection();
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-
-    setSelectedParagraph(content);
-    setMenuPosition({
-      top: rect.top - 80,
-      left: rect.left,
-    });
+    if (selectedParagraph === content) {
+      setSelectedParagraph(null);
+      setIsRewriteOpen(false);
+    } else {
+      setSelectedParagraph(content);
+      setIsRewriteOpen(false);
+    }
   };
 
   const handleRewrite = () => {
@@ -255,6 +286,7 @@ function BookView() {
 
   const closeMenu = () => {
     setSelectedParagraph(null);
+    setIsRewriteOpen(false);
   };
 
   const Footer = () => {
@@ -321,6 +353,10 @@ function BookView() {
                 chapter={chapter}
                 onParagraphSelect={handleParagraphSelect}
                 selectedParagraph={selectedParagraph}
+                isRewriteOpen={isRewriteOpen}
+                setIsRewriteOpen={setIsRewriteOpen}
+                onRewrite={handleRewrite}
+                onCloseMenu={closeMenu}
               />
             ))}
           </div>
