@@ -327,6 +327,22 @@ def continue_chapter():
         result = result.split("\n\n")[1]
     return jsonify({'paragraph': result})
 
+@app.route("/chapter/insert", methods=["POST"])
+def insert_chapter():
+    data = request.get_json()
+    summary = data.get('summary')
+    instruction = data.get('instruction')
+    systemPrompt = data.get('systemPrompt')
+    passage = data.get('passage')
+    position = data.get('position')
+
+    prompt = f'\n\nPlease continue the story based on the following summary: "{summary}" and the following instruction: "{instruction}". \n\nStory so far is: {passage}. \n\nWrite a new paragraph which is added after paragraph at position {position}. Only return the new paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+
+    result = hermes_ai_output(prompt, systemPrompt, [], "")
+    if "\n\n" in result:
+        result = result.split("\n\n")[1]
+    return jsonify({'insertedParagraph': result})
+
 @app.route("/paragraph", methods=["POST"])
 def update_paragraph():
     print("Update paragraph")

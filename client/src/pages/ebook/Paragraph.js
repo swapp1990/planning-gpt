@@ -165,7 +165,7 @@ const Paragraph = ({
   onSelect,
   isSelected,
   onRewrite,
-  onContParagraph,
+  onInsertParagraph,
   onCloseMenu,
   chapterId,
   paragraphIndex,
@@ -183,7 +183,7 @@ const Paragraph = ({
           onClose={() => onCloseMenu(chapterId)}
           onRewrite={(prompt) => onRewrite(chapterId, paragraphIndex, prompt)}
           onContParagraph={(prompt) =>
-            onContParagraph(chapterId, paragraphIndex, prompt)
+            onInsertParagraph(chapterId, paragraphIndex, prompt)
           }
         />
       )}

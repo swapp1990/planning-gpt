@@ -87,34 +87,6 @@ function BookView() {
     });
   };
 
-  const handleContParagraph = async (chapterId, paragraphIndex, prompt) => {
-    console.log("Add paragraph in chapter:", chapterId);
-    console.log("Paragraph index:", paragraphIndex);
-    console.log("With prompt:", prompt);
-
-    await new Promise((resolve) => {
-      setTimeout(() => {
-        const data = { paragraph: prompt };
-        setChapters((prevChapters) => {
-          const newChapters = [...prevChapters];
-          const chapterIndex = newChapters.findIndex(
-            (chapter) => chapter.id === chapterId
-          );
-          if (chapterIndex !== -1) {
-            const paragraphs = newChapters[chapterIndex].content.split("\n\n");
-            paragraphs.splice(paragraphIndex + 1, 0, data.paragraph);
-            newChapters[chapterIndex].content = paragraphs.join("\n\n");
-            return newChapters;
-          }
-        });
-        closeMenu(chapterId);
-        resolve();
-      }, 2000);
-    });
-
-    return { newParagraph: prompt };
-  };
-
   const updateChapterContent = (chapterId, paragraphId, content) => {
     setChapters((prevChapters) => {
       const newChapters = [...prevChapters];
@@ -136,7 +108,7 @@ function BookView() {
     console.log("With prompt:", prompt);
 
     let paragraph = chapters[chapterId - 1].content.split("\n\n")[paragraphId];
-    console.log(paragraph);
+    // console.log(paragraph);
 
     try {
       const response = await fetch(
@@ -195,6 +167,54 @@ function BookView() {
     } catch (error) {
       console.error("Error fetching continue chapter response:", error);
       return { error: "Error" };
+    }
+  };
+
+  const handleInsertParagraph = async (chapterId, paragraphId, instruction) => {
+    console.log("Add paragraph in chapter:", chapterId);
+    console.log("Paragraph index:", paragraphId);
+    console.log("With prompt:", instruction);
+
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/chapter/insert`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            passage: chapters[chapterId - 1].content,
+            systemPrompt: systemPrompts[0],
+            instruction: instruction,
+            position: paragraphId + 1,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      console.log(data);
+      if (data.insertedParagraph === undefined) {
+        return { error: "Error" };
+      }
+
+      setChapters((prevChapters) => {
+        const newChapters = [...prevChapters];
+        const chapterIndex = newChapters.findIndex(
+          (chapter) => chapter.id === chapterId
+        );
+        if (chapterIndex !== -1) {
+          const paragraphs = newChapters[chapterIndex].content.split("\n\n");
+          paragraphs.splice(paragraphId + 1, 0, data.insertedParagraph);
+          newChapters[chapterIndex].content = paragraphs.join("\n\n");
+        }
+        return newChapters;
+      });
+      closeMenu(chapterId);
+      return { newParagraph: data.insertedParagraph };
+    } catch (error) {
+      console.error("Error fetching inserted paragraph:", error);
+      return { error: "ERror" };
     }
   };
 
@@ -313,7 +333,7 @@ function BookView() {
                 onParagraphSelect={handleParagraphSelect}
                 selectedParagraph={selectedParagraphs[chapter.id]}
                 onRewrite={handleRewrite}
-                onContParagraph={handleContParagraph}
+                onInsertParagraph={handleInsertParagraph}
                 onCloseMenu={closeMenu}
                 onContinueChapter={handleContinueChapter}
                 onSummaryUpdate={handleSummaryUpdate}
