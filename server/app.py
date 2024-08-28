@@ -312,6 +312,21 @@ Based on Updated Instructions, rewrite the original user prompt, keeping the con
 
     return jsonify({'updatedPassage': result1, 'refinedUserPrompt': result2, 'summary': summary})
 
+@app.route("/chapter/continue", methods=["POST"])
+def continue_chapter():
+    data = request.get_json()
+    summary = data.get('summary')
+    instruction = data.get('instruction')
+    systemPrompt = data.get('systemPrompt')
+    passage = data.get('passage')
+
+    prompt = f'\n\nPlease continue the story based on the following summary: "{summary}" and the following instruction: "{instruction}". \n\nStory so far is: {passage}. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+
+    result = hermes_ai_output(prompt, systemPrompt, [], "")
+    if "\n\n" in result:
+        result = result.split("\n\n")[1]
+    return jsonify({'paragraph': result})
+
 @app.route("/paragraph", methods=["POST"])
 def update_paragraph():
     print("Update paragraph")

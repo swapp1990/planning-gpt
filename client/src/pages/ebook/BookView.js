@@ -18,32 +18,14 @@ function BookView() {
   const [systemPrompts, setSystemPrompts] = useState([]);
   const [parameters, setParameters] = useState([]);
 
-  const [currentChapter, setCurrentChapter] = useState(1);
+  const [currentChapter, setCurrentChapter] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedParagraphs, setSelectedParagraphs] = useState({});
 
-  const totalChapters = 10;
+  const totalChapters = 0;
   const chapterRefs = useRef([]);
 
-  // Sample chapters (unchanged)
-  const [chapters, setChapters] = useState(
-    Array.from({ length: totalChapters }, (_, i) => ({
-      id: i + 1,
-      title: `Chapter ${i + 1}`,
-      summary: `This is a detailed summary of Chapter ${
-        i + 1
-      }. It provides an overview of the key points discussed in this chapter, including main ideas, important concepts, and notable events. The summary aims to give readers a quick understanding of the chapter's content before diving into the full text.`.repeat(
-        2
-      ),
-      content: `This is the first paragraph for Chapter ${
-        i + 1
-      }. It introduces the main topic of the chapter and delves into its significance, providing an insightful introduction that sets the stage for the discussion that follows. The complexities of the subject are outlined, with emphasis on how they interconnect with broader themes.\n\n
-    This is the second paragraph. It goes into more detail about the subject matter, exploring various facets of the topic and presenting different perspectives. The paragraph provides in-depth analysis and critical insights, supported by relevant examples and case studies that illustrate the key points.\n\n
-    This is the third paragraph. It provides examples and elaborates on key points, offering a comprehensive examination of the chapter's themes. The discussion is enriched with historical context and contemporary relevance, making connections to related concepts and ideas that enhance the reader's understanding.\n\n
-    This is the fourth paragraph. It starts to wrap up the chapter's content by synthesizing the main arguments and reflecting on their implications. The paragraph highlights the most significant findings and suggests areas for further inquiry or consideration, encouraging readers to think critically about the material.\n\n
-    This is the final paragraph. It summarizes the main takeaways from the chapter, reinforcing the key messages and leaving the reader with a clear understanding of the chapter's core insights. The conclusion ties the chapter back to the overarching themes of the book, providing a sense of closure and continuity as the reader progresses to the next chapter.`,
-    }))
-  );
+  const [chapters, setChapters] = useState([]);
 
   useEffect(() => {
     console.log("init BookView");
@@ -133,13 +115,27 @@ function BookView() {
     return { newParagraph: prompt };
   };
 
-  const handleRewrite = async (chapterId, paragraphIndex, prompt) => {
+  const updateChapterContent = (chapterId, paragraphId, content) => {
+    setChapters((prevChapters) => {
+      const newChapters = [...prevChapters];
+      const chapterIndex = newChapters.findIndex(
+        (chapter) => chapter.id === chapterId
+      );
+      if (chapterIndex !== -1) {
+        const paragraphs = newChapters[chapterIndex].content.split("\n\n");
+        paragraphs[paragraphId] = content;
+        newChapters[chapterIndex].content = paragraphs.join("\n\n");
+      }
+      return newChapters;
+    });
+  };
+
+  const handleRewrite = async (chapterId, paragraphId, prompt) => {
     console.log("Rewrite paragraph in chapter:", chapterId);
-    console.log("Paragraph index:", paragraphIndex);
+    console.log("Paragraph index:", paragraphId);
     console.log("With prompt:", prompt);
 
-    let paragraph =
-      chapters[chapterId - 1].content.split("\n\n")[paragraphIndex];
+    let paragraph = chapters[chapterId - 1].content.split("\n\n")[paragraphId];
     console.log(paragraph);
 
     try {
@@ -163,25 +159,42 @@ function BookView() {
       if (data.updatedParagraph === undefined) {
         return { error: "ERror" };
       }
-
-      setChapters((prevChapters) => {
-        const newChapters = [...prevChapters];
-        const chapterIndex = newChapters.findIndex(
-          (chapter) => chapter.id === chapterId
-        );
-        if (chapterIndex !== -1) {
-          const paragraphs = newChapters[chapterIndex].content.split("\n\n");
-          paragraphs[paragraphIndex] = data.updatedParagraph;
-          newChapters[chapterIndex].content = paragraphs.join("\n\n");
-        }
-        return newChapters;
-      });
+      updateChapterContent(chapterId, paragraphId, data.updatedParagraph);
       closeMenu(chapterId);
-
       return { newParagraph: data.updatedParagraph };
     } catch (error) {
       console.error("Error fetching rewritten paragraph:", error);
       return { error: "ERror" };
+    }
+  };
+
+  const handleContinueChapter = async (chapterId, instruction) => {
+    console.log("Continue chapter:", chapterId);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/chapter/continue`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            summary: chapters[chapterId - 1].summary,
+            passage: chapters[chapterId - 1].content,
+            systemPrompt: systemPrompts[0],
+            instruction: instruction,
+          }),
+        }
+      );
+      const data = await response.json();
+      console.log(data);
+      let paragraphs = chapters[chapterId - 1].content.split("\n\n");
+      let paraIndex = paragraphs.length == 0 ? 0 : paragraphs.length + 1;
+      updateChapterContent(chapterId, paraIndex, data.paragraph);
+      return { newParagraph: data.paragraph };
+    } catch (error) {
+      console.error("Error fetching continue chapter response:", error);
+      return { error: "Error" };
     }
   };
 
@@ -193,30 +206,28 @@ function BookView() {
     });
   };
 
-  const handleAddParagraph = async (chapterId, newParagraphPrompt) => {
-    // Wrap setTimeout in a Promise and await it
-    await new Promise((resolve) => {
-      setTimeout(() => {
-        setChapters((prevChapters) => {
-          const newChapters = [...prevChapters];
-          const chapterIndex = newChapters.findIndex(
-            (chapter) => chapter.id === chapterId
-          );
-          if (chapterIndex !== -1) {
-            const trimmedNewParagraph = newParagraphPrompt.trim();
-            newChapters[chapterIndex].content =
-              newChapters[chapterIndex].content.trim() +
-              `\n\n${trimmedNewParagraph}`;
-            // console.log(newChapters[chapterIndex].content);
-          }
-          return newChapters;
-        });
-        resolve(); // Resolve the promise after the timeout
-      }, 2000);
+  const handleSummaryUpdate = (chapterId, newSummary) => {
+    setChapters((prevChapters) => {
+      return prevChapters.map((chapter) => {
+        if (chapter.id === chapterId) {
+          return { ...chapter, summary: newSummary };
+        }
+        return chapter;
+      });
     });
+    return { newSummary: newSummary };
+  };
 
-    // Return the result after the timeout
-    return { newParagraph: newParagraphPrompt };
+  const addNewChapter = () => {
+    setChapters((prevChapters) => [
+      ...prevChapters,
+      {
+        id: prevChapters.length + 1,
+        title: `Chapter ${prevChapters.length + 1}`,
+        content: "",
+        summary: "Summary of the chapter",
+      },
+    ]);
   };
 
   const Footer = () => {
@@ -234,14 +245,14 @@ function BookView() {
           <div className="flex items-center text-sm text-gray-600">
             <FaBook size={16} className="mr-2" />
             <span>
-              {currentChapter}/{totalChapters}
+              {currentChapter}/{chapters.length}
             </span>
           </div>
           <button
             onClick={() =>
-              navigateChapter(Math.min(totalChapters, currentChapter + 1))
+              navigateChapter(Math.min(chapters.length, currentChapter + 1))
             }
-            disabled={currentChapter === totalChapters}
+            disabled={currentChapter === chapters.length}
             className="p-2 text-blue-600 hover:bg-blue-100 rounded-full disabled:text-gray-400 disabled:hover:bg-transparent"
             aria-label="Next Chapter"
           >
@@ -257,7 +268,9 @@ function BookView() {
       <header className="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center z-30 relative">
         <div>
           <h1 className="text-xl font-bold">My Ebook Title</h1>
-          <p className="text-sm">{chapters[currentChapter - 1].title}</p>
+          {currentChapter && (
+            <p className="text-sm">{chapters[currentChapter - 1].title}</p>
+          )}
         </div>
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -276,6 +289,22 @@ function BookView() {
         />
         <main className="h-full overflow-auto p-4">
           <div className="max-w-3xl mx-auto">
+            <div className="text-center text-gray-500">
+              {chapters.length == 0 && (
+                <div>
+                  <p className="text-2xl">
+                    <FaBook size={32} className="inline-block mb-2" />
+                  </p>
+                  <p className="text-lg">No chapters available</p>
+                </div>
+              )}
+              <button
+                onClick={() => addNewChapter()}
+                className="bg-green-500 px-4 py-2 rounded hover:bg-green-600 transition-colors text-white mb-4"
+              >
+                Add New Chapter
+              </button>
+            </div>
             {chapters.map((chapter, index) => (
               <Chapter
                 key={chapter.id}
@@ -286,7 +315,8 @@ function BookView() {
                 onRewrite={handleRewrite}
                 onContParagraph={handleContParagraph}
                 onCloseMenu={closeMenu}
-                onAddParagraph={handleAddParagraph}
+                onContinueChapter={handleContinueChapter}
+                onSummaryUpdate={handleSummaryUpdate}
               />
             ))}
           </div>
