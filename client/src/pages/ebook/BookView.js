@@ -204,8 +204,12 @@ function BookView() {
           (chapter) => chapter.id === chapterId
         );
         if (chapterIndex !== -1) {
-          const paragraphs = newChapters[chapterIndex].content.split("\n\n");
+          let paragraphs = newChapters[chapterIndex].content.split("\n\n");
+          // remove paragraph with empty string
+          paragraphs = paragraphs.filter((p) => p.trim() !== "");
+          console.log(paragraphId);
           paragraphs.splice(paragraphId + 1, 0, data.insertedParagraph);
+          console.log(paragraphs);
           newChapters[chapterIndex].content = paragraphs.join("\n\n");
         }
         return newChapters;

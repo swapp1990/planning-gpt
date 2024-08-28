@@ -323,6 +323,7 @@ def continue_chapter():
     prompt = f'\n\nPlease continue the story based on the following summary: "{summary}" and the following instruction: "{instruction}". \n\nStory so far is: {passage}. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
 
     result = hermes_ai_output(prompt, systemPrompt, [], "")
+    # result = instruction
     if "\n\n" in result:
         result = result.split("\n\n")[1]
     return jsonify({'paragraph': result})
@@ -339,6 +340,7 @@ def insert_chapter():
     prompt = f'\n\nPlease continue the story based on the following summary: "{summary}" and the following instruction: "{instruction}". \n\nStory so far is: {passage}. \n\nWrite a new paragraph which is added after paragraph at position {position}. Only return the new paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
 
     result = hermes_ai_output(prompt, systemPrompt, [], "")
+    # result = instruction
     if "\n\n" in result:
         result = result.split("\n\n")[1]
     return jsonify({'insertedParagraph': result})
