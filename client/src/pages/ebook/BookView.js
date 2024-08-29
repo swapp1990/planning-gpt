@@ -306,7 +306,7 @@ function BookView() {
 
   return (
     <div className="h-full flex flex-col bg-gray-100">
-      <header className="bg-blue-600 text-white p-4 shadow-md flex justify-between items-center z-30 relative">
+      <header className="bg-blue-600 text-white p-1 shadow-md flex justify-between items-center z-30 relative">
         <div>
           <h1 className="text-xl font-bold">My Ebook Title</h1>
           {currentChapter && (
@@ -363,7 +363,9 @@ function BookView() {
           </div>
         </main>
       </div>
-      <Footer />
+      <div className="hidden sm:block">
+        <Footer />
+      </div>
     </div>
   );
 }

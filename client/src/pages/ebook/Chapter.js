@@ -148,7 +148,7 @@ const Chapter = React.forwardRef(
     };
 
     return (
-      <div ref={ref} className="mb-8 p-6 bg-white rounded-lg shadow-md">
+      <div ref={ref} className="mb-8 p-2 sm:p-6 bg-white rounded-lg shadow-md">
         <h2 className="text-3xl font-bold mb-4 text-gray-800">
           {chapter.title}
         </h2>
