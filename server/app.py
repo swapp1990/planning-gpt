@@ -320,12 +320,11 @@ def continue_chapter():
     systemPrompt = data.get('systemPrompt')
     passage = data.get('passage')
 
-    prompt = f'\n\nPlease continue the story based on the following summary: "{summary}" and the following instruction: "{instruction}". \n\nStory so far is: {passage}. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+    prompt = f'\n\nPlease continue the story based on the following summary: `{summary}` and the following instruction: `{instruction}`. \n\nStory so far is: `{passage}`. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
 
     result = hermes_ai_output(prompt, systemPrompt, [], "")
     # result = instruction
-    if "\n\n" in result:
-        result = result.split("\n\n")[1]
+    result = result.replace("\n\n", " ")
     return jsonify({'paragraph': result})
 
 @app.route("/chapter/insert", methods=["POST"])
@@ -334,36 +333,39 @@ def insert_chapter():
     summary = data.get('summary')
     instruction = data.get('instruction')
     systemPrompt = data.get('systemPrompt')
-    passage = data.get('passage')
-    position = data.get('position')
+    previousParagraph = data.get('previousParagraph')
+    # print(previousParagraph)
+    nextParagraph = data.get('nextParagraph')
+    # print(nextParagraph)
 
-    prompt = f'\n\nPlease continue the story based on the following summary: "{summary}" and the following instruction: "{instruction}". \n\nStory so far is: {passage}. \n\nWrite a new paragraph which is added after paragraph at position {position}. Only return the new paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+    prompt = f'\n\nYour task is to insert a new paragraph in an ongoing passage. Please write the new paragraph based on the following summary: `{summary}` and the following instruction: `{instruction}`.'
+    if previousParagraph != "":
+        prompt += f'\n\nThe new paragraph should be added after this paragraph: `{previousParagraph}`'
+    if nextParagraph != "":
+        prompt += f'\n\nThe new paragraph should be added before this paragraph: `{nextParagraph}`'
+    prompt += f'\n\nOnly return the new paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
 
     result = hermes_ai_output(prompt, systemPrompt, [], "")
-    # result = instruction
-    if "\n\n" in result:
-        result = result.split("\n\n")[1]
+    # result = prompt
+    result = result.replace("\n\n", " ")
     return jsonify({'insertedParagraph': result})
 
-@app.route("/paragraph", methods=["POST"])
-def update_paragraph():
-    print("Update paragraph")
+@app.route("/chapter/rewrite", methods=["POST"])
+def rewrite_paragraph():
+    print("Rewrite paragraph")
     data = request.get_json()
     # fullPassage = data.get('fullMessage')
     paragraph = data.get('paragraph')
     instruction = data.get('instruction')
     # previousSummary = data.get('previousSummary')
     systemPrompt = data.get('systemPrompt')
-    # systemPrompt += f'\n\nFull Passage: "{fullPassage}"'
-    systemPrompt += f'\n\nOriginal Paragraph: "{paragraph}"'
+    previousParagraph = data.get('previousParagraph')
 
-    prompt = f"Instructions to update: {instruction}"
+    prompt = f'\n\nPlease rewrite the following paragraph: `{paragraph}` by following instructions: `{instruction}`. \n\nPrevious paragraph is: `{previousParagraph}`. \n\n Only return the rewritten paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
     result = hermes_ai_output(prompt, systemPrompt, [], "")
+    # result = prompt
+    result = result.replace("\n\n", " ")
 
-    #if result has \n\n then get the following paragraph
-    if "\n\n" in result:
-        result = result.split("\n\n")[1]
-    #     print("Result: ", result)
     #replace the paragraph in the full passage
     # replacedFullPassage = fullPassage.replace(paragraph, result)
     # summary = generate_summary(replacedFullPassage, previousSummary)

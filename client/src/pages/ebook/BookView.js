@@ -88,14 +88,18 @@ function BookView() {
   };
 
   const updateChapterContent = (chapterId, paragraphId, content) => {
+    console.log("updateChapterContent " + paragraphId);
     setChapters((prevChapters) => {
       const newChapters = [...prevChapters];
       const chapterIndex = newChapters.findIndex(
         (chapter) => chapter.id === chapterId
       );
       if (chapterIndex !== -1) {
-        const paragraphs = newChapters[chapterIndex].content.split("\n\n");
+        const paragraphs = newChapters[chapterIndex].content
+          .split("\n\n")
+          .filter((p) => p.trim() !== "");
         paragraphs[paragraphId] = content;
+        console.log(paragraphs);
         newChapters[chapterIndex].content = paragraphs.join("\n\n");
       }
       return newChapters;
@@ -107,12 +111,16 @@ function BookView() {
     console.log("Paragraph index:", paragraphId);
     console.log("With prompt:", prompt);
 
-    let paragraph = chapters[chapterId - 1].content.split("\n\n")[paragraphId];
-    // console.log(paragraph);
+    let paragraphs = chapters[chapterId - 1].content.split("\n\n");
+
+    let paragraph = paragraphs[paragraphId];
+    let previousParagraph = paragraphId != 0 ? paragraphs[paragraphId - 1] : "";
+    let nextParagraph =
+      paragraphId < paragraphs.length - 1 ? paragraphs[paragraphId + 1] : "";
 
     try {
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/paragraph`,
+        `${process.env.REACT_APP_API_URL}/chapter/rewrite`,
         {
           method: "POST",
           headers: {
@@ -120,14 +128,15 @@ function BookView() {
           },
           body: JSON.stringify({
             paragraph,
-            systemPrompt: systemPrompts[0] + "\n" + systemPrompts[1],
+            previousParagraph: previousParagraph,
+            systemPrompt: systemPrompts[0],
             instruction: prompt,
           }),
         }
       );
 
       const data = await response.json();
-      console.log(data);
+      //   console.log(data);
       if (data.updatedParagraph === undefined) {
         return { error: "ERror" };
       }
@@ -159,10 +168,11 @@ function BookView() {
         }
       );
       const data = await response.json();
-      console.log(data);
-      let paragraphs = chapters[chapterId - 1].content.split("\n\n");
-      let paraIndex = paragraphs.length == 0 ? 0 : paragraphs.length + 1;
-      updateChapterContent(chapterId, paraIndex, data.paragraph);
+      //   console.log(data);
+      let paragraphs = chapters[chapterId - 1].content
+        .split("\n\n")
+        .filter((p) => p.trim() !== "");
+      updateChapterContent(chapterId, paragraphs.length, data.paragraph);
       return { newParagraph: data.paragraph };
     } catch (error) {
       console.error("Error fetching continue chapter response:", error);
@@ -175,6 +185,14 @@ function BookView() {
     console.log("Paragraph index:", paragraphId);
     console.log("With prompt:", instruction);
 
+    let paragraphs = chapters[chapterId - 1].content
+      .split("\n\n")
+      .filter((p) => p.trim() !== "");
+    console.log(paragraphs);
+    let previousParagraph = paragraphs[paragraphId];
+    let nextParagraph =
+      paragraphId < paragraphs.length - 1 ? paragraphs[paragraphId + 1] : "";
+
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/chapter/insert`,
@@ -184,16 +202,17 @@ function BookView() {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            passage: chapters[chapterId - 1].content,
             systemPrompt: systemPrompts[0],
+            summary: chapters[chapterId - 1].summary,
             instruction: instruction,
-            position: paragraphId + 1,
+            previousParagraph: previousParagraph,
+            nextParagraph: nextParagraph,
           }),
         }
       );
 
       const data = await response.json();
-      console.log(data);
+      //   console.log(data);
       if (data.insertedParagraph === undefined) {
         return { error: "Error" };
       }
@@ -207,9 +226,7 @@ function BookView() {
           let paragraphs = newChapters[chapterIndex].content.split("\n\n");
           // remove paragraph with empty string
           paragraphs = paragraphs.filter((p) => p.trim() !== "");
-          console.log(paragraphId);
           paragraphs.splice(paragraphId + 1, 0, data.insertedParagraph);
-          console.log(paragraphs);
           newChapters[chapterIndex].content = paragraphs.join("\n\n");
         }
         return newChapters;
