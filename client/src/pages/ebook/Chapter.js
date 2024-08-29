@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Paragraph from "./Paragraph";
-import { FaPlus, FaCheck, FaEdit } from "react-icons/fa";
+import { FaPlus, FaCheck, FaEdit, FaEraser } from "react-icons/fa";
 
 const Summary = ({ summary, onSummaryUpdate, chapterId }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -29,6 +29,10 @@ const Summary = ({ summary, onSummaryUpdate, chapterId }) => {
     setIsLoading(false);
   };
 
+  const handleClearText = () => {
+    setEditedSummary("");
+  };
+
   return (
     <div className="mb-6">
       <div className="flex justify-between items-center mb-2">
@@ -45,12 +49,21 @@ const Summary = ({ summary, onSummaryUpdate, chapterId }) => {
       </div>
       {isEditing ? (
         <div>
-          <textarea
-            className="w-full p-2 border rounded-md"
-            rows="4"
-            value={editedSummary}
-            onChange={(e) => setEditedSummary(e.target.value)}
-          />
+          <div className="relative">
+            <textarea
+              className="w-full p-2 border rounded-md pr-8"
+              rows="4"
+              value={editedSummary}
+              onChange={(e) => setEditedSummary(e.target.value)}
+            />
+            <button
+              onClick={handleClearText}
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              title="Clear text"
+            >
+              <FaEraser size={20} />
+            </button>
+          </div>
           <div className="flex justify-end mt-2 space-x-2">
             <button
               onClick={handleCancelEdit}
@@ -61,6 +74,7 @@ const Summary = ({ summary, onSummaryUpdate, chapterId }) => {
             <button
               onClick={handleSubmitEdit}
               className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 flex items-center"
+              disabled={isLoading}
             >
               {isLoading ? (
                 <span className="animate-spin mr-2">&#9696;</span>
@@ -76,6 +90,7 @@ const Summary = ({ summary, onSummaryUpdate, chapterId }) => {
           <p className="text-gray-600 pr-2">{summary}</p>
         </div>
       )}
+      {error && <div className="mt-2 text-red-500 text-sm">{error}</div>}
     </div>
   );
 };
