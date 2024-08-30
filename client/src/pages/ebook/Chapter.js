@@ -103,6 +103,7 @@ const Chapter = React.forwardRef(
       selectedParagraph,
       onRewrite,
       onInsertParagraph,
+      onReviewApply,
       onCloseMenu,
       onContinueChapter,
       onSummaryUpdate,
@@ -165,6 +166,7 @@ const Chapter = React.forwardRef(
               onSelect={onParagraphSelect}
               isSelected={selectedParagraph === index}
               onRewrite={onRewrite}
+              onReviewApply={onReviewApply}
               onInsertParagraph={onInsertParagraph}
               onCloseMenu={onCloseMenu}
               chapterId={chapter.id}

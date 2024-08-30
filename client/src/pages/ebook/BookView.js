@@ -28,7 +28,7 @@ function BookView() {
   const [chapters, setChapters] = useState([]);
 
   useEffect(() => {
-    console.log("init BookView");
+    // console.log("init BookView");
     init();
   }, []);
 
@@ -57,7 +57,7 @@ function BookView() {
       );
       const data = await response.json();
       setSystemPrompts(data.prompts);
-      console.log(data.prompts);
+      //   console.log(data.prompts);
       let parameters = [];
       parameters.push({
         title: "System Prompts",
@@ -88,7 +88,7 @@ function BookView() {
   };
 
   const updateChapterContent = (chapterId, paragraphId, content) => {
-    console.log("updateChapterContent " + paragraphId);
+    // console.log("updateChapterContent " + paragraphId);
     setChapters((prevChapters) => {
       const newChapters = [...prevChapters];
       const chapterIndex = newChapters.findIndex(
@@ -140,13 +140,22 @@ function BookView() {
       if (data.updatedParagraph === undefined) {
         return { error: "ERror" };
       }
-      updateChapterContent(chapterId, paragraphId, data.updatedParagraph);
-      closeMenu(chapterId);
+      //   updateChapterContent(chapterId, paragraphId, data.updatedParagraph);
+      //   closeMenu(chapterId);
       return { newParagraph: data.updatedParagraph };
     } catch (error) {
       console.error("Error fetching rewritten paragraph:", error);
       return { error: "ERror" };
     }
+  };
+
+  const handleReviewApply = async (newContent, chapterId, paragraphId) => {
+    // console.log("Apply review in chapter:", chapterId);
+    // console.log("Paragraph index:", paragraphId);
+    // console.log("With new content:", newContent);
+
+    updateChapterContent(chapterId, paragraphId, newContent);
+    closeMenu(chapterId);
   };
 
   const handleContinueChapter = async (chapterId, instruction) => {
@@ -181,14 +190,14 @@ function BookView() {
   };
 
   const handleInsertParagraph = async (chapterId, paragraphId, instruction) => {
-    console.log("Add paragraph in chapter:", chapterId);
-    console.log("Paragraph index:", paragraphId);
-    console.log("With prompt:", instruction);
+    // console.log("Add paragraph in chapter:", chapterId);
+    // console.log("Paragraph index:", paragraphId);
+    // console.log("With prompt:", instruction);
 
     let paragraphs = chapters[chapterId - 1].content
       .split("\n\n")
       .filter((p) => p.trim() !== "");
-    console.log(paragraphs);
+    // console.log(paragraphs);
     let previousParagraph = paragraphs[paragraphId];
     let nextParagraph =
       paragraphId < paragraphs.length - 1 ? paragraphs[paragraphId + 1] : "";
@@ -355,6 +364,7 @@ function BookView() {
                 selectedParagraph={selectedParagraphs[chapter.id]}
                 onRewrite={handleRewrite}
                 onInsertParagraph={handleInsertParagraph}
+                onReviewApply={handleReviewApply}
                 onCloseMenu={closeMenu}
                 onContinueChapter={handleContinueChapter}
                 onSummaryUpdate={handleSummaryUpdate}

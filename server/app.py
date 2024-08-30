@@ -363,7 +363,7 @@ def rewrite_paragraph():
 
     prompt = f'\n\nPlease rewrite the following paragraph: `{paragraph}` by following instructions: `{instruction}`. \n\nPrevious paragraph is: `{previousParagraph}`. \n\n Only return the rewritten paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
     result = hermes_ai_output(prompt, systemPrompt, [], "")
-    # result = prompt
+    # result = instruction
     result = result.replace("\n\n", " ")
 
     #replace the paragraph in the full passage
