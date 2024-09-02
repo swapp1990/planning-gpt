@@ -1,14 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  FaChevronLeft,
-  FaChevronRight,
-  FaBook,
-  FaPen,
-  FaCopy,
-  FaTrash,
-  FaShareAlt,
-  FaCheck,
-} from "react-icons/fa";
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { FaChevronLeft, FaChevronRight, FaBook } from "react-icons/fa";
 
 import Chapter from "./Chapter";
 import Sidebar from "./Sidebar";
@@ -26,11 +17,46 @@ function BookView() {
   const chapterRefs = useRef([]);
 
   const [chapters, setChapters] = useState([]);
+  const [isSaved, setIsSaved] = useState(true);
+  const [lastSavedTime, setLastSavedTime] = useState(null);
+
+  const saveToLocalStorage = useCallback(() => {
+    const bookData = {
+      chapters,
+      currentChapter,
+      systemPrompts,
+      parameters,
+    };
+    localStorage.setItem("bookData", JSON.stringify(bookData));
+    setIsSaved(true);
+    setLastSavedTime(new Date().toLocaleTimeString());
+  }, [chapters, currentChapter, systemPrompts, parameters]);
+
+  const loadFromLocalStorage = useCallback(() => {
+    const savedData = localStorage.getItem("bookData");
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      setChapters(parsedData.chapters || []);
+      setCurrentChapter(parsedData.currentChapter || null);
+      setSystemPrompts(parsedData.systemPrompts || []);
+      setParameters(parsedData.parameters || []);
+    }
+  }, []);
 
   useEffect(() => {
-    // console.log("init BookView");
+    loadFromLocalStorage();
     init();
-  }, []);
+  }, [loadFromLocalStorage]);
+
+  useEffect(() => {
+    const saveTimer = setTimeout(() => {
+      if (!isSaved) {
+        saveToLocalStorage();
+      }
+    }, 2000); // Auto-save after 2 seconds of inactivity
+
+    return () => clearTimeout(saveTimer);
+  }, [isSaved, saveToLocalStorage]);
 
   useEffect(() => {
     if (chapterRefs.current[currentChapter - 1]) {
@@ -39,6 +65,12 @@ function BookView() {
       });
     }
   }, [currentChapter]);
+
+  useEffect(() => {
+    if (chapters && chapters.length > 0) {
+      setIsSaved(false);
+    }
+  }, [chapters]);
 
   const init = async () => {
     await loadSystemPrompts(chatType);
@@ -278,6 +310,7 @@ function BookView() {
         summary: "Summary of the chapter",
       },
     ]);
+    setIsSaved(false);
   };
 
   const Footer = () => {
@@ -322,12 +355,17 @@ function BookView() {
             <p className="text-sm">{chapters[currentChapter - 1].title}</p>
           )}
         </div>
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-        >
-          Chapters
-        </button>
+        <div className="flex items-center">
+          <span className="text-sm mr-4">
+            {isSaved ? `Last saved: ${lastSavedTime}` : "Saving..."}
+          </span>
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+          >
+            Chapters
+          </button>
+        </div>
       </header>
       <div className="flex-grow overflow-hidden relative">
         <Sidebar

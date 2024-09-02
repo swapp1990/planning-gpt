@@ -10,6 +10,7 @@ import {
   FaEye,
   FaExclamationCircle,
 } from "react-icons/fa";
+import { computeDiff } from "../../utils/paragraphDiff";
 
 const ParagraphReview = ({ original, edited, onSave, onCancel }) => {
   const [changes, setChanges] = useState([]);
@@ -54,179 +55,6 @@ const ParagraphReview = ({ original, edited, onSave, onCancel }) => {
       })
       .filter(Boolean)
       .join(" ");
-  };
-
-  const computeLCS = (X, Y) => {
-    const m = X.length;
-    const n = Y.length;
-    const L = Array(m + 1)
-      .fill()
-      .map(() => Array(n + 1).fill(0));
-
-    for (let i = 0; i <= m; i++) {
-      for (let j = 0; j <= n; j++) {
-        if (i == 0 || j == 0) L[i][j] = 0;
-        else if (X[i - 1] === Y[j - 1]) L[i][j] = L[i - 1][j - 1] + 1;
-        else L[i][j] = Math.max(L[i - 1][j], L[i][j - 1]);
-      }
-    }
-    return L;
-  };
-
-  const backtrack = (L, X, Y, i, j) => {
-    if (i == 0 || j == 0) return [];
-
-    if (X[i - 1] === Y[j - 1]) {
-      return [
-        ...backtrack(L, X, Y, i - 1, j - 1),
-        { type: "unchanged", content: X[i - 1] },
-      ];
-    }
-
-    if (L[i][j - 1] > L[i - 1][j]) {
-      return [
-        ...backtrack(L, X, Y, i, j - 1),
-        { type: "addition", content: Y[j - 1], status: "pending" },
-      ];
-    }
-
-    return [
-      ...backtrack(L, X, Y, i - 1, j),
-      { type: "deletion", content: X[i - 1], status: "pending" },
-    ];
-  };
-
-  const levenshteinDistance = (a, b) => {
-    const matrix = [];
-
-    for (let i = 0; i <= b.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= a.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= b.length; i++) {
-      for (let j = 1; j <= a.length; j++) {
-        if (b.charAt(i - 1) == a.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
-        } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
-        }
-      }
-    }
-
-    return matrix[b.length][a.length];
-  };
-
-  const isSimilar = (a, b, threshold = 0.7) => {
-    const distance = levenshteinDistance(a, b);
-    const maxLength = Math.max(a.length, b.length);
-    const similarity = 1 - distance / maxLength;
-    return similarity >= threshold;
-  };
-
-  const computeDiff = (original, edited) => {
-    const originalSentences = original.split(/(?<=[.!?])\s+/);
-    const editedSentences = edited.split(/(?<=[.!?])\s+/);
-    let diff = [];
-    let i = 0,
-      j = 0;
-
-    while (i < originalSentences.length || j < editedSentences.length) {
-      if (i >= originalSentences.length) {
-        diff.push({
-          type: "addition",
-          content: editedSentences[j],
-          status: "pending",
-        });
-        j++;
-      } else if (j >= editedSentences.length) {
-        diff.push({
-          type: "deletion",
-          content: originalSentences[i],
-          status: "pending",
-        });
-        i++;
-      } else if (originalSentences[i] === editedSentences[j]) {
-        diff.push({ type: "unchanged", content: originalSentences[i] });
-        i++;
-        j++;
-      } else if (isSimilar(originalSentences[i], editedSentences[j])) {
-        diff.push({
-          type: "modification",
-          original: originalSentences[i],
-          modified: editedSentences[j],
-          status: "pending",
-        });
-        i++;
-        j++;
-      } else {
-        // Look ahead to find potential matches or modifications
-        let foundMatch = false;
-        for (
-          let k = 1;
-          k < 3 &&
-          i + k < originalSentences.length &&
-          j + k < editedSentences.length;
-          k++
-        ) {
-          if (
-            originalSentences[i + k] === editedSentences[j] ||
-            isSimilar(originalSentences[i + k], editedSentences[j])
-          ) {
-            // Sentences before the match are considered deletions
-            for (let m = 0; m < k; m++) {
-              diff.push({
-                type: "deletion",
-                content: originalSentences[i + m],
-                status: "pending",
-              });
-            }
-            i += k;
-            foundMatch = true;
-            break;
-          } else if (
-            originalSentences[i] === editedSentences[j + k] ||
-            isSimilar(originalSentences[i], editedSentences[j + k])
-          ) {
-            // Sentences before the match are considered additions
-            for (let m = 0; m < k; m++) {
-              diff.push({
-                type: "addition",
-                content: editedSentences[j + m],
-                status: "pending",
-              });
-            }
-            j += k;
-            foundMatch = true;
-            break;
-          }
-        }
-        if (!foundMatch) {
-          // If no match found, consider it as a deletion and an addition
-          diff.push({
-            type: "deletion",
-            content: originalSentences[i],
-            status: "pending",
-          });
-          diff.push({
-            type: "addition",
-            content: editedSentences[j],
-            status: "pending",
-          });
-          i++;
-          j++;
-        }
-      }
-    }
-
-    return diff;
   };
 
   const toggleChange = (index, status) => {
@@ -426,19 +254,21 @@ const ParagraphReview = ({ original, edited, onSave, onCancel }) => {
         </button>
       </div>
       {showPreview ? renderPreview() : renderInlineDiff()}
-      <div className="flex justify-end space-x-2 mt-4">
-        <button
-          onClick={onCancel}
-          className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={applyChanges}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Apply Changes
-        </button>
+      <div className="flex flex-col items-center space-x-2">
+        <div className="flex justify-end space-x-2 mt-4">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={applyChanges}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Apply Changes
+          </button>
+        </div>
         {error && <p className="text-red-500 text-sm">{error}</p>}
       </div>
     </div>
