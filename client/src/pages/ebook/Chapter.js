@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import Paragraph from "./Paragraph";
 import { FaPlus, FaCheck, FaEdit, FaEraser } from "react-icons/fa";
+import { useBook } from "./BookContext";
+import Paragraph from "./Paragraph";
 
-const Summary = ({ summary, onSummaryUpdate, chapterId }) => {
+const Summary = ({ summary, chapterId }) => {
+  const { handleSummaryUpdate } = useBook();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -19,7 +21,7 @@ const Summary = ({ summary, onSummaryUpdate, chapterId }) => {
 
   const handleSubmitEdit = async () => {
     setIsLoading(true);
-    const response = await onSummaryUpdate(chapterId, editedSummary);
+    const response = await handleSummaryUpdate(chapterId, editedSummary);
     if (response.error) {
       setError(response.error);
     } else {
@@ -96,21 +98,8 @@ const Summary = ({ summary, onSummaryUpdate, chapterId }) => {
 };
 
 const Chapter = React.forwardRef(
-  (
-    {
-      chapter,
-      onParagraphSelect,
-      selectedParagraph,
-      onRewrite,
-      onInsertParagraph,
-      onDeleteParagraph,
-      onReviewApply,
-      onCloseMenu,
-      onContinueChapter,
-      onSummaryUpdate,
-    },
-    ref
-  ) => {
+  ({ chapter, selectedParagraph, onCloseMenu }, ref) => {
+    const { handleContinueChapter } = useBook();
     const [isContinueOpen, setIsContinueOpen] = useState(false);
     const [newParagraphContent, setNewParagraphContent] = useState("");
     const [paragraphs, setParagraphs] = useState([]);
@@ -138,7 +127,10 @@ const Chapter = React.forwardRef(
     const handleSubmitContinue = async () => {
       setError(null);
       setIsLoading(true);
-      let response = await onContinueChapter(chapter.id, newParagraphContent);
+      let response = await handleContinueChapter(
+        chapter.id,
+        newParagraphContent
+      );
       if (response.newParagraph) {
         setIsContinueOpen(false);
         setNewParagraphContent("");
@@ -154,21 +146,13 @@ const Chapter = React.forwardRef(
         <h2 className="text-3xl font-bold mb-4 text-gray-800">
           {chapter.title}
         </h2>
-        <Summary
-          summary={chapter.summary}
-          onSummaryUpdate={onSummaryUpdate}
-          chapterId={chapter.id}
-        />
+        <Summary summary={chapter.summary} chapterId={chapter.id} />
         <div className="prose max-w-none">
           {paragraphs.map((paragraph, index) => (
             <Paragraph
               key={index}
               content={paragraph}
-              onSelect={onParagraphSelect}
               isSelected={selectedParagraph === index}
-              onRewrite={onRewrite}
-              onReviewApply={onReviewApply}
-              onInsertParagraph={onInsertParagraph}
               onCloseMenu={onCloseMenu}
               chapterId={chapter.id}
               paragraphIndex={index}

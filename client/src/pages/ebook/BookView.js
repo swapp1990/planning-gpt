@@ -125,7 +125,7 @@ function BookView() {
     chapterId,
     paragraphId,
     content,
-    updatedSummary = None
+    updatedSummary = null
   ) => {
     // console.log("updateChapterContent " + paragraphId);
     setChapters((prevChapters) => {
@@ -138,16 +138,19 @@ function BookView() {
           .split("\n\n")
           .filter((p) => p.trim() !== "");
         paragraphs[paragraphId] = content;
-        console.log(paragraphs);
+        // console.log(paragraphs);
         newChapters[chapterIndex].content = paragraphs.join("\n\n");
-        console.log("updatedSummary " + updatedSummary);
-        newChapters[chapterIndex].summary = updatedSummary;
+        if (updatedSummary) {
+          // console.log("updatedSummary " + updatedSummary);
+          newChapters[chapterIndex].summary =
+            newChapters[chapterIndex].summary + " " + updatedSummary;
+        }
       }
       return newChapters;
     });
   };
 
-  const handleRewrite = async (chapterId, paragraphId, prompt) => {
+  const handleRewriteParagraph = async (chapterId, paragraphId, prompt) => {
     console.log("Rewrite paragraph in chapter:", chapterId);
     console.log("Paragraph index:", paragraphId);
     console.log("With prompt:", prompt);
@@ -170,6 +173,7 @@ function BookView() {
           body: JSON.stringify({
             paragraph,
             previousParagraph: previousParagraph,
+            previousSummary: chapters[chapterId - 1].summary,
             systemPrompt: systemPrompts[0],
             instruction: prompt,
           }),
@@ -177,31 +181,31 @@ function BookView() {
       );
 
       const data = await response.json();
-      //   console.log(data);
+      console.log(data);
       if (data.updatedParagraph === undefined) {
         return { error: "ERror" };
       }
-      //   updateChapterContent(chapterId, paragraphId, data.updatedParagraph);
-      //   closeMenu(chapterId);
-      return { newParagraph: data.updatedParagraph };
+      return {
+        newParagraph: data.updatedParagraph,
+        newSummary: data.updatedSummary,
+      };
     } catch (error) {
       console.error("Error fetching rewritten paragraph:", error);
       return { error: "ERror" };
     }
   };
 
-  const handleReviewApply = async (newContent, chapterId, paragraphId) => {
-    // console.log("Apply review in chapter:", chapterId);
-    // console.log("Paragraph index:", paragraphId);
-    // console.log("With new content:", newContent);
-
+  const handleReviewApply = async (chapterId, paragraphId, newContent) => {
     updateChapterContent(chapterId, paragraphId, newContent);
     closeMenu(chapterId);
   };
 
   const handleContinueChapter = async (chapterId, instruction) => {
-    // console.log("Continue chapter:", chapterId);
+    console.log("Continue chapter:", chapterId);
     try {
+      let paragraphs = chapters[chapterId - 1].content
+        .split("\n\n")
+        .filter((p) => p.trim() !== "");
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/chapter/continue`,
         {
@@ -211,7 +215,7 @@ function BookView() {
           },
           body: JSON.stringify({
             summary: chapters[chapterId - 1].summary,
-            passage: chapters[chapterId - 1].content,
+            previousParagraph: paragraphs[paragraphs.length - 1],
             systemPrompt: systemPrompts[0],
             instruction: instruction,
           }),
@@ -219,9 +223,7 @@ function BookView() {
       );
       const data = await response.json();
       //   console.log(data);
-      let paragraphs = chapters[chapterId - 1].content
-        .split("\n\n")
-        .filter((p) => p.trim() !== "");
+
       updateChapterContent(
         chapterId,
         paragraphs.length,
@@ -267,9 +269,9 @@ function BookView() {
   };
 
   const handleInsertParagraph = async (chapterId, paragraphId, instruction) => {
-    // console.log("Add paragraph in chapter:", chapterId);
-    // console.log("Paragraph index:", paragraphId);
-    // console.log("With prompt:", instruction);
+    console.log("Add paragraph in chapter:", chapterId);
+    console.log("Paragraph index:", paragraphId);
+    console.log("With prompt:", instruction);
 
     let paragraphs = chapters[chapterId - 1].content
       .split("\n\n")
@@ -393,8 +395,13 @@ function BookView() {
 
   const bookContextValue = {
     chapters,
+    handleParagraphSelect,
     handleDeleteParagraph,
-    // ... other handler functions
+    handleContinueChapter,
+    handleRewriteParagraph,
+    handleReviewApply,
+    handleInsertParagraph,
+    handleSummaryUpdate,
   };
 
   return (
@@ -450,15 +457,8 @@ function BookView() {
                   key={chapter.id}
                   ref={(el) => (chapterRefs.current[index] = el)}
                   chapter={chapter}
-                  onParagraphSelect={handleParagraphSelect}
                   selectedParagraph={selectedParagraphs[chapter.id]}
-                  onRewrite={handleRewrite}
-                  onInsertParagraph={handleInsertParagraph}
-                  onDeleteParagraph={handleDeleteParagraph}
-                  onReviewApply={handleReviewApply}
                   onCloseMenu={closeMenu}
-                  onContinueChapter={handleContinueChapter}
-                  onSummaryUpdate={handleSummaryUpdate}
                 />
               ))}
             </div>

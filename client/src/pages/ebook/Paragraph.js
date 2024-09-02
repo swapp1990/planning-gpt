@@ -276,38 +276,39 @@ const ParagraphReview = ({ original, edited, onSave, onCancel }) => {
   );
 };
 
-const ParagraphMenu = ({
-  content,
-  chapterId,
-  paragraphId,
-  onClose,
-  onRewrite,
-  onContParagraph,
-  makeApplyReview,
-}) => {
-  const { handleDeleteParagraph } = useBook();
+const ParagraphMenu = ({ content, chapterId, paragraphId, onClose }) => {
+  const {
+    handleDeleteParagraph,
+    handleRewriteParagraph,
+    handleInsertParagraph,
+    handleReviewApply,
+  } = useBook();
   const [rewritePrompt, setRewritePrompt] = React.useState("");
   const [rewriteResponse, setRewriteResponse] = React.useState(null);
-  const [contParagraphPrompt, setContParagraphPrompt] = useState("");
+  const [insertParaPrompt, setInsertParaPrompt] = useState("");
   const [isRewriteOpen, setIsRewriteOpen] = useState(false);
-  const [isContParagraphOpen, setIsContParagraphOpen] = useState(false);
+  const [isInsertParaOpen, setisInsertParaOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isRewriteReviewOpen, setIsRewriteReviewOpen] = useState(false);
 
   const handleRewriteClick = () => {
     setIsRewriteOpen(!isRewriteOpen);
-    setIsContParagraphOpen(false);
+    setisInsertParaOpen(false);
   };
 
-  const handleContParagraphClick = () => {
-    setIsContParagraphOpen(!isContParagraphOpen);
+  const onInsertParaClick = () => {
+    setisInsertParaOpen(!isInsertParaOpen);
     setIsRewriteOpen(false);
   };
 
   const handleSubmitRewrite = async () => {
     setIsLoading(true);
-    let response = await onRewrite(rewritePrompt);
+    let response = await handleRewriteParagraph(
+      chapterId,
+      paragraphId,
+      rewritePrompt
+    );
     if (response.newParagraph) {
       setIsRewriteOpen(false);
       setRewritePrompt("");
@@ -320,12 +321,16 @@ const ParagraphMenu = ({
     }
   };
 
-  const handleSubmitContParagraph = async () => {
+  const onInsertParaSubmit = async () => {
     setIsLoading(true);
-    let response = await onContParagraph(contParagraphPrompt);
+    let response = await handleInsertParagraph(
+      chapterId,
+      paragraphId,
+      insertParaPrompt
+    );
     if (response.newParagraph) {
-      setIsContParagraphOpen(false);
-      setContParagraphPrompt("");
+      setisInsertParaOpen(false);
+      setInsertParaPrompt("");
       setIsLoading(false);
     } else {
       setError("An error occurred. Please try again later.");
@@ -333,20 +338,20 @@ const ParagraphMenu = ({
     }
   };
 
-  const handleCancel = () => {
+  const onInsertParaCancel = () => {
     setIsRewriteOpen(false);
-    setIsContParagraphOpen(false);
+    setisInsertParaOpen(false);
     setRewritePrompt("");
-    setContParagraphPrompt("");
+    setInsertParaPrompt("");
   };
 
   const onDeleteParagraph = () => {
     handleDeleteParagraph(chapterId, paragraphId);
   };
 
-  const handleReviewApply = (newParagraph) => {
+  const onReviewSave = (newParagraph) => {
     setIsRewriteReviewOpen(false);
-    makeApplyReview(newParagraph);
+    handleReviewApply(chapterId, paragraphId, newParagraph);
   };
 
   const onReviewCancel = () => {
@@ -366,9 +371,9 @@ const ParagraphMenu = ({
           <FaPen className="text-blue-500" />
         </button>
         <button
-          onClick={handleContParagraphClick}
+          onClick={onInsertParaClick}
           className={`p-2 hover:bg-gray-100 rounded-full transition-colors duration-200 ${
-            isContParagraphOpen ? "bg-green-100" : ""
+            isInsertParaOpen ? "bg-green-100" : ""
           }`}
           title="Continue Paragraph"
         >
@@ -430,28 +435,28 @@ const ParagraphMenu = ({
         <ParagraphReview
           original={content}
           edited={rewriteResponse}
-          onSave={handleReviewApply}
+          onSave={onReviewSave}
           onCancel={onReviewCancel}
         />
       )}
-      {isContParagraphOpen && (
+      {isInsertParaOpen && (
         <div className="mt-2">
           <textarea
             className="w-full p-2 border rounded-md"
             rows="3"
             placeholder="Enter content for the new paragraph..."
-            value={contParagraphPrompt}
-            onChange={(e) => setContParagraphPrompt(e.target.value)}
+            value={insertParaPrompt}
+            onChange={(e) => setInsertParaPrompt(e.target.value)}
           />
           <div className="flex justify-end mt-2 space-x-2">
             <button
-              onClick={handleCancel}
+              onClick={onInsertParaCancel}
               className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200"
             >
               Cancel
             </button>
             <button
-              onClick={handleSubmitContParagraph}
+              onClick={onInsertParaSubmit}
               className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
               disabled={isLoading}
             >
@@ -472,24 +477,17 @@ const ParagraphMenu = ({
 
 const Paragraph = ({
   content,
-  onSelect,
   isSelected,
-  onRewrite,
-  onInsertParagraph,
-  onReviewApply,
   onCloseMenu,
   chapterId,
   paragraphIndex,
 }) => {
-  const makeApplyReview = (newParagraph) => {
-    onReviewApply(newParagraph, chapterId, paragraphIndex);
-  };
-
+  const { handleParagraphSelect } = useBook();
   return (
     <div className={`mb-0 ${isSelected ? "bg-blue-50 rounded-t-lg" : ""}`}>
       <p
         className={`p-2 rounded-t-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer`}
-        onClick={() => onSelect(chapterId, paragraphIndex)}
+        onClick={() => handleParagraphSelect(chapterId, paragraphIndex)}
       >
         {content}
       </p>
@@ -499,11 +497,6 @@ const Paragraph = ({
           paragraphId={paragraphIndex}
           chapterId={chapterId}
           onClose={() => onCloseMenu(chapterId)}
-          onRewrite={(prompt) => onRewrite(chapterId, paragraphIndex, prompt)}
-          onContParagraph={(prompt) =>
-            onInsertParagraph(chapterId, paragraphIndex, prompt)
-          }
-          makeApplyReview={(newParagraph) => makeApplyReview(newParagraph)}
         />
       )}
     </div>

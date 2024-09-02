@@ -29,7 +29,7 @@ export default function MainLayout({ children }) {
       <div className="flex flex-col" style={{ height: `${viewportHeight}px` }}>
         {/* <Header onToggleSidebar={handleToggleClick} /> */}
         <header className="bg-blue-600 text-white shadow-md h-8 flex-shrink-0">
-          Test Header
+          AI Rewriter
         </header>
         <div class="flex-grow overflow-auto">{children}</div>
         {/*  */}

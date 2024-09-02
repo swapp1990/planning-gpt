@@ -239,13 +239,15 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
 
 def generate_summary(paragraph, previous_summary=None):
     system_prompt = f"""
-    You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the following paragraph and summarize it in one clear, objective sentence. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story."""
+    You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the following paragraph and summarize it in one clear, objective sentence. The sentence should be as short as possible with not more than 15 words. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story."""
     if previous_summary is not None:
-        system_prompt = f"""{system_prompt}\n\n Here is the previous summary for reference: {previous_summary}. Keep the previous_summary the same and append the newly generated sentence to the previous summary."""
-    system_prompt = f"""{system_prompt}\n\n Only return the new summary, nothing else"""
+        system_prompt = f"""{system_prompt}\n\n Here is the previous summary for reference: {previous_summary}."""
+    system_prompt = f"""{system_prompt}\n\n Do not include any introductory or explanatory text. The response should be exactly one sentence in length."""
+    # print(system_prompt)
     prompt = f"Current Paragraph: {paragraph}"
 
     summary = hermes_ai_output(prompt, system_prompt, [], "")
+    summary = summary.replace("\n\n", " ")
     return summary
 
 @app.route("/generate", methods=["POST"])
@@ -317,9 +319,13 @@ def continue_chapter():
     previousSummary = data.get('summary')
     instruction = data.get('instruction')
     systemPrompt = data.get('systemPrompt')
-    passage = data.get('passage')
+    # passage = data.get('passage')
+    previousParagraph = data.get('previousParagraph')
 
-    prompt = f'\n\nPlease continue the story based on the following summary: `{previousSummary}` and the following instruction: `{instruction}`. \n\nStory so far is: `{passage}`. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+    if previousParagraph is None or previousParagraph == "":
+        print("continue_chapter: previousParagraph is empty")
+
+    prompt = f'\n\nPlease continue the story based on the following summary: `{previousSummary}` and the following instruction: `{instruction}`. \n\nHere is the previous paragraph: `{previousParagraph}`. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
 
     result = hermes_ai_output(prompt, systemPrompt, [], "")
     # result = instruction
@@ -359,7 +365,7 @@ def rewrite_paragraph():
     # fullPassage = data.get('fullMessage')
     paragraph = data.get('paragraph')
     instruction = data.get('instruction')
-    # previousSummary = data.get('previousSummary')
+    previousSummary = data.get('previousSummary')
     systemPrompt = data.get('systemPrompt')
     previousParagraph = data.get('previousParagraph')
 
@@ -368,10 +374,9 @@ def rewrite_paragraph():
     # result = instruction
     result = result.replace("\n\n", " ")
 
-    #replace the paragraph in the full passage
-    # replacedFullPassage = fullPassage.replace(paragraph, result)
-    # summary = generate_summary(replacedFullPassage, previousSummary)
-    return jsonify({'updatedParagraph': result})
+    summary = generate_summary(result, previousSummary)
+
+    return jsonify({'updatedParagraph': result, 'updatedSummary': summary})
 
 CHAT_HISTORY_FILE = 'chat_history.json'
 @app.route('/history/save', methods=['POST'])
