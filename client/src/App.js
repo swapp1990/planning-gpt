@@ -25,7 +25,7 @@ function App() {
             <Switch>
               <Route path="/login" component={Login} />
               <Route path="/home" exact component={BookView} />
-              <Route path="/" exact component={BookView} />
+              <Route path="/" exact component={TestPage} />
             </Switch>
           </MainLayout>
         </Router>

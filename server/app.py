@@ -183,7 +183,7 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
         yield "Please provide a valid prompt."
         return
     model = "hermes-3-llama-3.1-405b-fp8"
-    print(system_prompt[:10])
+    # print(system_prompt[:10])
     system_prompt = system_prompt + "\n\n" + parameters
     messages = []
     messages.append({
@@ -220,7 +220,7 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
         final_response = ""
         paragraph = ""
         for chunk in chat_completion:
-            # print(chunk.choices[0].delta)
+            print(chunk.choices[0].delta)
             # print(chunk.choices[0].delta.content)
             msg = chunk.choices[0].delta.content or ""
             paragraph += msg
@@ -231,7 +231,7 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
                 paragraph = ""
         print(final_response)
         # return chat_completion.choices[0].message.content
-        yield "[DONE] " + final_response
+        yield "[DONE]"
     except Exception as e:
         # Handle the exception (log it, re-raise it, return an error message, etc.)
         print(f"An error occurred: {e}")
@@ -263,22 +263,15 @@ def generate_hermes():
     data = request.get_json()
     prompt = data.get('prompt')
     system_prompt = data.get('system_prompt')
-    examples = data.get('examples')
-    parameters = data.get('parameters')
 
     def generate():
         try:
-            for chunk in hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
+            for chunk in hermes_ai_streamed_output(prompt, system_prompt, [], ""):
                 yield f"data: {chunk}\n\n"
         except Exception as e:
             yield f"data: An error occurred: {e}\n\n"
 
-    # result = hermes_ai_output(prompt, system_prompt, examples, parameters)
-    # result = "Test Response"
-    # summary = generate_summary(result)
-
     return Response(stream_with_context(generate()), content_type='text/event-stream')
-    return jsonify({'prompt': prompt, 'passage': result, 'summary': summary})
 
 @app.route("/passage", methods=["POST"])
 def update_passage():
