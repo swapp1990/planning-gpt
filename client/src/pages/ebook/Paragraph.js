@@ -11,6 +11,7 @@ import {
   FaExclamationCircle,
 } from "react-icons/fa";
 import { computeDiff } from "../../utils/paragraphDiff";
+import { useBook } from "./BookContext";
 
 const ParagraphReview = ({ original, edited, onSave, onCancel }) => {
   const [changes, setChanges] = useState([]);
@@ -277,11 +278,14 @@ const ParagraphReview = ({ original, edited, onSave, onCancel }) => {
 
 const ParagraphMenu = ({
   content,
+  chapterId,
+  paragraphId,
   onClose,
   onRewrite,
   onContParagraph,
   makeApplyReview,
 }) => {
+  const { handleDeleteParagraph } = useBook();
   const [rewritePrompt, setRewritePrompt] = React.useState("");
   const [rewriteResponse, setRewriteResponse] = React.useState(null);
   const [contParagraphPrompt, setContParagraphPrompt] = useState("");
@@ -336,6 +340,10 @@ const ParagraphMenu = ({
     setContParagraphPrompt("");
   };
 
+  const onDeleteParagraph = () => {
+    handleDeleteParagraph(chapterId, paragraphId);
+  };
+
   const handleReviewApply = (newParagraph) => {
     setIsRewriteReviewOpen(false);
     makeApplyReview(newParagraph);
@@ -367,6 +375,7 @@ const ParagraphMenu = ({
           <FaPlus className="text-green-500" />
         </button>
         <button
+          onClick={onDeleteParagraph}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
           title="Delete"
         >
@@ -487,6 +496,8 @@ const Paragraph = ({
       {isSelected && (
         <ParagraphMenu
           content={content}
+          paragraphId={paragraphIndex}
+          chapterId={chapterId}
           onClose={() => onCloseMenu(chapterId)}
           onRewrite={(prompt) => onRewrite(chapterId, paragraphIndex, prompt)}
           onContParagraph={(prompt) =>

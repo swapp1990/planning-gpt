@@ -4,6 +4,8 @@ import { FaChevronLeft, FaChevronRight, FaBook } from "react-icons/fa";
 import Chapter from "./Chapter";
 import Sidebar from "./Sidebar";
 
+import { BookProvider } from "./BookContext";
+
 function BookView() {
   const [chatType, setChatType] = useState("writing_assistant");
   const [systemPrompts, setSystemPrompts] = useState([]);
@@ -119,7 +121,12 @@ function BookView() {
     });
   };
 
-  const updateChapterContent = (chapterId, paragraphId, content) => {
+  const updateChapterContent = (
+    chapterId,
+    paragraphId,
+    content,
+    updatedSummary = None
+  ) => {
     // console.log("updateChapterContent " + paragraphId);
     setChapters((prevChapters) => {
       const newChapters = [...prevChapters];
@@ -133,6 +140,8 @@ function BookView() {
         paragraphs[paragraphId] = content;
         console.log(paragraphs);
         newChapters[chapterIndex].content = paragraphs.join("\n\n");
+        console.log("updatedSummary " + updatedSummary);
+        newChapters[chapterIndex].summary = updatedSummary;
       }
       return newChapters;
     });
@@ -191,7 +200,7 @@ function BookView() {
   };
 
   const handleContinueChapter = async (chapterId, instruction) => {
-    console.log("Continue chapter:", chapterId);
+    // console.log("Continue chapter:", chapterId);
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/chapter/continue`,
@@ -213,12 +222,48 @@ function BookView() {
       let paragraphs = chapters[chapterId - 1].content
         .split("\n\n")
         .filter((p) => p.trim() !== "");
-      updateChapterContent(chapterId, paragraphs.length, data.paragraph);
-      return { newParagraph: data.paragraph };
+      updateChapterContent(
+        chapterId,
+        paragraphs.length,
+        data.paragraph,
+        data.updatedSummary
+      );
+      return {
+        newParagraph: data.paragraph,
+      };
     } catch (error) {
       console.error("Error fetching continue chapter response:", error);
       return { error: "Error" };
     }
+  };
+
+  const handleDeleteParagraph = async (chapterId, paragraphId) => {
+    console.log("Deleting Paragraph ", chapterId, paragraphId);
+    setChapters((prevChapters) => {
+      const newChapters = [...prevChapters];
+      const chapterIndex = newChapters.findIndex(
+        (chapter) => chapter.id === chapterId
+      );
+
+      if (chapterIndex !== -1) {
+        let paragraphs = newChapters[chapterIndex].content
+          .split("\n\n")
+          .filter((p) => p.trim() !== "");
+
+        // Remove the specified paragraph
+        paragraphs.splice(paragraphId, 1);
+
+        // If it was the last paragraph, add an empty one
+        if (paragraphs.length === 0) {
+          // paragraphs.push("New paragraph");
+        }
+
+        // Join the paragraphs back into a single string
+        newChapters[chapterIndex].content = paragraphs.join("\n\n");
+      }
+
+      return newChapters;
+    });
   };
 
   const handleInsertParagraph = async (chapterId, paragraphId, instruction) => {
@@ -346,75 +391,84 @@ function BookView() {
     );
   };
 
+  const bookContextValue = {
+    chapters,
+    handleDeleteParagraph,
+    // ... other handler functions
+  };
+
   return (
-    <div className="h-full flex flex-col bg-gray-100">
-      <header className="bg-blue-600 text-white p-1 shadow-md flex justify-between items-center z-30 relative">
-        <div>
-          <h1 className="text-xl font-bold">My Ebook Title</h1>
-          {currentChapter && (
-            <p className="text-sm">{chapters[currentChapter - 1].title}</p>
-          )}
-        </div>
-        <div className="flex items-center">
-          <span className="text-sm mr-4">
-            {isSaved ? `Last saved: ${lastSavedTime}` : "Saving..."}
-          </span>
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-          >
-            Chapters
-          </button>
-        </div>
-      </header>
-      <div className="flex-grow overflow-hidden relative">
-        <Sidebar
-          chapters={chapters}
-          currentChapter={currentChapter}
-          navigateChapter={navigateChapter}
-          isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
-        />
-        <main className="h-full overflow-auto p-4">
-          <div className="max-w-3xl mx-auto">
-            <div className="text-center text-gray-500">
-              {chapters.length == 0 && (
-                <div>
-                  <p className="text-2xl">
-                    <FaBook size={32} className="inline-block mb-2" />
-                  </p>
-                  <p className="text-lg">No chapters available</p>
-                </div>
-              )}
-              <button
-                onClick={() => addNewChapter()}
-                className="bg-green-500 px-4 py-2 rounded hover:bg-green-600 transition-colors text-white mb-4"
-              >
-                Add New Chapter
-              </button>
-            </div>
-            {chapters.map((chapter, index) => (
-              <Chapter
-                key={chapter.id}
-                ref={(el) => (chapterRefs.current[index] = el)}
-                chapter={chapter}
-                onParagraphSelect={handleParagraphSelect}
-                selectedParagraph={selectedParagraphs[chapter.id]}
-                onRewrite={handleRewrite}
-                onInsertParagraph={handleInsertParagraph}
-                onReviewApply={handleReviewApply}
-                onCloseMenu={closeMenu}
-                onContinueChapter={handleContinueChapter}
-                onSummaryUpdate={handleSummaryUpdate}
-              />
-            ))}
+    <BookProvider value={bookContextValue}>
+      <div className="h-full flex flex-col bg-gray-100">
+        <header className="bg-blue-600 text-white p-1 shadow-md flex justify-between items-center z-30 relative">
+          <div>
+            <h1 className="text-xl font-bold">My Ebook Title</h1>
+            {currentChapter && (
+              <p className="text-sm">{chapters[currentChapter - 1].title}</p>
+            )}
           </div>
-        </main>
+          <div className="flex items-center">
+            <span className="text-sm mr-4">
+              {isSaved ? `Last saved: ${lastSavedTime}` : "Saving..."}
+            </span>
+            <button
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+            >
+              Chapters
+            </button>
+          </div>
+        </header>
+        <div className="flex-grow overflow-hidden relative">
+          <Sidebar
+            chapters={chapters}
+            currentChapter={currentChapter}
+            navigateChapter={navigateChapter}
+            isOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+          />
+          <main className="h-full overflow-auto p-4">
+            <div className="max-w-3xl mx-auto">
+              <div className="text-center text-gray-500">
+                {chapters.length == 0 && (
+                  <div>
+                    <p className="text-2xl">
+                      <FaBook size={32} className="inline-block mb-2" />
+                    </p>
+                    <p className="text-lg">No chapters available</p>
+                  </div>
+                )}
+                <button
+                  onClick={() => addNewChapter()}
+                  className="bg-green-500 px-4 py-2 rounded hover:bg-green-600 transition-colors text-white mb-4"
+                >
+                  Add New Chapter
+                </button>
+              </div>
+              {chapters.map((chapter, index) => (
+                <Chapter
+                  key={chapter.id}
+                  ref={(el) => (chapterRefs.current[index] = el)}
+                  chapter={chapter}
+                  onParagraphSelect={handleParagraphSelect}
+                  selectedParagraph={selectedParagraphs[chapter.id]}
+                  onRewrite={handleRewrite}
+                  onInsertParagraph={handleInsertParagraph}
+                  onDeleteParagraph={handleDeleteParagraph}
+                  onReviewApply={handleReviewApply}
+                  onCloseMenu={closeMenu}
+                  onContinueChapter={handleContinueChapter}
+                  onSummaryUpdate={handleSummaryUpdate}
+                />
+              ))}
+            </div>
+          </main>
+        </div>
+        <div className="hidden sm:block">
+          <Footer />
+        </div>
       </div>
-      <div className="hidden sm:block">
-        <Footer />
-      </div>
-    </div>
+    </BookProvider>
   );
 }
 

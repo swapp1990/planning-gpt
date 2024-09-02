@@ -237,14 +237,13 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
         print(f"An error occurred: {e}")
         yield "An error occurred while processing the request."
 
-def generate_summary(passage, previous_summary=None):
-    #Generate Summary
+def generate_summary(paragraph, previous_summary=None):
     system_prompt = f"""
-    You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the following passage and summarize it in one clear, objective paragraph. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story."""
+    You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the following paragraph and summarize it in one clear, objective sentence. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story."""
     if previous_summary is not None:
-        system_prompt = f"""
-        You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries using plain and simple language. Your task is to read the following passage and summarize it in one clear, objective paragraph. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story. If the current passage significantly differs from the previous summary, please provide a new summary that accurately reflects the content of the passage. If the current passage content is slightly altered or expanded, you may choose to refine the existing summary to incorporate the new information, but try to keep the summary concise without losing any major information. \n\n Here is the previous summary for reference: {previous_summary}. """
-    prompt = f"Current Passage: {passage}"
+        system_prompt = f"""{system_prompt}\n\n Here is the previous summary for reference: {previous_summary}. Keep the previous_summary the same and append the newly generated sentence to the previous summary."""
+    system_prompt = f"""{system_prompt}\n\n Only return the new summary, nothing else"""
+    prompt = f"Current Paragraph: {paragraph}"
 
     summary = hermes_ai_output(prompt, system_prompt, [], "")
     return summary
@@ -315,17 +314,20 @@ Based on Updated Instructions, rewrite the original user prompt, keeping the con
 @app.route("/chapter/continue", methods=["POST"])
 def continue_chapter():
     data = request.get_json()
-    summary = data.get('summary')
+    previousSummary = data.get('summary')
     instruction = data.get('instruction')
     systemPrompt = data.get('systemPrompt')
     passage = data.get('passage')
 
-    prompt = f'\n\nPlease continue the story based on the following summary: `{summary}` and the following instruction: `{instruction}`. \n\nStory so far is: `{passage}`. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+    prompt = f'\n\nPlease continue the story based on the following summary: `{previousSummary}` and the following instruction: `{instruction}`. \n\nStory so far is: `{passage}`. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
 
     result = hermes_ai_output(prompt, systemPrompt, [], "")
     # result = instruction
     result = result.replace("\n\n", " ")
-    return jsonify({'paragraph': result})
+
+    summary = generate_summary(result, previousSummary)
+
+    return jsonify({'paragraph': result, 'updatedSummary': summary})
 
 @app.route("/chapter/insert", methods=["POST"])
 def insert_chapter():

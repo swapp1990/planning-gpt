@@ -103,6 +103,7 @@ const Chapter = React.forwardRef(
       selectedParagraph,
       onRewrite,
       onInsertParagraph,
+      onDeleteParagraph,
       onReviewApply,
       onCloseMenu,
       onContinueChapter,
