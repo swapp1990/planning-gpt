@@ -6,6 +6,7 @@ import { useEbookStorage } from "../../utils/storage";
 
 import Chapter from "./Chapter";
 import Sidebar from "./Sidebar";
+import Header from "./Header";
 
 import { BookProvider } from "./BookContext";
 
@@ -58,6 +59,7 @@ function BookView() {
   useEffect(() => {
     if (chapters && chapters.length > 0) {
       setIsSaved(false);
+      console.log("Saved");
     }
   }, [chapters]);
 
@@ -497,51 +499,6 @@ function BookView() {
     );
   };
 
-  const Header = () => (
-    <header className="bg-blue-600 text-white p-1 shadow-md flex justify-between items-center z-30 relative">
-      <div className="flex items-center">
-        {isEditingTitle ? (
-          <input
-            type="text"
-            value={ebookTitle}
-            onChange={(e) => setEbookTitle(e.target.value)}
-            onBlur={() => setIsEditingTitle(false)}
-            onKeyPress={(e) => e.key === "Enter" && setIsEditingTitle(false)}
-            className="text-xl font-bold bg-blue-500 px-2 py-1 rounded"
-            autoFocus
-          />
-        ) : (
-          <h1
-            className="text-xl font-bold cursor-pointer"
-            onClick={() => setIsEbookListOpen(true)}
-          >
-            {ebookTitle}
-          </h1>
-        )}
-        <button
-          onClick={() => setIsEditingTitle(!isEditingTitle)}
-          className="ml-2 text-white hover:text-gray-200"
-        >
-          <FaEdit />
-        </button>
-      </div>
-      {currentChapter && (
-        <p className="text-sm">{chapters[currentChapter - 1].title}</p>
-      )}
-      <div className="flex items-center">
-        <span className="text-sm mr-4">
-          {isSaved ? `Last saved: ${lastSavedTime}` : "Saving..."}
-        </span>
-        <button
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-          className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-        >
-          Chapters
-        </button>
-      </div>
-    </header>
-  );
-
   const bookContextValue = {
     chapters,
     handleParagraphSelect,
@@ -556,7 +513,18 @@ function BookView() {
   return (
     <BookProvider value={bookContextValue}>
       <div className="h-full flex flex-col bg-gray-100">
-        <Header />
+        <Header
+          ebookTitle={ebookTitle}
+          setEbookTitle={setEbookTitle}
+          isEditingTitle={isEditingTitle}
+          setIsEditingTitle={setIsEditingTitle}
+          currentChapter={currentChapter}
+          chapters={chapters}
+          isSaved={isSaved}
+          lastSavedTime={lastSavedTime}
+          setIsSidebarOpen={setIsSidebarOpen}
+          setIsEbookListOpen={setIsEbookListOpen}
+        />
         <div className="flex-grow overflow-hidden relative">
           <Sidebar
             items={chapters}
