@@ -322,6 +322,15 @@ const ParagraphMenu = ({ content, chapterId, paragraphId, onClose }) => {
     }
   };
 
+  const onRewriteCancel = () => {
+    setIsLoading(false);
+    setIsRewriteOpen(false);
+    setRewritePrompt("");
+    setRewriteResponse("");
+    setError(null);
+    setIsRewriteReviewOpen(false);
+  };
+
   const onInsertParaSubmit = async () => {
     setIsLoading(true);
     let response = await handleInsertParagraph(
@@ -412,7 +421,7 @@ const ParagraphMenu = ({ content, chapterId, paragraphId, onClose }) => {
           />
           <div className="flex justify-end mt-2 space-x-2">
             <button
-              onClick={handleCancel}
+              onClick={onRewriteCancel}
               className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200"
             >
               Cancel
