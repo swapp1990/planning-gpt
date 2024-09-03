@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { FaPlus, FaCheck, FaEdit, FaTimes, FaLightbulb } from "react-icons/fa";
+import {
+  FaPlus,
+  FaCheck,
+  FaEdit,
+  FaEraser,
+  FaTimes,
+  FaLightbulb,
+} from "react-icons/fa";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { useBook } from "./BookContext";
 import Paragraph from "./Paragraph";
