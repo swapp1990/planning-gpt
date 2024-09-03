@@ -332,7 +332,7 @@ def continue_chapter():
         # print("continue_chapter: previousParagraph is empty")
         previousParagraph = ""
 
-    prompt = f'\n\nPlease continue the story based on the following summary: `{previousSummary}` and the following instruction: `{instruction}`. \n\nHere is the previous paragraph: `{previousParagraph}`. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+    prompt = f'\n\nPlease continue the story based on the following summary: `{previousSummary}` and the following instruction: `{instruction}`. \n\nHere is the previous paragraph: `{previousParagraph}`.'
 
     def generate():
         partial_result = ""
