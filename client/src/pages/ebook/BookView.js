@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { FaChevronLeft, FaChevronRight, FaBook } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaBook, FaEdit } from "react-icons/fa";
 
 import { streamedApiCall } from "../../utils/api";
 
@@ -17,6 +17,11 @@ function BookView() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedParagraphs, setSelectedParagraphs] = useState({});
 
+  const [ebookTitle, setEbookTitle] = useState("My Ebook Title");
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [ebooks, setEbooks] = useState([]);
+  const [isEbookListOpen, setIsEbookListOpen] = useState(false);
+
   const totalChapters = 0;
   const chapterRefs = useRef([]);
 
@@ -26,24 +31,64 @@ function BookView() {
 
   const saveToLocalStorage = useCallback(() => {
     const bookData = {
+      title: ebookTitle,
       chapters,
       currentChapter,
       systemPrompts,
       parameters,
     };
-    localStorage.setItem("bookData", JSON.stringify(bookData));
+
+    // Save current ebook
+    localStorage.setItem("currentEbook", JSON.stringify(bookData));
+
+    // Update ebooks list
+    const updatedEbooks = ebooks.filter((ebook) => ebook.title !== ebookTitle);
+    if (ebookTitle !== "New Ebook") {
+      updatedEbooks.push({
+        title: ebookTitle,
+        lastModified: new Date().toISOString(),
+        bookData: bookData,
+      });
+      localStorage.setItem("ebooks", JSON.stringify(updatedEbooks));
+      setEbooks(updatedEbooks);
+    }
+
     setIsSaved(true);
     setLastSavedTime(new Date().toLocaleTimeString());
-  }, [chapters, currentChapter, systemPrompts, parameters]);
+  }, [chapters, currentChapter, systemPrompts, parameters, ebookTitle, ebooks]);
 
-  const loadFromLocalStorage = useCallback(() => {
-    const savedData = localStorage.getItem("bookData");
-    if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      setChapters(parsedData.chapters || []);
-      setCurrentChapter(parsedData.currentChapter || null);
-      setSystemPrompts(parsedData.systemPrompts || []);
-      setParameters(parsedData.parameters || []);
+  const loadFromLocalStorage = useCallback((ebookToLoad = null) => {
+    if (ebookToLoad) {
+      if (localStorage.getItem("ebooks")) {
+        let ebooks = JSON.parse(localStorage.getItem("ebooks"));
+        let resp = ebooks.filter((ebook) => ebook.title == ebookToLoad);
+        if (resp && resp.length > 0) {
+          let loadedEbook = resp[0];
+          const parsedData = loadedEbook.bookData;
+          setEbookTitle(parsedData.title || "Untitled Ebook");
+          setChapters(parsedData.chapters || []);
+          setCurrentChapter(parsedData.currentChapter || null);
+          setSystemPrompts(parsedData.systemPrompts || []);
+          setParameters(parsedData.parameters || []);
+        }
+      }
+    } else {
+      const savedData = localStorage.getItem("currentEbook");
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        setEbookTitle(parsedData.title || "Untitled Ebook");
+        setChapters(parsedData.chapters || []);
+        setCurrentChapter(parsedData.currentChapter || null);
+        setSystemPrompts(parsedData.systemPrompts || []);
+        setParameters(parsedData.parameters || []);
+      }
+
+      // Load ebooks list
+      let savedEbooks = localStorage.getItem("ebooks");
+      if (savedEbooks) {
+        savedEbooks = JSON.parse(savedEbooks);
+        setEbooks(savedEbooks);
+      }
     }
   }, []);
 
@@ -382,6 +427,11 @@ function BookView() {
     return { newSummary: newSummary };
   };
 
+  const handleEbookSelect = (selectedEbookTitle) => {
+    loadFromLocalStorage(selectedEbookTitle);
+    setIsEbookListOpen(false);
+  };
+
   const addNewChapter = () => {
     setChapters((prevChapters) => [
       ...prevChapters,
@@ -393,6 +443,62 @@ function BookView() {
       },
     ]);
     setIsSaved(false);
+  };
+
+  const createNewEbook = () => {
+    const newEbookTitle = "New Ebook";
+    const newEbook = {
+      title: newEbookTitle,
+      chapters: [],
+      currentChapter: null,
+      systemPrompts: [],
+      parameters: [],
+      lastModified: new Date().toISOString(),
+    };
+
+    // Save new ebook to localStorage
+    localStorage.setItem(newEbookTitle, JSON.stringify(newEbook));
+
+    // Update ebooks list
+    const updatedEbooks = [
+      ...ebooks,
+      { title: newEbookTitle, lastModified: newEbook.lastModified },
+    ];
+    localStorage.setItem("ebooks", JSON.stringify(updatedEbooks));
+    setEbooks(updatedEbooks);
+
+    // Load the new ebook
+    loadFromLocalStorage(newEbookTitle);
+    setIsEbookListOpen(false);
+  };
+
+  const deleteChapter = (chapterId) => {
+    setChapters((prevChapters) =>
+      prevChapters.filter((chapter) => chapter.id !== chapterId)
+    );
+    if (currentChapter === chapterId) {
+      setCurrentChapter(null);
+    }
+    setIsSaved(false);
+  };
+
+  const deleteEbook = (ebookTitle) => {
+    // Remove from localStorage
+    localStorage.removeItem(ebookTitle);
+
+    // Update ebooks list
+    const updatedEbooks = ebooks.filter((ebook) => ebook.title !== ebookTitle);
+    localStorage.setItem("ebooks", JSON.stringify(updatedEbooks));
+    setEbooks(updatedEbooks);
+
+    // If the deleted ebook was the current one, load the first available ebook or create a new one
+    if (ebookTitle === ebookTitle) {
+      if (updatedEbooks.length > 0) {
+        loadFromLocalStorage(updatedEbooks[0].title);
+      } else {
+        createNewEbook();
+      }
+    }
   };
 
   const Footer = () => {
@@ -428,6 +534,51 @@ function BookView() {
     );
   };
 
+  const Header = () => (
+    <header className="bg-blue-600 text-white p-1 shadow-md flex justify-between items-center z-30 relative">
+      <div className="flex items-center">
+        {isEditingTitle ? (
+          <input
+            type="text"
+            value={ebookTitle}
+            onChange={(e) => setEbookTitle(e.target.value)}
+            onBlur={() => setIsEditingTitle(false)}
+            onKeyPress={(e) => e.key === "Enter" && setIsEditingTitle(false)}
+            className="text-xl font-bold bg-blue-500 px-2 py-1 rounded"
+            autoFocus
+          />
+        ) : (
+          <h1
+            className="text-xl font-bold cursor-pointer"
+            onClick={() => setIsEbookListOpen(true)}
+          >
+            {ebookTitle}
+          </h1>
+        )}
+        <button
+          onClick={() => setIsEditingTitle(!isEditingTitle)}
+          className="ml-2 text-white hover:text-gray-200"
+        >
+          <FaEdit />
+        </button>
+      </div>
+      {currentChapter && (
+        <p className="text-sm">{chapters[currentChapter - 1].title}</p>
+      )}
+      <div className="flex items-center">
+        <span className="text-sm mr-4">
+          {isSaved ? `Last saved: ${lastSavedTime}` : "Saving..."}
+        </span>
+        <button
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
+        >
+          Chapters
+        </button>
+      </div>
+    </header>
+  );
+
   const bookContextValue = {
     chapters,
     handleParagraphSelect,
@@ -442,32 +593,26 @@ function BookView() {
   return (
     <BookProvider value={bookContextValue}>
       <div className="h-full flex flex-col bg-gray-100">
-        <header className="bg-blue-600 text-white p-1 shadow-md flex justify-between items-center z-30 relative">
-          <div>
-            <h1 className="text-xl font-bold">My Ebook Title</h1>
-            {currentChapter && (
-              <p className="text-sm">{chapters[currentChapter - 1].title}</p>
-            )}
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm mr-4">
-              {isSaved ? `Last saved: ${lastSavedTime}` : "Saving..."}
-            </span>
-            <button
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="bg-blue-500 px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-            >
-              Chapters
-            </button>
-          </div>
-        </header>
+        <Header />
         <div className="flex-grow overflow-hidden relative">
           <Sidebar
-            chapters={chapters}
-            currentChapter={currentChapter}
-            navigateChapter={navigateChapter}
+            items={chapters}
+            currentItem={currentChapter}
+            onItemClick={navigateChapter}
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
+            title="Chapters"
+            onDeleteItem={deleteChapter}
+          />
+          <Sidebar
+            items={ebooks}
+            currentItem={ebookTitle}
+            onItemClick={handleEbookSelect}
+            isOpen={isEbookListOpen}
+            onClose={() => setIsEbookListOpen(false)}
+            title="Ebooks"
+            onNewItem={createNewEbook}
+            onDeleteItem={deleteEbook}
           />
           <main className="h-full overflow-auto p-4">
             <div className="max-w-3xl mx-auto">
