@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { FaPlus, FaCheck, FaEdit, FaEraser } from "react-icons/fa";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { useBook } from "./BookContext";
 import Paragraph from "./Paragraph";
 
-const Summary = ({ summary, chapterId }) => {
+const Summary = ({ summary, chapterId, isUpdatingSummary }) => {
   const { handleSummaryUpdate } = useBook();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -89,6 +90,9 @@ const Summary = ({ summary, chapterId }) => {
         </div>
       ) : (
         <div className="bg-gray-100 p-4 rounded-md h-24 overflow-y-auto relative">
+          {isUpdatingSummary && (
+            <AiOutlineLoading3Quarters className="inline-block ml-1 animate-spin text-green-500" />
+          )}
           <p className="text-gray-600 pr-2">{summary}</p>
         </div>
       )}
@@ -105,6 +109,8 @@ const Chapter = React.forwardRef(
     const [paragraphs, setParagraphs] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [isStreaming, setIsStreaming] = useState(false);
+    const [isUpdatingSummary, setIsUpdatingSummary] = useState(false);
 
     useEffect(() => {
       setParagraphs(
@@ -114,6 +120,14 @@ const Chapter = React.forwardRef(
           .map((p) => p.trim())
       );
     }, [chapter.content]);
+
+    useEffect(() => {
+      setIsStreaming(chapter.streaming);
+    }, [chapter.streaming]);
+
+    useEffect(() => {
+      setIsUpdatingSummary(chapter.updatingSummary);
+    }, [chapter.updatingSummary]);
 
     const handleContinueClick = () => {
       setIsContinueOpen(true);
@@ -146,7 +160,11 @@ const Chapter = React.forwardRef(
         <h2 className="text-3xl font-bold mb-4 text-gray-800">
           {chapter.title}
         </h2>
-        <Summary summary={chapter.summary} chapterId={chapter.id} />
+        <Summary
+          summary={chapter.summary}
+          chapterId={chapter.id}
+          isUpdatingSummary={isUpdatingSummary}
+        />
         <div className="prose max-w-none">
           {paragraphs.map((paragraph, index) => (
             <Paragraph
@@ -156,6 +174,7 @@ const Chapter = React.forwardRef(
               onCloseMenu={onCloseMenu}
               chapterId={chapter.id}
               paragraphIndex={index}
+              isStreaming={isStreaming}
             />
           ))}
         </div>

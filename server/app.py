@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 import time
 import json
@@ -179,36 +180,27 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
         api_key=openai_api_key,
         base_url=openai_api_base,
     )
-    if(prompt is None or len(prompt) == 0):
+    
+    if prompt is None or len(prompt) == 0:
         yield "Please provide a valid prompt."
         return
+    
     model = "hermes-3-llama-3.1-405b-fp8"
-    # print(system_prompt[:10])
     system_prompt = system_prompt + "\n\n" + parameters
-    messages = []
-    messages.append({
-        "role": "system",
-        "content": system_prompt
-    })
-
-    if examples is not None or len(examples) > 0:
+    messages = [
+        {"role": "system", "content": system_prompt}
+    ]
+    
+    if examples is not None and len(examples) > 0:
         for example in examples:
-            messages.append({
-                "role": "user",
-                "content": example["user"]
-            })
-            messages.append({
-                "role": "assistant",
-                "content": example["assistant"]
-            })
-
-    #add user prompt
-    messages.append({
-        "role": "user",
-        "content": prompt
-    })
-
-    print(messages)
+            messages.extend([
+                {"role": "user", "content": example["user"]},
+                {"role": "assistant", "content": example["assistant"]}
+            ])
+    
+    messages.append({"role": "user", "content": prompt})
+    
+    # print(messages)
     
     try:
         chat_completion = client.chat.completions.create(
@@ -216,26 +208,34 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
             model=model,
             stream=True
         )
-
+        
         final_response = ""
-        paragraph = ""
+        current_sentence = ""
         for chunk in chat_completion:
-            print(chunk.choices[0].delta)
-            # print(chunk.choices[0].delta.content)
             msg = chunk.choices[0].delta.content or ""
-            paragraph += msg
-            if "\n\n" in msg:
-                # print(paragraph)
-                final_response += paragraph
-                yield paragraph
-                paragraph = ""
-        print(final_response)
-        # return chat_completion.choices[0].message.content
+            current_sentence += msg
+            
+            sentences = re.split(r'(?<=[.!?])\s+', current_sentence)
+            
+            if len(sentences) > 1:
+                complete_sentences = sentences[:-1]
+                for sentence in complete_sentences:
+                    # print(sentence.strip())
+                    yield sentence.strip()
+                    final_response += sentence + " "
+                
+                current_sentence = sentences[-1]
+        
+        if current_sentence.strip():
+            # print(current_sentence.strip())
+            yield current_sentence.strip()
+            final_response += current_sentence
+        
         yield "[DONE]"
+        
     except Exception as e:
-        # Handle the exception (log it, re-raise it, return an error message, etc.)
         print(f"An error occurred: {e}")
-        yield "An error occurred while processing the request."
+        yield {"error": "An error occurred"}
 
 def generate_summary(paragraph, previous_summary=None):
     system_prompt = f"""
@@ -316,17 +316,25 @@ def continue_chapter():
     previousParagraph = data.get('previousParagraph')
 
     if previousParagraph is None or previousParagraph == "":
-        print("continue_chapter: previousParagraph is empty")
+        # print("continue_chapter: previousParagraph is empty")
+        previousParagraph = ""
 
     prompt = f'\n\nPlease continue the story based on the following summary: `{previousSummary}` and the following instruction: `{instruction}`. \n\nHere is the previous paragraph: `{previousParagraph}`. \n\nOnly return the continuation of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
 
-    result = hermes_ai_output(prompt, systemPrompt, [], "")
-    # result = instruction
-    result = result.replace("\n\n", " ")
+    def generate():
+        partial_result = ""
+        try:
+            for chunk in hermes_ai_streamed_output(prompt, systemPrompt, [], ""):
+                partial_result += chunk
+                yield json.dumps({'chunk': chunk}) + '\n'
+        except Exception as e:
+            yield json.dumps({'error': "An error occured"})
 
-    summary = generate_summary(result, previousSummary)
+        summary = generate_summary(partial_result, previousSummary)
+        summary = previousSummary + " " + summary
+        yield json.dumps({'summary': summary}) + '\n'
 
-    return jsonify({'paragraph': result, 'updatedSummary': summary})
+    return Response(stream_with_context(generate()), content_type='application/x-ndjson')
 
 @app.route("/chapter/insert", methods=["POST"])
 def insert_chapter():

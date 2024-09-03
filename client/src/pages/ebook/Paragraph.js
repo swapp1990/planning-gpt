@@ -10,6 +10,7 @@ import {
   FaEye,
   FaExclamationCircle,
 } from "react-icons/fa";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { computeDiff } from "../../utils/paragraphDiff";
 import { useBook } from "./BookContext";
 
@@ -478,6 +479,7 @@ const ParagraphMenu = ({ content, chapterId, paragraphId, onClose }) => {
 const Paragraph = ({
   content,
   isSelected,
+  isStreaming,
   onCloseMenu,
   chapterId,
   paragraphIndex,
@@ -490,6 +492,9 @@ const Paragraph = ({
         onClick={() => handleParagraphSelect(chapterId, paragraphIndex)}
       >
         {content}
+        {isStreaming && (
+          <AiOutlineLoading3Quarters className="inline-block ml-1 animate-spin text-gray-500" />
+        )}
       </p>
       {isSelected && (
         <ParagraphMenu

@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { FaChevronLeft, FaChevronRight, FaBook } from "react-icons/fa";
 
+import { streamedApiCall } from "../../utils/api";
+
 import Chapter from "./Chapter";
 import Sidebar from "./Sidebar";
 
@@ -125,7 +127,9 @@ function BookView() {
     chapterId,
     paragraphId,
     content,
-    updatedSummary = null
+    updatedSummary = null,
+    streaming = false,
+    updatingSummary = false
   ) => {
     // console.log("updateChapterContent " + paragraphId);
     setChapters((prevChapters) => {
@@ -140,10 +144,11 @@ function BookView() {
         paragraphs[paragraphId] = content;
         // console.log(paragraphs);
         newChapters[chapterIndex].content = paragraphs.join("\n\n");
+        newChapters[chapterIndex].streaming = streaming;
+        newChapters[chapterIndex].updatingSummary = updatingSummary;
         if (updatedSummary) {
-          // console.log("updatedSummary " + updatedSummary);
-          newChapters[chapterIndex].summary =
-            newChapters[chapterIndex].summary + " " + updatedSummary;
+          // console.log("updatedSummary " + newChapters[chapterIndex].summary);
+          newChapters[chapterIndex].summary = updatedSummary;
         }
       }
       return newChapters;
@@ -202,39 +207,69 @@ function BookView() {
 
   const handleContinueChapter = async (chapterId, instruction) => {
     console.log("Continue chapter:", chapterId);
-    try {
-      let paragraphs = chapters[chapterId - 1].content
-        .split("\n\n")
-        .filter((p) => p.trim() !== "");
-      const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/chapter/continue`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            summary: chapters[chapterId - 1].summary,
-            previousParagraph: paragraphs[paragraphs.length - 1],
-            systemPrompt: systemPrompts[0],
-            instruction: instruction,
-          }),
-        }
-      );
-      const data = await response.json();
-      //   console.log(data);
+    let newParagraph = "";
+    let updatedSummary = "";
 
-      updateChapterContent(
-        chapterId,
-        paragraphs.length,
-        data.paragraph,
-        data.updatedSummary
-      );
-      return {
-        newParagraph: data.paragraph,
-      };
-    } catch (error) {
+    const paragraphs = chapters[chapterId - 1].content
+      .split("\n\n")
+      .filter((p) => p.trim() !== "");
+
+    const onChunk = (data) => {
+      if (data.chunk) {
+        if (data.chunk !== "[DONE]") {
+          newParagraph += data.chunk + " ";
+          updateChapterContent(
+            chapterId,
+            paragraphs.length,
+            newParagraph,
+            null,
+            true
+          );
+        } else {
+          updateChapterContent(
+            chapterId,
+            paragraphs.length,
+            newParagraph,
+            null,
+            false,
+            true
+          );
+        }
+      } else if (data.summary) {
+        updatedSummary = data.summary;
+        // console.log("got summary ", updatedSummary);
+        updateChapterContent(
+          chapterId,
+          paragraphs.length,
+          newParagraph,
+          updatedSummary,
+          false,
+          false
+        );
+      }
+    };
+
+    const onError = (error) => {
       console.error("Error fetching continue chapter response:", error);
+      // Handle error in UI
+    };
+
+    try {
+      await streamedApiCall(
+        `${process.env.REACT_APP_API_URL}/chapter/continue`,
+        "POST",
+        {
+          summary: chapters[chapterId - 1].summary,
+          previousParagraph: paragraphs[paragraphs.length - 1],
+          systemPrompt: systemPrompts[0],
+          instruction: instruction,
+        },
+        onChunk,
+        onError
+      );
+
+      return { newParagraph };
+    } catch (error) {
       return { error: "Error" };
     }
   };
