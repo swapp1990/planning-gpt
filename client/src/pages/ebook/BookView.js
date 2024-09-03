@@ -59,7 +59,6 @@ function BookView() {
   useEffect(() => {
     if (chapters && chapters.length > 0) {
       setIsSaved(false);
-      console.log("Saved");
     }
   }, [chapters]);
 
@@ -80,7 +79,6 @@ function BookView() {
       );
       const data = await response.json();
       setSystemPrompts(data.prompts);
-      //   console.log(data.prompts);
       let parameters = [];
       parameters.push({
         title: "System Prompts",
@@ -226,7 +224,6 @@ function BookView() {
       );
 
       const data = await response.json();
-      console.log(data);
       summarySentences[paragraphId + 1] = data.newSummary;
       fullSummary = summarySentences.join(" ");
 
@@ -252,6 +249,9 @@ function BookView() {
 
   const handleContinueChapter = async (chapterId, instruction) => {
     console.log("Continue chapter:", chapterId);
+    if (systemPrompts.length == 0) {
+      return { error: "System Prompts is empty" };
+    }
     let newParagraph = "";
     let updatedSummary = "";
 
