@@ -123,14 +123,17 @@ function BookView() {
         (chapter) => chapter.id === chapterId
       );
       if (chapterIndex !== -1) {
-        const paragraphs = newChapters[chapterIndex].content
-          .split("\n\n")
-          .filter((p) => p.trim() !== "");
-        paragraphs[paragraphId] = content;
-        // console.log(paragraphs);
-        newChapters[chapterIndex].content = paragraphs.join("\n\n");
         newChapters[chapterIndex].streaming = streaming;
         newChapters[chapterIndex].updatingSummary = updatingSummary;
+        if (content != null) {
+          const paragraphs = newChapters[chapterIndex].content
+            .split("\n\n")
+            .filter((p) => p.trim() !== "");
+          paragraphs[paragraphId] = content;
+          // console.log(paragraphs);
+          newChapters[chapterIndex].content = paragraphs.join("\n\n");
+        }
+
         if (updatedSummary) {
           // console.log("updatedSummary " + newChapters[chapterIndex].summary);
           newChapters[chapterIndex].summary = updatedSummary;
@@ -177,8 +180,62 @@ function BookView() {
       }
       return {
         newParagraph: data.updatedParagraph,
-        newSummary: data.updatedSummary,
       };
+    } catch (error) {
+      console.error("Error fetching rewritten paragraph:", error);
+      return { error: "ERror" };
+    }
+  };
+
+  const handleSummaryUpdateonRewrite = async (
+    chapterId,
+    paragraphId,
+    newContent
+  ) => {
+    try {
+      updateChapterContent(chapterId, paragraphId, null, null, false, true);
+      let fullSummary = chapters[chapterId - 1].summary;
+      // Split the fullSummary into sentences
+      const summaryTokenizer = new RegExp("(?<=[.!?])\\s*", "g");
+      const summarySentences = fullSummary
+        .split(summaryTokenizer)
+        .map((sentence) => sentence.trim());
+      // console.log(summarySentences);
+
+      let summarySentence = summarySentences[paragraphId + 1] || "";
+      if (summarySentence == "") {
+        console.error("No summary sentence found!");
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/chapter/rewrite/summary`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            paragraph: newContent,
+            fullSummary: fullSummary,
+            summarySentence: summarySentence,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      console.log(data);
+      summarySentences[paragraphId + 1] = data.newSummary;
+      fullSummary = summarySentences.join(" ");
+
+      updateChapterContent(
+        chapterId,
+        paragraphId,
+        null,
+        fullSummary,
+        false,
+        false
+      );
     } catch (error) {
       console.error("Error fetching rewritten paragraph:", error);
       return { error: "ERror" };
@@ -187,6 +244,7 @@ function BookView() {
 
   const handleReviewApply = async (chapterId, paragraphId, newContent) => {
     updateChapterContent(chapterId, paragraphId, newContent);
+    handleSummaryUpdateonRewrite(chapterId, paragraphId, newContent);
     closeMenu(chapterId);
   };
 
@@ -282,6 +340,17 @@ function BookView() {
 
         // Join the paragraphs back into a single string
         newChapters[chapterIndex].content = paragraphs.join("\n\n");
+
+        // Update summary
+        let fullSummary = newChapters[chapterIndex].summary;
+        const summaryTokenizer = new RegExp("(?<=[.!?])\\s*", "g");
+        const summarySentences = fullSummary
+          .split(summaryTokenizer)
+          .map((sentence) => sentence.trim());
+        if (summarySentences.length > paragraphId + 1) {
+          summarySentences.splice(paragraphId + 1, 1);
+        }
+        newChapters[chapterIndex].summary = summarySentences.join(" ");
       }
 
       return newChapters;
@@ -379,7 +448,7 @@ function BookView() {
         id: prevChapters.length + 1,
         title: `Chapter ${prevChapters.length + 1}`,
         content: "",
-        summary: "Summary of the chapter",
+        summary: "Summary of the chapter.",
       },
     ]);
     setIsSaved(false);

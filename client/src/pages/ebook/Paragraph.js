@@ -316,6 +316,7 @@ const ParagraphMenu = ({ content, chapterId, paragraphId, onClose }) => {
       setIsLoading(false);
       setRewriteResponse(response.newParagraph);
       setIsRewriteReviewOpen(true);
+      setError(null);
     } else {
       setError("An error occurred. Please try again later.");
       setIsLoading(false);

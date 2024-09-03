@@ -141,6 +141,7 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         base_url=openai_api_base,
     )
     model = "hermes-3-llama-3.1-405b-fp8"
+    # model = "wrong-model"
     system_prompt = system_prompt + "\n\n" + parameters
     messages = []
     messages.append({
@@ -173,7 +174,7 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         return chat_completion.choices[0].message.content
     except Exception as e:
         print(f"An error occurred: {e}")
-        return "An error occurred while processing the request."
+        return {"error": "An error occurred while processing the request."}
 
 def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
     client = OpenAI(
@@ -186,6 +187,7 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
         return
     
     model = "hermes-3-llama-3.1-405b-fp8"
+    # model = "wrong-model"
     system_prompt = system_prompt + "\n\n" + parameters
     messages = [
         {"role": "system", "content": system_prompt}
@@ -336,6 +338,8 @@ def continue_chapter():
         partial_result = ""
         try:
             for chunk in hermes_ai_streamed_output(prompt, systemPrompt, [], ""):
+                if isinstance(chunk, dict) and 'error' in chunk:
+                    return jsonify(chunk), 500
                 partial_result += chunk
                 yield json.dumps({'chunk': chunk}) + '\n'
         except Exception as e:
@@ -377,18 +381,35 @@ def rewrite_paragraph():
     # fullPassage = data.get('fullMessage')
     paragraph = data.get('paragraph')
     instruction = data.get('instruction')
-    previousSummary = data.get('previousSummary')
     systemPrompt = data.get('systemPrompt')
     previousParagraph = data.get('previousParagraph')
 
     prompt = f'\n\nPlease rewrite the following paragraph: `{paragraph}` by following instructions: `{instruction}`. \n\nPrevious paragraph is: `{previousParagraph}`. \n\n Only return the rewritten paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
     result = hermes_ai_output(prompt, systemPrompt, [], "")
     # result = instruction
+    if isinstance(result, dict) and 'error' in result:
+        return jsonify(result), 500
+
     result = result.replace("\n\n", " ")
 
-    summary = generate_summary(result, previousSummary)
+    return jsonify({'updatedParagraph': result})
 
-    return jsonify({'updatedParagraph': result, 'updatedSummary': summary})
+@app.route("/chapter/rewrite/summary", methods=["POST"])
+def update_summary_rewrite():
+    data = request.get_json()
+    paragraph = data.get('paragraph')
+    fullSummary = data.get('fullSummary')
+    summarySentence = data.get('summarySentence')
+    system_prompt = f"""
+    You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the Current Paragraph and summarize it in one clear, objective sentence. The sentence should be as short as possible with not more than 15 words. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story."""
+    system_prompt = f"""{system_prompt}\n\nThe summary sentence generated should replace the following sentence in the full summary. Full Summary: `{fullSummary}`. Sentence to be replaced in the full summary: `{summarySentence}`"""
+    system_prompt = f"""{system_prompt}\n\n Do not include any introductory or explanatory text. The response should be exactly one sentence in length. The generated summary sentence should cohesively fit within the entire full summary correctly."""
+    # print(system_prompt)
+    prompt = f"Current Paragraph: {paragraph}"
+
+    summary = hermes_ai_output(prompt, system_prompt, [], "")
+    summary = summary.replace("\n\n", " ")
+    return jsonify({'newSummary': summary})
 
 CHAT_HISTORY_FILE = 'chat_history.json'
 @app.route('/history/save', methods=['POST'])

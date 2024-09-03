@@ -19,6 +19,10 @@ const Summary = ({ summary, chapterId, isUpdatingSummary }) => {
   const [error, setError] = useState(null);
   const [editedSummary, setEditedSummary] = useState(summary);
 
+  useEffect(() => {
+    setEditedSummary(summary);
+  }, [summary]);
+
   const handleEditClick = () => {
     setIsEditing(true);
   };
@@ -30,7 +34,11 @@ const Summary = ({ summary, chapterId, isUpdatingSummary }) => {
 
   const handleSubmitEdit = async () => {
     setIsLoading(true);
-    const response = await handleSummaryUpdate(chapterId, editedSummary);
+    let finalSummary = editedSummary.trim();
+    if (!finalSummary.endsWith(".")) {
+      finalSummary += ".";
+    }
+    const response = await handleSummaryUpdate(chapterId, finalSummary);
     if (response.error) {
       setError(response.error);
     } else {
