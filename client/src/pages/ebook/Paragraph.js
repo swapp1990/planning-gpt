@@ -13,6 +13,7 @@ import {
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { computeDiff } from "../../utils/paragraphDiff";
 import { useBook } from "./BookContext";
+import RewritePanel from "./RewritePanel";
 
 const ParagraphReview = ({ original, edited, onSave, onCancel }) => {
   const [changes, setChanges] = useState([]);
@@ -303,12 +304,12 @@ const ParagraphMenu = ({ content, chapterId, paragraphId, onClose }) => {
     setIsRewriteOpen(false);
   };
 
-  const handleSubmitRewrite = async () => {
+  const handleSubmitRewrite = async (finalInstruction) => {
     setIsLoading(true);
     let response = await handleRewriteParagraph(
       chapterId,
       paragraphId,
-      rewritePrompt
+      finalInstruction
     );
     if (response.newParagraph) {
       setIsRewriteOpen(false);
@@ -412,35 +413,11 @@ const ParagraphMenu = ({ content, chapterId, paragraphId, onClose }) => {
         </button>
       </div>
       {isRewriteOpen && (
-        <div className="mt-2">
-          <textarea
-            className="w-full p-2 border rounded-md"
-            rows="3"
-            placeholder="Enter your rewrite prompt..."
-            value={rewritePrompt}
-            onChange={(e) => setRewritePrompt(e.target.value)}
-          />
-          <div className="flex justify-end mt-2 space-x-2">
-            <button
-              onClick={onRewriteCancel}
-              className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmitRewrite}
-              className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 flex items-center"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="animate-spin mr-2">&#9696;</span>
-              ) : (
-                <FaCheck size={16} className="mr-1" />
-              )}
-              {isLoading ? "Rewriting..." : "Submit"}
-            </button>
-          </div>
-        </div>
+        <RewritePanel
+          content={content}
+          onSubmit={handleSubmitRewrite}
+          onCancel={onRewriteCancel}
+        />
       )}
       {isRewriteReviewOpen && (
         <ParagraphReview
