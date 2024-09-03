@@ -47,3 +47,30 @@ export const streamedApiCall = async (url, method, body, onChunk, onError) => {
     onError(error);
   }
 };
+
+export const regularApiCall = async (url, method, body) => {
+  try {
+    const response = await fetch(url, {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      return { error: data.error };
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Error in API call:", error);
+    return { error: "An error occurred while fetching data" };
+  }
+};

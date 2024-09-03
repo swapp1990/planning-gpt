@@ -306,6 +306,17 @@ Based on Updated Instructions, rewrite the original user prompt, keeping the con
 
     return jsonify({'updatedPassage': result1, 'refinedUserPrompt': result2, 'summary': summary})
 
+@app.route("/chapter/continue/suggestions", methods=["POST"])
+def continue_chapter_suggestions():
+    suggestions = [
+      "Continue the story with a surprising plot twist in the end",
+      "Introduce a new character that changes the dynamic",
+      "Describe the setting in more detail to set the mood",
+      "Add a flashback that provides crucial backstory",
+      "Create tension with a cliffhanger ending",
+    ]
+    return jsonify({'suggestions': suggestions})
+
 @app.route("/chapter/continue", methods=["POST"])
 def continue_chapter():
     data = request.get_json()
