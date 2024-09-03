@@ -453,22 +453,21 @@ function BookView() {
       currentChapter: null,
       systemPrompts: [],
       parameters: [],
-      lastModified: new Date().toISOString(),
     };
 
-    // Save new ebook to localStorage
-    localStorage.setItem(newEbookTitle, JSON.stringify(newEbook));
+    // Save current ebook
+    localStorage.setItem("currentEbook", JSON.stringify(newEbook));
 
     // Update ebooks list
-    const updatedEbooks = [
-      ...ebooks,
-      { title: newEbookTitle, lastModified: newEbook.lastModified },
-    ];
-    localStorage.setItem("ebooks", JSON.stringify(updatedEbooks));
-    setEbooks(updatedEbooks);
+    // const updatedEbooks = [
+    //   ...ebooks,
+    //   { title: newEbookTitle, lastModified: newEbook.lastModified },
+    // ];
+    // localStorage.setItem("ebooks", JSON.stringify(updatedEbooks));
+    // setEbooks(updatedEbooks);
 
     // Load the new ebook
-    loadFromLocalStorage(newEbookTitle);
+    loadFromLocalStorage();
     setIsEbookListOpen(false);
   };
 
