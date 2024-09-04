@@ -112,15 +112,15 @@ export const useEbookStorage = () => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
 
-  useEffect(() => {
-    const saveTimer = setTimeout(() => {
-      if (!isSaved) {
-        saveToLocalStorage();
-      }
-    }, 2000); // Auto-save after 2 seconds of inactivity
+  // useEffect(() => {
+  //   const saveTimer = setTimeout(() => {
+  //     if (!isSaved) {
+  //       saveToLocalStorage();
+  //     }
+  //   }, 2000); // Auto-save after 2 seconds of inactivity
 
-    return () => clearTimeout(saveTimer);
-  }, [isSaved, saveToLocalStorage]);
+  //   return () => clearTimeout(saveTimer);
+  // }, [isSaved, saveToLocalStorage]);
 
   return {
     ebookTitle,

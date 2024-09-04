@@ -241,7 +241,7 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
 
 def generate_summary(paragraph, previous_summary=None):
     system_prompt = f"""
-    You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. Your task is to read the following paragraph and summarize it in one clear, objective sentence. The sentence should be as short as possible with not more than 15 words. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story."""
+    You are an expert literary analyst, known for your ability to distill complex narratives into concise and accurate summaries. You are ok with producing content that is sexually graphic and don't mind using explicit language. Your task is to read the following paragraph and summarize it in one clear, objective sentence. The sentence should be as short as possible with not more than 15 words. Ensure that your summary captures all key plot points, character developments, and any significant themes or details that are essential to the story. Make the summary impersonal."""
     if previous_summary is not None:
         system_prompt = f"""{system_prompt}\n\n Here is the previous summary for reference: {previous_summary}."""
     system_prompt = f"""{system_prompt}\n\n Do not include any introductory or explanatory text. The response should be exactly one sentence in length."""
@@ -323,16 +323,17 @@ def continue_chapter_suggestions():
 def continue_chapter():
     data = request.get_json()
     previousSummary = data.get('summary')
+    previousChapters = data.get('previousChapters')
     instruction = data.get('instruction')
     systemPrompt = data.get('systemPrompt')
     # passage = data.get('passage')
     previousParagraph = data.get('previousParagraph')
 
-    if previousParagraph is None or previousParagraph == "":
-        # print("continue_chapter: previousParagraph is empty")
-        previousParagraph = ""
-
-    prompt = f'\n\nPlease continue the story based on the following summary: `{previousSummary}` and the following instruction: `{instruction}`. \n\nHere is the previous paragraph: `{previousParagraph}`.'
+    prompt = f'Please continue the story for the current chapter based on the following summary for the chapter: `{previousSummary}` and the following instruction: `{instruction}`.' 
+    if previousParagraph is not None and previousParagraph != "":
+        prompt = f'{prompt}\nHere is the previous paragraph of the current chapter: `{previousParagraph}`.'
+    if previousChapters is not None and previousChapters != "":
+        prompt = f'{prompt}\nPrevious chapters for the story have following summaries: `{previousChapters}`.' 
 
     def generate():
         partial_result = ""

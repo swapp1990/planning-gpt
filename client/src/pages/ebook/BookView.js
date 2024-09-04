@@ -259,6 +259,16 @@ function BookView() {
       .split("\n\n")
       .filter((p) => p.trim() !== "");
 
+    const previousChaptersSummaries = chapters
+      .slice(0, chapterId - 1)
+      .map(
+        (chapter, index) =>
+          `Chapter ${index + 1}: ${chapter.title}\n${chapter.summary}`
+      )
+      .join("\n\n");
+
+    // console.log(previousChaptersSummaries);
+
     const onChunk = (data) => {
       if (data.chunk) {
         if (data.chunk !== "[DONE]") {
@@ -305,6 +315,7 @@ function BookView() {
         "POST",
         {
           summary: chapters[chapterId - 1].summary,
+          previousChapters: previousChaptersSummaries,
           previousParagraph: paragraphs[paragraphs.length - 1],
           systemPrompt: systemPrompts[0],
           instruction: instruction,
@@ -317,6 +328,16 @@ function BookView() {
     } catch (error) {
       return { error: "Error" };
     }
+  };
+
+  const handleDeleteChapter = async (chapterId) => {
+    setChapters((prevChapters) =>
+      prevChapters.filter((chapter) => chapter.id !== chapterId)
+    );
+    if (currentChapter === chapterId) {
+      setCurrentChapter(null);
+    }
+    setIsSaved(false);
   };
 
   const handleDeleteParagraph = async (chapterId, paragraphId) => {
@@ -503,6 +524,7 @@ function BookView() {
     chapters,
     handleParagraphSelect,
     handleDeleteParagraph,
+    handleDeleteChapter,
     handleContinueChapter,
     handleRewriteParagraph,
     handleReviewApply,
