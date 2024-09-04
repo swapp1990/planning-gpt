@@ -542,8 +542,6 @@ function BookView() {
           setIsEditingTitle={setIsEditingTitle}
           currentChapter={currentChapter}
           chapters={chapters}
-          isSaved={isSaved}
-          lastSavedTime={lastSavedTime}
           setIsSidebarOpen={setIsSidebarOpen}
           setIsEbookListOpen={setIsEbookListOpen}
         />
