@@ -112,6 +112,11 @@ export const useEbookStorage = () => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
 
+  useEffect(() => {
+    if (!isSaved) {
+      saveToLocalStorage();
+    }
+  }, [isSaved]);
   // useEffect(() => {
   //   const saveTimer = setTimeout(() => {
   //     if (!isSaved) {

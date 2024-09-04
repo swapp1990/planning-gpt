@@ -59,7 +59,7 @@ const Header = ({
                 isSaved ? "text-green-300" : "text-yellow-300 animate-pulse"
               }`}
             />
-            <span className="hidden text-sm">
+            <span className="text-sm hidden sm:block">
               {isSaved ? "Saved" : "Saving..."}
             </span>
           </div>
