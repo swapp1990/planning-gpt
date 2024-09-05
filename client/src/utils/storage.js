@@ -5,7 +5,7 @@ export const useEbookStorage = () => {
   const [chapters, setChapters] = useState([]);
   const [currentChapter, setCurrentChapter] = useState(null);
   const [systemPrompts, setSystemPrompts] = useState([]);
-  const [parameters, setParameters] = useState();
+  const [parameters, setParameters] = useState({});
   const [ebooks, setEbooks] = useState([]);
   const [isSaved, setIsSaved] = useState(true);
   const [lastSavedTime, setLastSavedTime] = useState(null);
