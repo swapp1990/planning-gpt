@@ -201,7 +201,7 @@ const ParametersPanel = ({ parameters, onParametersChange }) => {
   );
 
   return (
-    <div className="bg-white shadow rounded-lg mb-4">
+    <div className="bg-white shadow rounded-lg mb-1 sm:mb-4">
       <div className="px-4 py-5 sm:px-6">
         <div className="flex items-center justify-between flex-wrap sm:flex-nowrap">
           <h3 className="text-lg leading-6 font-medium text-gray-900">

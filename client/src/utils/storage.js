@@ -113,7 +113,6 @@ export const useEbookStorage = () => {
   }, [loadFromLocalStorage]);
 
   useEffect(() => {
-    console.log("Saving ", isSaved);
     if (!isSaved) {
       saveToLocalStorage();
     }

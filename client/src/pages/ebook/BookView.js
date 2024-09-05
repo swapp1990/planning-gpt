@@ -175,7 +175,6 @@ function BookView() {
       );
 
       const data = await response.json();
-      console.log(data);
       if (data.updatedParagraph === undefined) {
         return { error: "ERror" };
       }
@@ -616,6 +615,7 @@ function BookView() {
     <BookProvider value={bookContextValue}>
       <div className="h-full flex flex-col bg-gray-100">
         <Header
+          isSaved={isSaved}
           ebookTitle={ebookTitle}
           setEbookTitle={setEbookTitle}
           isEditingTitle={isEditingTitle}
@@ -651,33 +651,47 @@ function BookView() {
                 parameters={parameters}
                 onParametersChange={handleParametersChange}
               />
-              <div className="text-center text-gray-500">
+              <div className="text-center text-gray-600 p-2">
                 {chapters.length == 0 && (
-                  <div>
-                    <p className="text-2xl">
-                      <FaBook size={32} className="inline-block mb-2" />
+                  <div className="mb-6 p-6 bg-gray-100 rounded-lg shadow-inner">
+                    <FaBook size={48} className="mx-auto text-gray-400 mb-3" />
+                    <p className="text-xl font-semibold">
+                      No chapters available
                     </p>
-                    <p className="text-lg">No chapters available</p>
+                    <p className="text-sm mt-2">
+                      Start by adding your first chapter!
+                    </p>
                   </div>
                 )}
-                <button
-                  onClick={() => addNewChapter()}
-                  className="bg-green-500 px-4 py-2 rounded hover:bg-green-600 transition-colors text-white mb-4"
-                >
-                  Add New Chapter
-                </button>
-                <button
-                  onClick={toggleSuggestions}
-                  className={`px-4 py-2 rounded transition-colors text-white flex items-center ${
-                    showSuggestions
-                      ? "bg-blue-500 hover:bg-blue-600"
-                      : "bg-yellow-500 hover:bg-yellow-600"
-                  }`}
-                  title="Toggle Chapter Suggestions"
-                >
-                  <FaLightbulb className="mr-2" />
-                  {showSuggestions ? "Hide Suggestions" : "Show Suggestions"}
-                </button>
+                <div className="flex flex-row sm:flex-row justify-start items-start space-x-4 sm:space-y-0 sm:space-x-4">
+                  <button
+                    onClick={() => addNewChapter()}
+                    className="bg-green-500 px-6 py-2 rounded-full hover:bg-green-600 transition-all duration-300 text-white font-semibold shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+                  >
+                    Add New Chapter
+                  </button>
+                  <button
+                    onClick={toggleSuggestions}
+                    className={`p-2 rounded-full transition-all duration-300 text-white shadow-md hover:shadow-lg transform hover:-translate-y-0.5 ${
+                      showSuggestions
+                        ? "bg-blue-500 hover:bg-blue-600"
+                        : "bg-yellow-500 hover:bg-yellow-600"
+                    }`}
+                    title={
+                      showSuggestions ? "Hide Suggestions" : "Show Suggestions"
+                    }
+                    aria-label={
+                      showSuggestions ? "Hide Suggestions" : "Show Suggestions"
+                    }
+                  >
+                    <FaLightbulb
+                      size={24}
+                      className={`${
+                        showSuggestions ? "text-white" : "text-yellow-100"
+                      }`}
+                    />
+                  </button>
+                </div>
               </div>
               {showSuggestions ? (
                 <ChapterSuggestions

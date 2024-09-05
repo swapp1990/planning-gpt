@@ -1,7 +1,9 @@
-import { FaBook, FaEdit, FaSave, FaBars, FaLightbulb } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { FaBook, FaEdit, FaSave, FaBars } from "react-icons/fa";
 import { useEbookStorage } from "../../utils/storage";
 
 const Header = ({
+  isSaved,
   ebookTitle,
   setEbookTitle,
   isEditingTitle,
@@ -11,8 +13,25 @@ const Header = ({
   chapters,
   setIsSidebarOpen,
 }) => {
-  const { isSaved } = useEbookStorage();
+  const [showSaveStatus, setShowSaveStatus] = useState(false);
 
+  useEffect(() => {
+    let timeoutId;
+    if (isSaved) {
+      setShowSaveStatus(true);
+      timeoutId = setTimeout(() => {
+        setShowSaveStatus(false);
+      }, 1000);
+    } else {
+      setShowSaveStatus(true);
+    }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [isSaved]);
   return (
     <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 shadow-lg z-30 relative">
       <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
@@ -54,16 +73,18 @@ const Header = ({
           </div>
 
           <div className="flex items-center space-x-4">
-            <div className="items-center space-x-2 sm:flex">
-              <FaSave
-                className={`${
-                  isSaved ? "text-green-300" : "text-yellow-300 animate-pulse"
-                }`}
-              />
-              <span className="text-sm hidden sm:block">
-                {isSaved ? "Saved" : "Saving..."}
-              </span>
-            </div>
+            {showSaveStatus && (
+              <div className="items-center space-x-2 sm:flex">
+                <FaSave
+                  className={`${
+                    isSaved ? "text-green-300" : "text-yellow-300 animate-pulse"
+                  }`}
+                />
+                <span className="text-sm hidden sm:block">
+                  {isSaved ? "Saved" : "Saving..."}
+                </span>
+              </div>
+            )}
 
             <button
               onClick={() => setIsSidebarOpen(true)}
