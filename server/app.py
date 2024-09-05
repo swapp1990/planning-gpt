@@ -308,6 +308,18 @@ Based on Updated Instructions, rewrite the original user prompt, keeping the con
 
     return jsonify({'updatedPassage': result1, 'refinedUserPrompt': result2, 'summary': summary})
 
+@app.route("/chapter/suggestions", methods=["POST"])
+def chapter_suggestions():
+    data = request.get_json()
+    chapters = data.get('chapters')
+    parameters = data.get('parameters')
+    print(chapters)
+    suggestions = [
+      {"title": "Tryst", "summary": "Summary 1"},
+      {"title": "Tryst 2", "summary": "Summary 2"}
+    ]
+    return jsonify({'suggestions': suggestions})
+
 @app.route("/chapter/continue/suggestions", methods=["POST"])
 def continue_chapter_suggestions():
     suggestions = [

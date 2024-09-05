@@ -1,5 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
-import { FaChevronLeft, FaChevronRight, FaBook, FaEdit } from "react-icons/fa";
+import {
+  FaChevronLeft,
+  FaChevronRight,
+  FaBook,
+  FaEdit,
+  FaLightbulb,
+} from "react-icons/fa";
 
 import { streamedApiCall } from "../../utils/api";
 import { useEbookStorage } from "../../utils/storage";
@@ -8,6 +14,7 @@ import Chapter from "./Chapter";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import ParametersPanel from "./ParametersPanel";
+import ChapterSuggestions from "./ChapterSuggestions";
 
 import { BookProvider } from "./BookContext";
 
@@ -489,6 +496,77 @@ function BookView() {
     setIsSaved(false);
   };
 
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [chapterSuggestions, setChapterSuggestions] = useState([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState(null);
+
+  const fetchChapterSuggestions = async () => {
+    setIsLoadingSuggestions(true);
+    setSuggestionsError(null);
+    let chapterSummaries = chapters.map((c) => ({
+      title: c.title,
+      summary: c.summary,
+    }));
+    console.log(chapterSummaries);
+    try {
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/chapter/suggestions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            chapters: chapterSummaries,
+            parameters: parameters,
+            instruction: "instructions",
+          }),
+        }
+      );
+
+      const data = await response.json();
+      setChapterSuggestions((prevSuggestions) => [
+        ...prevSuggestions,
+        ...data.suggestions,
+      ]);
+    } catch (error) {
+      console.error("Error fetching chapter suggestions:", error);
+      setSuggestionsError(error.message);
+    } finally {
+      setIsLoadingSuggestions(false);
+    }
+  };
+
+  const deleteSetChapter = (chapterId) => {
+    setChapters((prevChapters) =>
+      prevChapters.filter((ch) => ch.id !== chapterId)
+    );
+  };
+
+  const toggleSuggestions = () => {
+    setShowSuggestions((prevState) => !prevState);
+    if (!showSuggestions && chapterSuggestions.length === 0) {
+      fetchChapterSuggestions();
+    }
+  };
+
+  const addSuggestedChapter = (suggestion) => {
+    setChapters((prevChapters) => [
+      ...prevChapters,
+      {
+        id: prevChapters.length + 1,
+        title: suggestion.title,
+        content: "",
+        summary: suggestion.summary,
+      },
+    ]);
+    setChapterSuggestions((prevSuggestions) =>
+      prevSuggestions.filter((s) => s.title !== suggestion.title)
+    );
+    setIsSaved(false);
+  };
+
   const Footer = () => {
     return (
       <footer className="bg-gray-200 py-2 px-4 shadow-md z-30 relative">
@@ -588,16 +666,40 @@ function BookView() {
                 >
                   Add New Chapter
                 </button>
+                <button
+                  onClick={toggleSuggestions}
+                  className={`px-4 py-2 rounded transition-colors text-white flex items-center ${
+                    showSuggestions
+                      ? "bg-blue-500 hover:bg-blue-600"
+                      : "bg-yellow-500 hover:bg-yellow-600"
+                  }`}
+                  title="Toggle Chapter Suggestions"
+                >
+                  <FaLightbulb className="mr-2" />
+                  {showSuggestions ? "Hide Suggestions" : "Show Suggestions"}
+                </button>
               </div>
-              {chapters.map((chapter, index) => (
-                <Chapter
-                  key={chapter.id}
-                  ref={(el) => (chapterRefs.current[index] = el)}
-                  chapter={chapter}
-                  selectedParagraph={selectedParagraphs[chapter.id]}
-                  onCloseMenu={closeMenu}
+              {showSuggestions ? (
+                <ChapterSuggestions
+                  chapters={chapters}
+                  suggestions={chapterSuggestions}
+                  isLoading={isLoadingSuggestions}
+                  error={suggestionsError}
+                  onAddChapter={addSuggestedChapter}
+                  onLoadMore={fetchChapterSuggestions}
+                  onClose={() => setShowSuggestions(false)}
                 />
-              ))}
+              ) : (
+                chapters.map((chapter, index) => (
+                  <Chapter
+                    key={chapter.id}
+                    ref={(el) => (chapterRefs.current[index] = el)}
+                    chapter={chapter}
+                    selectedParagraph={selectedParagraphs[chapter.id]}
+                    onCloseMenu={closeMenu}
+                  />
+                ))
+              )}
             </div>
           </main>
         </div>

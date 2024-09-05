@@ -1,4 +1,4 @@
-import { FaBook, FaEdit, FaSave, FaBars } from "react-icons/fa";
+import { FaBook, FaEdit, FaSave, FaBars, FaLightbulb } from "react-icons/fa";
 import { useEbookStorage } from "../../utils/storage";
 
 const Header = ({
