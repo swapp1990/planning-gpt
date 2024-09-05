@@ -308,17 +308,44 @@ Based on Updated Instructions, rewrite the original user prompt, keeping the con
 
     return jsonify({'updatedPassage': result1, 'refinedUserPrompt': result2, 'summary': summary})
 
+# Read the synopsis guidelines file once when the app starts
+current_dir = os.path.dirname(os.path.abspath(__file__))
+synopsis_guidelines_path = os.path.join(current_dir, 'synopsis_guidelines.txt')
+with open(synopsis_guidelines_path, 'r') as file:
+    synopsis_guidelines = file.read().strip()
+
 @app.route("/chapter/suggestions", methods=["POST"])
 def chapter_suggestions():
     data = request.get_json()
     chapters = data.get('chapters')
     parameters = data.get('parameters')
-    print(chapters)
-    suggestions = [
-      {"title": "Tryst", "summary": "Summary 1"},
-      {"title": "Tryst 2", "summary": "Summary 2"}
-    ]
-    return jsonify({'suggestions': suggestions})
+    number_of_chapters = data.get('number_of_chapters')
+    total_chapters =  data.get('total_chapters')
+
+    system_prompt = f"""You are an AI assistant specialized in creative writing and story structure. Your task is to generate chapter outlines for novels based on a given premise. You should create engaging chapter titles, concise synopses, and determine which act each chapter belongs to in a structure defined in the "parameters". Your output should be well-structured, consistent, and suitable for further development into a full novel. Follow these guidelines:
+    1. Create chapter titles that are intriguing and relevant to the chapter's content.
+    2. Write synopses that capture the key events, character developments, and themes of each chapter.
+    3. Assign each chapter an act it is part of, ensuring a proper distribution across the structure defined in the "parameters".
+    4. Maintain consistency in tone, style, and narrative progression throughout the chapter outlines.
+    5. Ensure that the generated chapters build upon each other to create a cohesive story arc.
+    6. Adapt the pacing and content density based on the number of chapters requested versus the total intended chapters.
+
+    Additionally, when writing synopses, follow these specific guidelines:
+    {synopsis_guidelines}
+
+    Your output should be a valid JSON array where each element is an object containing 'title', 'synopsis', and 'act' keys."
+    """
+
+    user_prompt = f"""Generate chapter outlines based on the following:
+    novel parameters: `{parameters}`
+    number of chapters to generate: `{number_of_chapters}`
+    total chapters: `{total_chapters}`
+    chapters so far: `{chapters}`
+    Please provide an array of chapter outlines, each containing a title, synopsis, and the act it belongs to.
+    """
+    print("generating chapter suggestions")
+    result = hermes_ai_output(user_prompt, system_prompt, [], "")
+    return jsonify({'suggestions': result})
 
 @app.route("/chapter/continue/suggestions", methods=["POST"])
 def continue_chapter_suggestions():
@@ -335,18 +362,18 @@ def continue_chapter_suggestions():
 def continue_chapter():
     data = request.get_json()
     parameters = data.get('parameters')
-    previousSummary = data.get('summary')
+    synopsis = data.get('synopsis')
     previousChapters = data.get('previousChapters')
     instruction = data.get('instruction')
     systemPrompt = data.get('systemPrompt')
     # passage = data.get('passage')
     previousParagraph = data.get('previousParagraph')
 
-    prompt = f'Please continue the story for the current chapter based on the following summary for the chapter so far: `{previousSummary}` and the following instruction: `{instruction}`. This are the parameters that guide the story: `{parameters}`' 
+    prompt = f'Please continue the story for the current chapter based on the following synopsis for the chapter: `{synopsis}` and the following instruction: `{instruction}`. This are the parameters that guide the story: `{parameters}`' 
     if previousParagraph is not None and previousParagraph != "":
         prompt = f'{prompt}\nHere is the previous paragraph of the current chapter: `{previousParagraph}`.'
     if previousChapters is not None and previousChapters != "":
-        prompt = f'{prompt}\nPrevious chapters for the story have following summaries: `{previousChapters}`.' 
+        prompt = f'{prompt}\nPrevious chapters for the story have following synopsis: `{previousChapters}`.' 
 
     print(prompt)
 
@@ -361,9 +388,9 @@ def continue_chapter():
         except Exception as e:
             yield json.dumps({'error': "An error occured"})
 
-        summary = generate_summary(partial_result, previousSummary)
-        summary = previousSummary + " " + summary
-        yield json.dumps({'summary': summary}) + '\n'
+        # summary = generate_summary(partial_result, previousSummary)
+        # summary = previousSummary + " " + summary
+        # yield json.dumps({'summary': summary}) + '\n'
 
     return Response(stream_with_context(generate()), content_type='application/x-ndjson')
 
@@ -394,13 +421,13 @@ def insert_chapter():
 def rewrite_paragraph():
     print("Rewrite paragraph")
     data = request.get_json()
-    # fullPassage = data.get('fullMessage')
+    synopsis = data.get('synopsis')
     paragraph = data.get('paragraph')
     instruction = data.get('instruction')
     systemPrompt = data.get('systemPrompt')
     previousParagraph = data.get('previousParagraph')
 
-    prompt = f'\n\nPlease rewrite the following paragraph: `{paragraph}` by following instructions: `{instruction}`. \n\nPrevious paragraph is: `{previousParagraph}`. \n\n Only return the rewritten paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+    prompt = f'\n\nPlease rewrite the following paragraph: `{paragraph}` by following instructions: `{instruction}`. \n\nSynopsis for the chapter is: `{synopsis}`, Previous paragraph is: `{previousParagraph}`. \n\n Only return the rewritten paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
     result = hermes_ai_output(prompt, systemPrompt, [], "")
     # result = instruction
     if isinstance(result, dict) and 'error' in result:

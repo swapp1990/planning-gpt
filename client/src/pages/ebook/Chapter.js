@@ -118,6 +118,16 @@ const Summary = ({ summary, chapterId, isUpdatingSummary }) => {
   );
 };
 
+const Synopsis = ({ synopsis, chapterId }) => {
+  return (
+    <div className="mb-6">
+      <div className="bg-gray-100 p-4 rounded-md h-24 overflow-y-auto relative">
+        <p className="text-gray-600 pr-2">{synopsis}</p>
+      </div>
+    </div>
+  );
+};
+
 const ContinueChapter = ({ onSubmit, onCancel, chapterId, summary }) => {
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -320,11 +330,12 @@ const Chapter = React.forwardRef(
             <FaTrash size={20} />
           </button>
         </div>
-        <Summary
+        {/* <Summary
           summary={chapter.summary}
           chapterId={chapter.id}
           isUpdatingSummary={isUpdatingSummary}
-        />
+        /> */}
+        <Synopsis synopsis={chapter.synopsis} chapterId={chapter.id} />
         <div className="prose max-w-none">
           {paragraphs.map((paragraph, index) => (
             <Paragraph

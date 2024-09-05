@@ -7,7 +7,7 @@ const ChapterSuggestions = ({
   isLoading,
   error,
   onAddChapter,
-  onLoadMore,
+  onReload,
   onClose,
 }) => {
   return (
@@ -73,7 +73,7 @@ const ChapterSuggestions = ({
                     Add
                   </button>
                 </div>
-                <p className="text-sm text-gray-600">{suggestion.summary}</p>
+                <p className="text-sm text-gray-600">{suggestion.synopsis}</p>
               </div>
             ))}
           </div>
@@ -83,7 +83,7 @@ const ChapterSuggestions = ({
       </div>
 
       <button
-        onClick={onLoadMore}
+        onClick={onReload}
         className="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center justify-center"
         disabled={isLoading}
       >
@@ -112,7 +112,7 @@ const ChapterSuggestions = ({
             Loading...
           </>
         ) : (
-          "Load More Suggestions"
+          "Reload"
         )}
       </button>
     </div>

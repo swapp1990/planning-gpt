@@ -67,6 +67,7 @@ function BookView() {
   useEffect(() => {
     if (chapters && chapters.length > 0) {
       // setIsSaved(false);
+      console.log(chapters);
     }
   }, [chapters]);
 
@@ -135,10 +136,10 @@ function BookView() {
           newChapters[chapterIndex].content = paragraphs.join("\n\n");
         }
 
-        if (updatedSummary) {
-          // console.log("updatedSummary " + newChapters[chapterIndex].summary);
-          newChapters[chapterIndex].summary = updatedSummary;
-        }
+        // if (updatedSummary) {
+        //   // console.log("updatedSummary " + newChapters[chapterIndex].summary);
+        //   newChapters[chapterIndex].summary = updatedSummary;
+        // }
       }
       return newChapters;
     });
@@ -167,7 +168,7 @@ function BookView() {
           body: JSON.stringify({
             paragraph,
             previousParagraph: previousParagraph,
-            previousSummary: chapters[chapterId - 1].summary,
+            synopsis: chapters[chapterId - 1].synopsis,
             systemPrompt: systemPrompts[0],
             instruction: prompt,
           }),
@@ -243,7 +244,7 @@ function BookView() {
 
   const handleReviewApply = async (chapterId, paragraphId, newContent) => {
     updateChapterContent(chapterId, paragraphId, newContent);
-    handleSummaryUpdateonRewrite(chapterId, paragraphId, newContent);
+    // handleSummaryUpdateonRewrite(chapterId, paragraphId, newContent);
     closeMenu(chapterId);
   };
 
@@ -253,17 +254,17 @@ function BookView() {
       return { error: "System Prompts is empty" };
     }
     let newParagraph = "";
-    let updatedSummary = "";
+    // let updatedSummary = "";
 
     const paragraphs = chapters[chapterId - 1].content
       .split("\n\n")
       .filter((p) => p.trim() !== "");
 
-    const previousChaptersSummaries = chapters
+    const previousChaptersSynopsis = chapters
       .slice(0, chapterId - 1)
       .map(
         (chapter, index) =>
-          `Chapter ${index + 1}: ${chapter.title}\n${chapter.summary}`
+          `Chapter ${index + 1}: ${chapter.title}\n${chapter.synopsis}`
       )
       .join("\n\n");
 
@@ -291,34 +292,36 @@ function BookView() {
           );
           setIsSaved(false);
         }
-      } else if (data.summary) {
-        updatedSummary = data.summary;
-        // console.log("got summary ", updatedSummary);
-        updateChapterContent(
-          chapterId,
-          paragraphs.length,
-          newParagraph,
-          updatedSummary,
-          false,
-          false
-        );
-        setIsSaved(false);
       }
+
+      // else if (data.summary) {
+      //   updatedSummary = data.summary;
+      //   // console.log("got summary ", updatedSummary);
+      //   updateChapterContent(
+      //     chapterId,
+      //     paragraphs.length,
+      //     newParagraph,
+      //     updatedSummary,
+      //     false,
+      //     false
+      //   );
+      //   setIsSaved(false);
+      // }
     };
 
     const onError = (error) => {
       console.error("Error fetching continue chapter response:", error);
       // Handle error in UI
     };
-    console.log(parameters);
+    // console.log(parameters);
     try {
       await streamedApiCall(
         `${process.env.REACT_APP_API_URL}/chapter/continue`,
         "POST",
         {
           parameters: parameters,
-          summary: chapters[chapterId - 1].summary,
-          previousChapters: previousChaptersSummaries,
+          synopsis: chapters[chapterId - 1].synopsis,
+          previousChapters: previousChaptersSynopsis,
           previousParagraph: paragraphs[paragraphs.length - 1],
           systemPrompt: systemPrompts[0],
           instruction: instruction,
@@ -474,7 +477,7 @@ function BookView() {
         id: prevChapters.length + 1,
         title: `Chapter ${prevChapters.length + 1}`,
         content: "",
-        summary: "Summary of the chapter.",
+        synopsis: "Synopsis of the chapter.",
       },
     ]);
     setIsSaved(false);
@@ -492,6 +495,7 @@ function BookView() {
 
   const handleParametersChange = (newParameters) => {
     setParameters(newParameters);
+    setEbookTitle(newParameters.title);
     setIsSaved(false);
   };
 
@@ -501,13 +505,20 @@ function BookView() {
   const [suggestionsError, setSuggestionsError] = useState(null);
 
   const fetchChapterSuggestions = async () => {
+    if (chapterSuggestions.length > 0) {
+      return;
+    }
     setIsLoadingSuggestions(true);
     setSuggestionsError(null);
     let chapterSummaries = chapters.map((c) => ({
       title: c.title,
-      summary: c.summary,
+      synopsis: c.synopsis,
     }));
     console.log(chapterSummaries);
+    setChapterSuggestions([]);
+    let total_chapters = 10;
+    let number_of_chapters = 5;
+    number_of_chapters = number_of_chapters - chapterSummaries.length;
     try {
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/chapter/suggestions`,
@@ -520,15 +531,16 @@ function BookView() {
             chapters: chapterSummaries,
             parameters: parameters,
             instruction: "instructions",
+            number_of_chapters: number_of_chapters,
+            total_chapters: total_chapters,
           }),
         }
       );
 
       const data = await response.json();
-      setChapterSuggestions((prevSuggestions) => [
-        ...prevSuggestions,
-        ...data.suggestions,
-      ]);
+      console.log(JSON.parse(data.suggestions));
+      let suggestions = JSON.parse(data.suggestions);
+      setChapterSuggestions(suggestions);
     } catch (error) {
       console.error("Error fetching chapter suggestions:", error);
       setSuggestionsError(error.message);
@@ -557,7 +569,7 @@ function BookView() {
         id: prevChapters.length + 1,
         title: suggestion.title,
         content: "",
-        summary: suggestion.summary,
+        synopsis: suggestion.synopsis,
       },
     ]);
     setChapterSuggestions((prevSuggestions) =>
@@ -700,7 +712,7 @@ function BookView() {
                   isLoading={isLoadingSuggestions}
                   error={suggestionsError}
                   onAddChapter={addSuggestedChapter}
-                  onLoadMore={fetchChapterSuggestions}
+                  onReload={fetchChapterSuggestions}
                   onClose={() => setShowSuggestions(false)}
                 />
               ) : (

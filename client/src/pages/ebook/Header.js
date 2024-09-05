@@ -62,13 +62,13 @@ const Header = ({
                   {ebookTitle}
                 </h1>
               )}
-              <button
+              {/* <button
                 onClick={() => setIsEditingTitle(!isEditingTitle)}
                 className="ml-2 text-white hover:text-gray-200 transition-colors duration-200"
                 aria-label="Edit title"
               >
                 <FaEdit />
-              </button>
+              </button> */}
             </div>
           </div>
 

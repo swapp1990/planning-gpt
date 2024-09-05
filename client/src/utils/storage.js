@@ -46,7 +46,7 @@ export const useEbookStorage = () => {
         if (resp && resp.length > 0) {
           let loadedEbook = resp[0];
           const parsedData = loadedEbook.bookData;
-          setEbookTitle(parsedData.title || "Untitled Ebook");
+          setEbookTitle(parsedData.parameters.title || "Untitled");
           setChapters(parsedData.chapters || []);
           setCurrentChapter(parsedData.currentChapter || null);
           setSystemPrompts(parsedData.systemPrompts || []);
@@ -117,6 +117,7 @@ export const useEbookStorage = () => {
       saveToLocalStorage();
     }
   }, [isSaved]);
+
   // useEffect(() => {
   //   const saveTimer = setTimeout(() => {
   //     if (!isSaved) {
