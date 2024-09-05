@@ -322,6 +322,7 @@ def continue_chapter_suggestions():
 @app.route("/chapter/continue", methods=["POST"])
 def continue_chapter():
     data = request.get_json()
+    parameters = data.get('parameters')
     previousSummary = data.get('summary')
     previousChapters = data.get('previousChapters')
     instruction = data.get('instruction')
@@ -329,11 +330,13 @@ def continue_chapter():
     # passage = data.get('passage')
     previousParagraph = data.get('previousParagraph')
 
-    prompt = f'Please continue the story for the current chapter based on the following summary for the chapter: `{previousSummary}` and the following instruction: `{instruction}`.' 
+    prompt = f'Please continue the story for the current chapter based on the following summary for the chapter so far: `{previousSummary}` and the following instruction: `{instruction}`. This are the parameters that guide the story: `{parameters}`' 
     if previousParagraph is not None and previousParagraph != "":
         prompt = f'{prompt}\nHere is the previous paragraph of the current chapter: `{previousParagraph}`.'
     if previousChapters is not None and previousChapters != "":
         prompt = f'{prompt}\nPrevious chapters for the story have following summaries: `{previousChapters}`.' 
+
+    print(prompt)
 
     def generate():
         partial_result = ""

@@ -7,6 +7,7 @@ import { useEbookStorage } from "../../utils/storage";
 import Chapter from "./Chapter";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
+import ParametersPanel from "./ParametersPanel";
 
 import { BookProvider } from "./BookContext";
 
@@ -58,7 +59,7 @@ function BookView() {
 
   useEffect(() => {
     if (chapters && chapters.length > 0) {
-      setIsSaved(false);
+      // setIsSaved(false);
     }
   }, [chapters]);
 
@@ -79,13 +80,6 @@ function BookView() {
       );
       const data = await response.json();
       setSystemPrompts(data.prompts);
-      let parameters = [];
-      parameters.push({
-        title: "System Prompts",
-        points: data.prompts,
-      });
-      parameters = [...parameters, ...data.parameters];
-      setParameters(parameters);
     } catch (error) {
       console.error("Error fetching system prompt:", error);
     }
@@ -289,6 +283,7 @@ function BookView() {
             false,
             true
           );
+          setIsSaved(false);
         }
       } else if (data.summary) {
         updatedSummary = data.summary;
@@ -301,6 +296,7 @@ function BookView() {
           false,
           false
         );
+        setIsSaved(false);
       }
     };
 
@@ -308,12 +304,13 @@ function BookView() {
       console.error("Error fetching continue chapter response:", error);
       // Handle error in UI
     };
-
+    console.log(parameters);
     try {
       await streamedApiCall(
         `${process.env.REACT_APP_API_URL}/chapter/continue`,
         "POST",
         {
+          parameters: parameters,
           summary: chapters[chapterId - 1].summary,
           previousChapters: previousChaptersSummaries,
           previousParagraph: paragraphs[paragraphs.length - 1],
@@ -487,6 +484,11 @@ function BookView() {
     setIsSaved(false);
   };
 
+  const handleParametersChange = (newParameters) => {
+    setParameters(newParameters);
+    setIsSaved(false);
+  };
+
   const Footer = () => {
     return (
       <footer className="bg-gray-200 py-2 px-4 shadow-md z-30 relative">
@@ -567,6 +569,10 @@ function BookView() {
           />
           <main className="h-full overflow-auto p-4">
             <div className="max-w-3xl mx-auto">
+              <ParametersPanel
+                parameters={parameters}
+                onParametersChange={handleParametersChange}
+              />
               <div className="text-center text-gray-500">
                 {chapters.length == 0 && (
                   <div>

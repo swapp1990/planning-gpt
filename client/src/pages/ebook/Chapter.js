@@ -355,7 +355,7 @@ const Chapter = React.forwardRef(
           />
         )}
         {showDeleteConfirm && (
-          <div className="absolute inset-0 bg-white bg-opacity-90 flex items-center justify-center">
+          <div className="absolute inset-0 bg-white bg-opacity-90 flex items-start justify-center mt-4">
             <div className="bg-white p-4 rounded-lg shadow-md text-center">
               <p className="mb-4">
                 Are you sure you want to delete this chapter?

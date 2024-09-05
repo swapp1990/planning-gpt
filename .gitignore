@@ -18,3 +18,4 @@ analysis/
 /server/testperformance.py
 client/node_modules/
 server/__pycache__/
+server/models/__pycache__/
