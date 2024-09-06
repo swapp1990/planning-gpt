@@ -345,7 +345,8 @@ def chapter_suggestions():
     """
     print("generating chapter suggestions")
     result = hermes_ai_output(user_prompt, system_prompt, [], "")
-    print(result)
+    if isinstance(result, dict) and 'error' in result:
+        return jsonify(result), 500
     return jsonify({'suggestions': result})
 
 @app.route("/chapter/continue/suggestions", methods=["POST"])
@@ -375,6 +376,8 @@ def continue_chapter_suggestions():
     """
     print("generating paragraph suggestions")
     result = hermes_ai_output(user_prompt, system_prompt, [], "")
+    if isinstance(result, dict) and 'error' in result:
+        return jsonify(result), 500
     return jsonify({'suggestions': result})
 
 @app.route("/chapter/continue", methods=["POST"])
