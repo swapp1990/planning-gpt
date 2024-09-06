@@ -333,7 +333,7 @@ def chapter_suggestions():
     Additionally, when writing synopses, follow these specific guidelines:
     {synopsis_guidelines}
 
-    Your output should be a valid JSON array where each element is an object containing 'title', 'synopsis', and 'act' keys."
+    Your output should be a valid JSON array where each element is an object containing 'title', 'synopsis', and 'act' keys. Only return the json output, nothing else."
     """
 
     user_prompt = f"""Generate chapter outlines based on the following:
@@ -345,6 +345,7 @@ def chapter_suggestions():
     """
     print("generating chapter suggestions")
     result = hermes_ai_output(user_prompt, system_prompt, [], "")
+    print(result)
     return jsonify({'suggestions': result})
 
 @app.route("/chapter/continue/suggestions", methods=["POST"])
