@@ -327,16 +327,22 @@ def rewrite_sentence():
         "John's reputation as a master chef spread throughout the city. People would make reservations months in advance to taste his cuisine. He loved the challenge of each new dish and the satisfaction of seeing diners savor his creations.",
     ]
     
-    if random.random() < 0.5:
-        time.sleep(2)
-        try:
-            new_sentences = NEW_PARAGRAPHS[int(paragraph_id)].split('.')
-            revised_sentence = new_sentences[int(sentence_id)].strip()
-            return jsonify({'revised_sentence': revised_sentence})
-        except (IndexError, ValueError):
-            return jsonify({'error': 'Invalid paragraph_id or sentence_id'}), 400
-    else:
-        return jsonify({'revised_sentence': None})
+    def generate():
+        yield '{"status": "checking"}'
+        time.sleep(1)
+        if random.random() < 0.5:
+            yield '{"status": "rewriting"}'
+            time.sleep(2)
+            try:
+                new_sentences = NEW_PARAGRAPHS[int(paragraph_id)].split('.')
+                revised_sentence = new_sentences[int(sentence_id)].strip()
+                yield f'{{"status": "complete", "revised_sentence": "{revised_sentence}"}}'
+            except (IndexError, ValueError):
+                yield '{"status": "error", "message": "Invalid paragraph_id or sentence_id"}'
+        else:
+            yield '{"status": "ok", "revised_sentence": null}'
+    
+    return Response(generate(), mimetype='text/event-stream')
 
 @app.route("/chapter/suggestions", methods=["POST"])
 def chapter_suggestions():

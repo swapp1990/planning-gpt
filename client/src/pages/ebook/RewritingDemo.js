@@ -6,6 +6,7 @@ import React, {
   useEffect,
 } from "react";
 import { FaSync, FaGithub, FaTwitter, FaCheck, FaTimes } from "react-icons/fa";
+import { streamedApiCallBasic } from "../../utils/api";
 
 const INITIAL_PARAGRAPHS = [
   "John was a skilled carpenter, known for his intricate woodwork. He spent his days in his workshop, crafting beautiful furniture and ornate decorations. His passion for woodworking was evident in every piece he created.",
@@ -19,31 +20,93 @@ const NEW_PARAGRAPHS = [
   "John's reputation as a master chef spread throughout the city. People would make reservations months in advance to taste his cuisine. He loved the challenge of each new dish and the satisfaction of seeing diners savor his creations.",
 ];
 
-const rewriteSentence = async (sentence, paragraph_id, sentence_id) => {
+const rewriteSentence = async (sentence, paragraphId, sentenceId, dispatch) => {
   try {
-    const response = await fetch(
-      `${process.env.REACT_APP_API_URL}/sentence/rewrite`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          sentence: sentence,
-          sentence_id: sentence_id,
-          paragraph_id: paragraph_id,
-        }),
+    let revised_sentence = null;
+    const onChunk = (data) => {
+      //   console.log(data);
+      let response = JSON.parse(data);
+
+      console.log(response);
+      if (response.status == "rewriting") {
+        dispatch({
+          type: "SET_SENTENCE_STATUS",
+          payload: {
+            key: `${paragraphId}-${sentenceId}`,
+            status: "rewriting",
+          },
+        });
+      } else if (response.status == "complete") {
+        revised_sentence = response.revised_sentence;
+      } else if (response.status == "ok") {
+        revised_sentence = response.revised_sentence;
       }
+    };
+
+    const onError = (error) => {
+      console.error("Error fetching revised sentence:", error);
+      return null;
+    };
+    await streamedApiCallBasic(
+      `${process.env.REACT_APP_API_URL}/sentence/rewrite`,
+      "POST",
+      {
+        sentence: sentence,
+        paragraph_id: paragraphId,
+        sentence_id: sentenceId,
+      },
+      onChunk,
+      onError
     );
-    if (!response.ok) {
-      throw new Error("Failed to rewrite sentence");
-    }
-    const data = await response.json();
-    return data.revised_sentence;
+    return revised_sentence;
   } catch (error) {
-    console.error("Error rewriting sentence:", error);
     return null;
   }
+  //   return new Promise((resolve, reject) => {
+
+  // const eventSource = new EventSource(
+  //   `${process.env.REACT_APP_API_URL}/sentence/rewrite`
+  // );
+
+  // eventSource.onmessage = (event) => {
+  //   const data = JSON.parse(event.data);
+
+  //   if (data.status === "rewriting") {
+  //     // Update UI to show rewriting status
+  //     dispatch({
+  //       type: "SET_SENTENCE_STATUS",
+  //       payload: {
+  //         key: `${paragraphId}-${sentenceId}`,
+  //         status: "rewriting",
+  //       },
+  //     });
+  //   } else if (data.status === "complete") {
+  //     eventSource.close();
+  //     resolve(data.revised_sentence);
+  //   } else if (data.status === "error") {
+  //     eventSource.close();
+  //     reject(new Error(data.message));
+  //   }
+  // };
+
+  // eventSource.onerror = (error) => {
+  //   eventSource.close();
+  //   reject(error);
+  // };
+
+  // // Send the POST request to start the SSE stream
+  // fetch(`${process.env.REACT_APP_API_URL}/sentence/rewrite`, {
+  //   method: "POST",
+  //   headers: {
+  //     "Content-Type": "application/json",
+  //   },
+  //   body: JSON.stringify({
+  //     sentence,
+  //     paragraph_id: paragraphId,
+  //     sentence_id: sentenceId,
+  //   }),
+  // });
+  //   });
 };
 
 const rewritingReducer = (state, action) => {
@@ -140,8 +203,10 @@ const useRewritingProcess = (state, dispatch) => {
           const rewrittenSentence = await rewriteSentence(
             sentences[nextSentenceId],
             currentParagraph,
-            nextSentenceId
+            nextSentenceId,
+            dispatch
           );
+          console.log(rewrittenSentence);
           if (rewrittenSentence != null) {
             dispatch({
               type: "SET_REWRITTEN_SENTENCE",
@@ -150,7 +215,6 @@ const useRewritingProcess = (state, dispatch) => {
                 sentence: rewrittenSentence,
               },
             });
-            console.log(rewrittenSentence);
           } else {
             dispatch({
               type: "SET_SENTENCE_STATUS",
@@ -196,7 +260,7 @@ const Sentence = React.memo(
 
     let className = "transition-all duration-300 relative";
     if (status === "scanning") className += " bg-yellow-200";
-    else if (status === "rewrite") className += " bg-red-200";
+    else if (status === "rewriting") className += " bg-red-200";
     else if (status === "accepted") className += " bg-green-200";
     else if (isCurrentSentence) className += " bg-yellow-200";
     const textClassName = `transition-all duration-300 ${
