@@ -14,6 +14,7 @@ import BottomNavigation from "./components/BottomNavigation";
 import HomePage from "./pages/home/HomePage";
 import BookView from "./pages/ebook/BookView";
 import TestPage from "./pages/TestPage";
+import RewritingDemo from "./pages/ebook/RewritingDemo";
 import Login from "./pages/Login";
 
 function App() {
@@ -25,7 +26,7 @@ function App() {
             <Switch>
               <Route path="/login" component={Login} />
               <Route path="/home" exact component={BookView} />
-              <Route path="/" exact component={BookView} />
+              <Route path="/" exact component={RewritingDemo} />
             </Switch>
           </MainLayout>
         </Router>
