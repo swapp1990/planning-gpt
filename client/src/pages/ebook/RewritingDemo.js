@@ -1,4 +1,10 @@
-import React, { useReducer, useCallback, useMemo, useEffect } from "react";
+import React, {
+  useReducer,
+  useState,
+  useCallback,
+  useMemo,
+  useEffect,
+} from "react";
 import { FaSync, FaGithub, FaTwitter, FaCheck, FaTimes } from "react-icons/fa";
 
 const INITIAL_PARAGRAPHS = [
@@ -123,39 +129,51 @@ const Sentence = React.memo(
     onReject,
     sentenceKey,
   }) => {
+    const [showLineThrough, setShowLineThrough] = useState(false);
+
+    useEffect(() => {
+      if (status === "rewriting") {
+        const timer = setTimeout(() => setShowLineThrough(true), 500);
+        return () => clearTimeout(timer);
+      } else {
+        setShowLineThrough(false);
+      }
+    }, [status]);
+
     let className = "transition-all duration-300 relative";
     if (status === "rewriting") className += " bg-red-200";
     else if (status === "accepted") className += " bg-green-200";
     else if (isCurrentSentence) className += " bg-yellow-200";
+    const textClassName = `transition-all duration-300 ${
+      (showLineThrough && status === "rewriting") || status === "rewrite"
+        ? "line-through"
+        : ""
+    } ${status === "rewrite" ? "text-gray-500" : ""}`;
 
     return (
       <span className={className}>
-        {status === "rewrite" ? (
-          <>
-            <span className="text-blue-600 text-sm mb-1 new-sentence flex items-start">
-              <span className="mr-1">{newSentence}.</span>
-              <span className="inline-flex items-center flex-shrink-0">
-                <button
-                  onClick={() => onAccept(sentenceKey, newSentence)}
-                  className="text-green-500 hover:text-green-700 transition-colors duration-200 mr-1"
-                  aria-label="Accept rewrite"
-                >
-                  <FaCheck size={12} />
-                </button>
-                <button
-                  onClick={() => onReject(sentenceKey)}
-                  className="text-red-500 hover:text-red-700 transition-colors duration-200"
-                  aria-label="Reject rewrite"
-                >
-                  <FaTimes size={12} />
-                </button>
-              </span>
+        {status === "rewrite" && (
+          <span className="text-blue-600 text-sm mb-1 new-sentence flex items-start">
+            <span className="mr-1">{newSentence}.</span>
+            <span className="inline-flex items-center flex-shrink-0">
+              <button
+                onClick={() => onAccept(sentenceKey, newSentence)}
+                className="bg-gray-200 text-green-500 hover:text-green-700 transition-colors duration-200 mr-1 p-1 rounded"
+                aria-label="Accept rewrite"
+              >
+                <FaCheck size={14} />
+              </button>
+              <button
+                onClick={() => onReject(sentenceKey)}
+                className="bg-gray-200 text-red-500 hover:text-red-700 transition-colors duration-200 p-1 rounded"
+                aria-label="Reject rewrite"
+              >
+                <FaTimes size={14} />
+              </button>
             </span>
-            <span className="line-through text-gray-500">{sentence}.</span>
-          </>
-        ) : (
-          <span>{sentence}.</span>
+          </span>
         )}
+        <span className={textClassName}>{sentence}.</span>
       </span>
     );
   }
