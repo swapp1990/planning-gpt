@@ -27,7 +27,7 @@ const rewriteSentence = async (sentence, paragraphId, sentenceId, dispatch) => {
       //   console.log(data);
       let response = JSON.parse(data);
 
-      console.log(response);
+      //   console.log(response);
       if (response.status == "rewriting") {
         dispatch({
           type: "SET_SENTENCE_STATUS",
@@ -39,6 +39,13 @@ const rewriteSentence = async (sentence, paragraphId, sentenceId, dispatch) => {
       } else if (response.status == "complete") {
         revised_sentence = response.revised_sentence;
       } else if (response.status == "ok") {
+        dispatch({
+          type: "SET_SENTENCE_STATUS",
+          payload: {
+            key: `${paragraphId}-${sentenceId}`,
+            status: "ok",
+          },
+        });
         revised_sentence = response.revised_sentence;
       }
     };
@@ -62,51 +69,6 @@ const rewriteSentence = async (sentence, paragraphId, sentenceId, dispatch) => {
   } catch (error) {
     return null;
   }
-  //   return new Promise((resolve, reject) => {
-
-  // const eventSource = new EventSource(
-  //   `${process.env.REACT_APP_API_URL}/sentence/rewrite`
-  // );
-
-  // eventSource.onmessage = (event) => {
-  //   const data = JSON.parse(event.data);
-
-  //   if (data.status === "rewriting") {
-  //     // Update UI to show rewriting status
-  //     dispatch({
-  //       type: "SET_SENTENCE_STATUS",
-  //       payload: {
-  //         key: `${paragraphId}-${sentenceId}`,
-  //         status: "rewriting",
-  //       },
-  //     });
-  //   } else if (data.status === "complete") {
-  //     eventSource.close();
-  //     resolve(data.revised_sentence);
-  //   } else if (data.status === "error") {
-  //     eventSource.close();
-  //     reject(new Error(data.message));
-  //   }
-  // };
-
-  // eventSource.onerror = (error) => {
-  //   eventSource.close();
-  //   reject(error);
-  // };
-
-  // // Send the POST request to start the SSE stream
-  // fetch(`${process.env.REACT_APP_API_URL}/sentence/rewrite`, {
-  //   method: "POST",
-  //   headers: {
-  //     "Content-Type": "application/json",
-  //   },
-  //   body: JSON.stringify({
-  //     sentence,
-  //     paragraph_id: paragraphId,
-  //     sentence_id: sentenceId,
-  //   }),
-  // });
-  //   });
 };
 
 const rewritingReducer = (state, action) => {
@@ -206,7 +168,7 @@ const useRewritingProcess = (state, dispatch) => {
             nextSentenceId,
             dispatch
           );
-          console.log(rewrittenSentence);
+          //   console.log(rewrittenSentence);
           if (rewrittenSentence != null) {
             dispatch({
               type: "SET_REWRITTEN_SENTENCE",
@@ -262,7 +224,6 @@ const Sentence = React.memo(
     if (status === "scanning") className += " bg-yellow-200";
     else if (status === "rewriting") className += " bg-red-200";
     else if (status === "accepted") className += " bg-green-200";
-    else if (isCurrentSentence) className += " bg-yellow-200";
     const textClassName = `transition-all duration-300 ${
       (showLineThrough && status === "rewriting") || status === "rewrite"
         ? "line-through"
