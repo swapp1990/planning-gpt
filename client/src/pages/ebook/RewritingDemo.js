@@ -123,34 +123,38 @@ const Sentence = React.memo(
     onReject,
     sentenceKey,
   }) => {
-    let className = "transition-all duration-300";
+    let className = "transition-all duration-300 relative";
     if (status === "rewriting") className += " bg-red-200";
-    else if (status === "rewrite" || isCurrentSentence)
-      className += " bg-orange-200";
     else if (status === "accepted") className += " bg-green-200";
     else if (isCurrentSentence) className += " bg-yellow-200";
 
     return (
-      <span>
-        <span className={className}>{sentence}.</span>
-        {status === "rewrite" && (
-          <span className="ml-2">
-            {newSentence && <span>{newSentence}</span>}
-            <button
-              onClick={() => onAccept(sentenceKey, newSentence)}
-              className="bg-green-500 text-white px-2 py-1 rounded mr-1"
-              aria-label="Accept rewrite"
-            >
-              <FaCheck />
-            </button>
-            <button
-              onClick={() => onReject(sentenceKey)}
-              className="bg-red-500 text-white px-2 py-1 rounded"
-              aria-label="Reject rewrite"
-            >
-              <FaTimes />
-            </button>
-          </span>
+      <span className={className}>
+        {status === "rewrite" ? (
+          <>
+            <span className="text-blue-600 text-sm mb-1 new-sentence flex items-start">
+              <span className="mr-1">{newSentence}.</span>
+              <span className="inline-flex items-center flex-shrink-0">
+                <button
+                  onClick={() => onAccept(sentenceKey, newSentence)}
+                  className="text-green-500 hover:text-green-700 transition-colors duration-200 mr-1"
+                  aria-label="Accept rewrite"
+                >
+                  <FaCheck size={12} />
+                </button>
+                <button
+                  onClick={() => onReject(sentenceKey)}
+                  className="text-red-500 hover:text-red-700 transition-colors duration-200"
+                  aria-label="Reject rewrite"
+                >
+                  <FaTimes size={12} />
+                </button>
+              </span>
+            </span>
+            <span className="line-through text-gray-500">{sentence}.</span>
+          </>
+        ) : (
+          <span>{sentence}.</span>
         )}
       </span>
     );
@@ -260,10 +264,10 @@ const RewritingDemo = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-      <div className="relative py-3 sm:max-w-xl sm:mx-auto">
+      <div className="relative p-6 sm:p-3 sm:mx-auto">
         <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-light-blue-500 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
         <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <div className="max-w-md mx-auto">
+          <div>
             <h1 className="text-2xl font-semibold mb-4">
               AI Paragraph Rewriting Demo
             </h1>
