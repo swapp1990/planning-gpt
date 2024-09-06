@@ -12,6 +12,7 @@ import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { useBook } from "./BookContext";
 import Paragraph from "./Paragraph";
 import { regularApiCall } from "../../utils/api";
+import { useEbookStorage } from "../../utils/storage";
 
 const Summary = ({ summary, chapterId, isUpdatingSummary }) => {
   const { handleSummaryUpdate } = useBook();
@@ -128,7 +129,8 @@ const Synopsis = ({ synopsis, chapterId }) => {
   );
 };
 
-const ContinueChapter = ({ onSubmit, onCancel, chapterId, summary }) => {
+const ContinueChapter = ({ onSubmit, onCancel, synopsis, paragraphs }) => {
+  const { parameters } = useEbookStorage();
   const [content, setContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -137,26 +139,35 @@ const ContinueChapter = ({ onSubmit, onCancel, chapterId, summary }) => {
   const [isFetchingSuggestions, setIsFetchingSuggestions] = useState(false);
 
   useEffect(() => {
-    fetchSuggestions();
-  }, []);
+    // fetchSuggestions();
+    // console.log(paragraphs);
+  }, [paragraphs]);
 
   const fetchSuggestions = async () => {
     setIsFetchingSuggestions(true);
     setError(null);
 
+    let previousParagraph =
+      paragraphs.length > 0 ? paragraphs[paragraphs.length - 1] : "";
     const response = await regularApiCall(
       `${process.env.REACT_APP_API_URL}/chapter/continue/suggestions`,
       "POST",
       {
-        chapterId,
-        summary,
+        parameters,
+        chapter_synopsis: synopsis,
+        previous_paragraph: previousParagraph,
+        n_suggestions: 3,
       }
     );
 
     if (response.error) {
       setError("Failed to fetch suggestions. Please try again.");
     } else {
-      setSuggestions(response.suggestions || []);
+      // setSuggestions(response.suggestions || []);
+      let suggestions = JSON.parse(response.suggestions);
+      suggestions = suggestions.map((s) => s.suggestion);
+      // console.log(suggestions);
+      setSuggestions(suggestions || []);
     }
 
     setIsFetchingSuggestions(false);
@@ -180,6 +191,13 @@ const ContinueChapter = ({ onSubmit, onCancel, chapterId, summary }) => {
     setIsSuggestionsOpen(false);
   };
 
+  const handleShowSuggestion = () => {
+    if (!isSuggestionsOpen) {
+      fetchSuggestions();
+    }
+    setIsSuggestionsOpen(!isSuggestionsOpen);
+  };
+
   return (
     <div className="mt-4 bg-white rounded-lg shadow-md p-4">
       <h3 className="text-xl font-semibold mb-2 text-gray-800">
@@ -194,7 +212,7 @@ const ContinueChapter = ({ onSubmit, onCancel, chapterId, summary }) => {
           onChange={(e) => setContent(e.target.value)}
         />
         <button
-          onClick={() => setIsSuggestionsOpen(!isSuggestionsOpen)}
+          onClick={handleShowSuggestion}
           className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
           title="Show suggestions"
         >
@@ -361,8 +379,8 @@ const Chapter = React.forwardRef(
           <ContinueChapter
             onSubmit={handleSubmitContinue}
             onCancel={handleCancelContinue}
-            chapterId={chapter.id}
-            summary={chapter.summary}
+            synopsis={chapter.synopsis}
+            paragraphs={paragraphs}
           />
         )}
         {showDeleteConfirm && (

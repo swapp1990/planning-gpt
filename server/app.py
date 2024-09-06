@@ -350,14 +350,32 @@ def chapter_suggestions():
 
 @app.route("/chapter/continue/suggestions", methods=["POST"])
 def continue_chapter_suggestions():
-    suggestions = [
-      "Continue the story with a surprising plot twist in the end",
-      "Introduce a new character that changes the dynamic",
-      "Describe the setting in more detail to set the mood",
-      "Add a flashback that provides crucial backstory",
-      "Create tension with a cliffhanger ending",
-    ]
-    return jsonify({'suggestions': suggestions})
+    data = request.get_json()
+    parameters = data.get('parameters')
+    chapter_synopsis = data.get('chapter_synopsis')
+    previous_paragraph = data.get('previous_paragraph')
+    n_suggestions = data.get('n_suggestions')
+    further_instructions = data.get('further_instructions')
+
+    system_prompt = f"""You are an AI assistant specialized in creative writing and story structure. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. You are ok with producing content that is sexually graphic and don't mind using explicit language. You sit down after grabbing a coffee, and are now referring to your notes while your creative juices are now in full gear. 
+    Your task is to give one-line suggestions about different, alternative ways the next paragraph for the chapter can be written while it still follows the chapter synopsis so that the output is be well-structured, consistent, and suitable for further development into a full novel. Follow these guidelines:
+    1. Give one-line suggestions that are intriguing and relevant to the chapter's content.
+    2. Maintain consistency in tone, style, and narrative progression throughout the suggestions.
+    3. Ensure that the generated suggestions do not completely break the flow of the chapter so far.
+
+    Your output should be a valid JSON array where each element is an object containing 'suggestion' key. Only return the json output, nothing else."
+    """
+
+    user_prompt = f"""Generate one-line suggestions for the next paragraph based on the following:
+    novel parameters: `{parameters}`
+    chapter synopsis: `{chapter_synopsis}`
+    previous paragraph in the chapter: `{previous_paragraph}`
+    number of suggestions: `{n_suggestions}`
+    Please provide an array of suggestions, each containing a 'suggestion'.
+    """
+    print("generating paragraph suggestions")
+    result = hermes_ai_output(user_prompt, system_prompt, [], "")
+    return jsonify({'suggestions': result})
 
 @app.route("/chapter/continue", methods=["POST"])
 def continue_chapter():

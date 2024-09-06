@@ -67,7 +67,7 @@ function BookView() {
   useEffect(() => {
     if (chapters && chapters.length > 0) {
       // setIsSaved(false);
-      console.log(chapters);
+      // console.log(chapters);
     }
   }, [chapters]);
 
@@ -517,7 +517,7 @@ function BookView() {
     console.log(chapterSummaries);
     setChapterSuggestions([]);
     let total_chapters = 10;
-    let number_of_chapters = 5;
+    let number_of_chapters = 10;
     number_of_chapters = number_of_chapters - chapterSummaries.length;
     try {
       const response = await fetch(
