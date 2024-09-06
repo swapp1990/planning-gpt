@@ -90,10 +90,9 @@ const SentenceSelector = ({
   );
 };
 
-const RewritePanel = ({ content, onSubmit, onCancel }) => {
+const RewritePanel = ({ content, isLoading, onSubmit, onCancel }) => {
   const [rewritePrompt, setRewritePrompt] = useState("");
   const [selectedSentences, setSelectedSentences] = useState({});
-  const [isLoading, setIsLoading] = useState(false);
   const [showSentenceSelector, setShowSentenceSelector] = useState(false);
 
   const handleSelectionChange = (index, note) => {
@@ -108,7 +107,6 @@ const RewritePanel = ({ content, onSubmit, onCancel }) => {
   };
 
   const handleSubmit = () => {
-    setIsLoading(true);
     const instructions = Object.entries(selectedSentences).map(
       ([index, { note }]) => `Sentence ${parseInt(index) + 1}: Note: ${note}`
     );

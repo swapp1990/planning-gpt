@@ -415,6 +415,7 @@ const ParagraphMenu = ({ content, chapterId, paragraphId, onClose }) => {
       {isRewriteOpen && (
         <RewritePanel
           content={content}
+          isLoading={isLoading}
           onSubmit={handleSubmitRewrite}
           onCancel={onRewriteCancel}
         />
