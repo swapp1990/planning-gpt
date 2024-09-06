@@ -362,24 +362,19 @@ function BookView() {
         // Remove the specified paragraph
         paragraphs.splice(paragraphId, 1);
 
-        // If it was the last paragraph, add an empty one
-        if (paragraphs.length === 0) {
-          // paragraphs.push("New paragraph");
-        }
-
         // Join the paragraphs back into a single string
         newChapters[chapterIndex].content = paragraphs.join("\n\n");
 
         // Update summary
-        let fullSummary = newChapters[chapterIndex].summary;
-        const summaryTokenizer = new RegExp("(?<=[.!?])\\s*", "g");
-        const summarySentences = fullSummary
-          .split(summaryTokenizer)
-          .map((sentence) => sentence.trim());
-        if (summarySentences.length > paragraphId + 1) {
-          summarySentences.splice(paragraphId + 1, 1);
-        }
-        newChapters[chapterIndex].summary = summarySentences.join(" ");
+        // let fullSummary = newChapters[chapterIndex].summary;
+        // const summaryTokenizer = new RegExp("(?<=[.!?])\\s*", "g");
+        // const summarySentences = fullSummary
+        //   .split(summaryTokenizer)
+        //   .map((sentence) => sentence.trim());
+        // if (summarySentences.length > paragraphId + 1) {
+        //   summarySentences.splice(paragraphId + 1, 1);
+        // }
+        // newChapters[chapterIndex].summary = summarySentences.join(" ");
       }
 
       return newChapters;
