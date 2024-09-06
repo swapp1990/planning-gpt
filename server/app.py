@@ -3,6 +3,7 @@ import re
 import logging
 import time
 import json
+import random
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify,Response, stream_with_context
 from flask_cors import CORS
@@ -313,6 +314,29 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 synopsis_guidelines_path = os.path.join(current_dir, 'synopsis_guidelines.txt')
 with open(synopsis_guidelines_path, 'r') as file:
     synopsis_guidelines = file.read().strip()
+
+@app.route("/sentence/rewrite", methods=["POST"])
+def rewrite_sentence():
+    data = request.get_json()
+    sentence = data.get("sentence")
+    paragraph_id = data.get("paragraph_id")
+    sentence_id = data.get("sentence_id")
+    NEW_PARAGRAPHS = [
+        "John was a talented chef, renowned for his culinary creations. He spent his days in the kitchen, preparing exquisite dishes and innovative recipes. His passion for cooking was evident in every meal he served.",
+        "As a chef, John's hands were nimble and precise from years of wielding knives and utensils. He took great pride in his ability to transform raw ingredients into gastronomic masterpieces. His kitchen was always filled with the enticing aroma of simmering sauces and freshly baked bread.",
+        "John's reputation as a master chef spread throughout the city. People would make reservations months in advance to taste his cuisine. He loved the challenge of each new dish and the satisfaction of seeing diners savor his creations.",
+    ]
+    
+    if random.random() < 0.5:
+        time.sleep(2)
+        try:
+            new_sentences = NEW_PARAGRAPHS[int(paragraph_id)].split('.')
+            revised_sentence = new_sentences[int(sentence_id)].strip()
+            return jsonify({'revised_sentence': revised_sentence})
+        except (IndexError, ValueError):
+            return jsonify({'error': 'Invalid paragraph_id or sentence_id'}), 400
+    else:
+        return jsonify({'revised_sentence': None})
 
 @app.route("/chapter/suggestions", methods=["POST"])
 def chapter_suggestions():

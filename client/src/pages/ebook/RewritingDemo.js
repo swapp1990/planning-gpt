@@ -19,6 +19,33 @@ const NEW_PARAGRAPHS = [
   "John's reputation as a master chef spread throughout the city. People would make reservations months in advance to taste his cuisine. He loved the challenge of each new dish and the satisfaction of seeing diners savor his creations.",
 ];
 
+const rewriteSentence = async (sentence, paragraph_id, sentence_id) => {
+  try {
+    const response = await fetch(
+      `${process.env.REACT_APP_API_URL}/sentence/rewrite`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sentence: sentence,
+          sentence_id: sentence_id,
+          paragraph_id: paragraph_id,
+        }),
+      }
+    );
+    if (!response.ok) {
+      throw new Error("Failed to rewrite sentence");
+    }
+    const data = await response.json();
+    return data.revised_sentence;
+  } catch (error) {
+    console.error("Error rewriting sentence:", error);
+    return null;
+  }
+};
+
 const rewritingReducer = (state, action) => {
   switch (action.type) {
     case "START_REWRITING":
@@ -28,6 +55,7 @@ const rewritingReducer = (state, action) => {
         currentParagraph: 0,
         currentSentence: -1,
         sentenceStatuses: {},
+        rewrittenSentences: {},
       };
     case "RESET_DEMO":
       return {
@@ -36,6 +64,7 @@ const rewritingReducer = (state, action) => {
         currentParagraph: 0,
         currentSentence: -1,
         sentenceStatuses: {},
+        rewrittenSentences: {},
         paragraphs: INITIAL_PARAGRAPHS,
       };
     case "NEXT_SENTENCE":
@@ -54,6 +83,18 @@ const rewritingReducer = (state, action) => {
           [action.payload.key]: action.payload.status,
         },
       };
+    case "SET_REWRITTEN_SENTENCE":
+      return {
+        ...state,
+        sentenceStatuses: {
+          ...state.sentenceStatuses,
+          [action.payload.key]: "rewrite",
+        },
+        rewrittenSentences: {
+          ...state.rewrittenSentences,
+          [action.payload.key]: action.payload.sentence,
+        },
+      };
     case "ACCEPT_REWRITE":
       const { key, newSentence } = action.payload;
       const [pIndex, sIndex] = key.split("-").map(Number);
@@ -66,6 +107,10 @@ const rewritingReducer = (state, action) => {
         ...state,
         paragraphs: updatedParagraphs,
         sentenceStatuses: { ...state.sentenceStatuses, [key]: "accepted" },
+        rewrittenSentences: {
+          ...state.rewrittenSentences,
+          [key]: null,
+        },
       };
     case "FINISH_REWRITING":
       return { ...state, isRewriting: false };
@@ -80,42 +125,51 @@ const useRewritingProcess = (state, dispatch) => {
   useEffect(() => {
     if (!isRewriting) return;
 
-    const timer = setTimeout(() => {
+    const processPassage = async () => {
       const sentences = paragraphs[currentParagraph].split(".");
       if (currentSentence < sentences.length - 1) {
         const nextSentenceId = currentSentence + 1;
         if (sentences[nextSentenceId].trim() !== "") {
-          const needsRewrite = Math.random() < 0.5;
           dispatch({
             type: "SET_SENTENCE_STATUS",
             payload: {
               key: `${currentParagraph}-${nextSentenceId}`,
-              status: needsRewrite ? "rewriting" : "ok",
+              status: "scanning",
             },
           });
-          if (needsRewrite) {
-            setTimeout(() => {
-              dispatch({
-                type: "SET_SENTENCE_STATUS",
-                payload: {
-                  key: `${currentParagraph}-${nextSentenceId}`,
-                  status: "rewrite",
-                },
-              });
-              dispatch({ type: "NEXT_SENTENCE" });
-            }, 2000);
+          const rewrittenSentence = await rewriteSentence(
+            sentences[nextSentenceId],
+            currentParagraph,
+            nextSentenceId
+          );
+          if (rewrittenSentence != null) {
+            dispatch({
+              type: "SET_REWRITTEN_SENTENCE",
+              payload: {
+                key: `${currentParagraph}-${nextSentenceId}`,
+                sentence: rewrittenSentence,
+              },
+            });
+            console.log(rewrittenSentence);
           } else {
-            dispatch({ type: "NEXT_SENTENCE" });
+            dispatch({
+              type: "SET_SENTENCE_STATUS",
+              payload: {
+                key: `${currentParagraph}-${nextSentenceId}`,
+                status: "ok",
+              },
+            });
           }
+          dispatch({ type: "NEXT_SENTENCE" });
         } else if (currentParagraph < paragraphs.length - 1) {
           dispatch({ type: "NEXT_PARAGRAPH" });
         } else {
           dispatch({ type: "FINISH_REWRITING" });
         }
       }
-    }, 800);
+    };
 
-    return () => clearTimeout(timer);
+    processPassage();
   }, [isRewriting, currentSentence, currentParagraph, paragraphs, dispatch]);
 };
 
@@ -141,7 +195,8 @@ const Sentence = React.memo(
     }, [status]);
 
     let className = "transition-all duration-300 relative";
-    if (status === "rewriting") className += " bg-red-200";
+    if (status === "scanning") className += " bg-yellow-200";
+    else if (status === "rewrite") className += " bg-red-200";
     else if (status === "accepted") className += " bg-green-200";
     else if (isCurrentSentence) className += " bg-yellow-200";
     const textClassName = `transition-all duration-300 ${
@@ -182,15 +237,18 @@ const Sentence = React.memo(
 const Paragraph = React.memo(
   ({
     paragraph,
-    newParagraph,
     pIndex,
     currentParagraph,
     currentSentence,
     isRewriting,
     sentenceStatuses,
+    rewrittenSentences,
     onAccept,
     onReject,
   }) => {
+    useEffect(() => {
+      //   console.log(rewrittenSentences);
+    }, [rewrittenSentences]);
     return (
       <p key={pIndex}>
         {paragraph.split(".").map((sentence, sIndex) => {
@@ -200,7 +258,7 @@ const Paragraph = React.memo(
             currentParagraph === pIndex && currentSentence === sIndex;
           const status = sentenceStatuses[key];
           const newSentence =
-            status === "rewrite" ? newParagraph.split(".")[sIndex] : null;
+            status === "rewrite" ? rewrittenSentences[key] : null;
 
           return (
             <Sentence
@@ -227,6 +285,7 @@ const RewritingDemo = () => {
     currentSentence: -1,
     isRewriting: false,
     sentenceStatuses: {},
+    rewrittenSentences: {},
   });
 
   const {
@@ -235,6 +294,7 @@ const RewritingDemo = () => {
     currentSentence,
     isRewriting,
     sentenceStatuses,
+    rewrittenSentences,
   } = state;
 
   useRewritingProcess(state, dispatch);
@@ -259,12 +319,12 @@ const RewritingDemo = () => {
         <Paragraph
           key={pIndex}
           paragraph={paragraph}
-          newParagraph={NEW_PARAGRAPHS[pIndex]}
           pIndex={pIndex}
           currentParagraph={currentParagraph}
           currentSentence={currentSentence}
           isRewriting={isRewriting}
           sentenceStatuses={sentenceStatuses}
+          rewrittenSentences={rewrittenSentences}
           onAccept={handleAccept}
           onReject={handleReject}
         />
