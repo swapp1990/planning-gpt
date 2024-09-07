@@ -14,17 +14,11 @@ const INITIAL_PARAGRAPHS = [
   "John's reputation as a master carpenter spread throughout the town. People would come from far and wide to commission his work. He loved the challenge of each new project and the satisfaction of seeing his creations in people's homes.",
 ];
 
-const NEW_PARAGRAPHS = [
-  "John was a talented chef, renowned for his culinary creations. He spent his days in the kitchen, preparing exquisite dishes and innovative recipes. His passion for cooking was evident in every meal he served.",
-  "As a chef, John's hands were nimble and precise from years of wielding knives and utensils. He took great pride in his ability to transform raw ingredients into gastronomic masterpieces. His kitchen was always filled with the enticing aroma of simmering sauces and freshly baked bread.",
-  "John's reputation as a master chef spread throughout the city. People would make reservations months in advance to taste his cuisine. He loved the challenge of each new dish and the satisfaction of seeing diners savor his creations.",
-];
-
 const rewriteSentence = async (sentence, paragraphId, sentenceId, dispatch) => {
   try {
     let revised_sentence = null;
     const onChunk = (data) => {
-      //   console.log(data);
+      console.log(data);
       let response = JSON.parse(data);
 
       //   console.log(response);
@@ -59,8 +53,7 @@ const rewriteSentence = async (sentence, paragraphId, sentenceId, dispatch) => {
       "POST",
       {
         sentence: sentence,
-        paragraph_id: paragraphId,
-        sentence_id: sentenceId,
+        instruction: "Change John's profession to a chef.",
       },
       onChunk,
       onError

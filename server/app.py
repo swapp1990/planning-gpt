@@ -20,7 +20,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-openai_api_key = os.getenv('LAMBDA_API_KEY')
+lambda_hermes_api_key = os.getenv('LAMBDA_API_KEY')
+openai_api_key = os.getenv('OPENAI_API_KEY')
 openai_api_base = "https://api.lambdalabs.com/v1"
 
 @app.before_request
@@ -136,9 +137,49 @@ def improved_ai_output(prompt, num_plans=4):
 	final_response = generate_response(prompt, best_plan)
 	return final_response
 
-def hermes_ai_output(prompt, system_prompt, examples, parameters):
+def openai_output(prompt, system_prompt, examples, parameters):
     client = OpenAI(
         api_key=openai_api_key,
+    )
+    model = "gpt-4o-mini"
+    # model = "wrong-model"
+    system_prompt = system_prompt + "\n\n" + parameters
+    messages = []
+    messages.append({
+        "role": "system",
+        "content": system_prompt
+    })
+
+    if examples is not None or len(examples) > 0:
+        for example in examples:
+            messages.append({
+                "role": "user",
+                "content": example["user"]
+            })
+            messages.append({
+                "role": "assistant",
+                "content": example["assistant"]
+            })
+
+    #add user prompt
+    messages.append({
+        "role": "user",
+        "content": prompt
+    })
+    
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=messages,
+            model=model,
+        )
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return {"error": "An error occurred while processing the request."}
+    
+def hermes_ai_output(prompt, system_prompt, examples, parameters):
+    client = OpenAI(
+        api_key=lambda_hermes_api_key,
         base_url=openai_api_base,
     )
     model = "hermes-3-llama-3.1-405b-fp8"
@@ -179,7 +220,7 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
 
 def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
     client = OpenAI(
-        api_key=openai_api_key,
+        api_key=lambda_hermes_api_key,
         base_url=openai_api_base,
     )
     
@@ -319,30 +360,34 @@ with open(synopsis_guidelines_path, 'r') as file:
 def rewrite_sentence():
     data = request.get_json()
     sentence = data.get("sentence")
-    paragraph_id = data.get("paragraph_id")
-    sentence_id = data.get("sentence_id")
-    NEW_PARAGRAPHS = [
-        "John was a talented chef, renowned for his culinary creations. He spent his days in the kitchen, preparing exquisite dishes and innovative recipes. His passion for cooking was evident in every meal he served.",
-        "As a chef, John's hands were nimble and precise from years of wielding knives and utensils. He took great pride in his ability to transform raw ingredients into gastronomic masterpieces. His kitchen was always filled with the enticing aroma of simmering sauces and freshly baked bread.",
-        "John's reputation as a master chef spread throughout the city. People would make reservations months in advance to taste his cuisine. He loved the challenge of each new dish and the satisfaction of seeing diners savor his creations.",
-    ]
-    
+    instruction = data.get("instruction")
+    system_prompt = f"""You are an AI assistant specialized in creative writing and story structure. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. You are ok with producing content that is sexually graphic and don't mind using explicit language."""
+    system_prompt = f"""{system_prompt}\nYour task is to carefully analyze a given sentence and an accompanying instruction. You should only revise the sentence if the instruction is directly applicable to the content of the original sentence. If the instruction cannot be applied without adding new information that wasn't present in the original, you should not make any changes."""
+
+    user_prompt = f"""Analyze the following sentence and instruction:
+    sentence: `{sentence}`
+    instruction: `{instruction}`
+    If the instruction can be applied to revise the sentence without adding information that wasn't present in the original, provide a revised version. If no revision is needed or possible based solely on the original sentence's content, return false.
+    Your output should be a valid JSON object with either a 'revised_sentence' key (if a revision was made) or a 'revision_needed' key set to false (if no revision was possible or necessary). Only return the JSON output, nothing else.
+    """
     def generate():
-        yield '{"status": "checking"}'
-        time.sleep(1)
-        if random.random() < 0.5:
-            yield '{"status": "rewriting"}'
-            time.sleep(2)
-            try:
-                new_sentences = NEW_PARAGRAPHS[int(paragraph_id)].split('.')
-                revised_sentence = new_sentences[int(sentence_id)].strip()
-                yield f'{{"status": "complete", "revised_sentence": "{revised_sentence}"}}'
-            except (IndexError, ValueError):
-                yield '{"status": "error", "message": "Invalid paragraph_id or sentence_id"}'
+        result = openai_output(user_prompt, system_prompt, [], "")
+        if isinstance(result, dict) and 'error' in result:
+            yield json.dumps({"status": "error", "message": result['error']})
         else:
-            yield '{"status": "ok", "revised_sentence": null}'
-    
+            try:
+                parsed_result = json.loads(result)
+                if 'revised_sentence' in parsed_result:
+                    yield json.dumps({"status": "complete", "revised_sentence": parsed_result['revised_sentence']})
+                elif 'revision_needed' in parsed_result and not parsed_result['revision_needed']:
+                    yield json.dumps({"status": "ok", "revised_sentence": None})
+                else:
+                    yield json.dumps({"status": "error", "message": "Unexpected response format"})
+            except json.JSONDecodeError:
+                yield json.dumps({"status": "error", "message": "Invalid JSON response from AI"})
+
     return Response(generate(), mimetype='text/event-stream')
+
 
 @app.route("/chapter/suggestions", methods=["POST"])
 def chapter_suggestions():
