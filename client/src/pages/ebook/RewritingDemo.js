@@ -14,7 +14,13 @@ const INITIAL_PARAGRAPHS = [
   "John's reputation as a master carpenter spread throughout the town. People would come from far and wide to commission his work. He loved the challenge of each new project and the satisfaction of seeing his creations in people's homes.",
 ];
 
-const rewriteSentence = async (sentence, paragraphId, sentenceId, dispatch) => {
+const rewriteSentence = async (
+  sentence,
+  instruction,
+  paragraphId,
+  sentenceId,
+  dispatch
+) => {
   try {
     let revised_sentence = null;
     const onChunk = (data) => {
@@ -53,7 +59,7 @@ const rewriteSentence = async (sentence, paragraphId, sentenceId, dispatch) => {
       "POST",
       {
         sentence: sentence,
-        instruction: "Change John's profession to a chef.",
+        instruction: instruction,
       },
       onChunk,
       onError
@@ -75,6 +81,11 @@ const rewritingReducer = (state, action) => {
         sentenceStatuses: {},
         rewrittenSentences: {},
       };
+    case "SET_INSTRUCTION":
+      return {
+        ...state,
+        instruction: action.payload,
+      };
     case "RESET_DEMO":
       return {
         ...state,
@@ -83,7 +94,17 @@ const rewritingReducer = (state, action) => {
         currentSentence: -1,
         sentenceStatuses: {},
         rewrittenSentences: {},
-        paragraphs: INITIAL_PARAGRAPHS,
+        paragraphs: [],
+      };
+    case "CLEAR":
+      return {
+        ...state,
+        isRewriting: false,
+        currentParagraph: 0,
+        currentSentence: -1,
+        sentenceStatuses: {},
+        rewrittenSentences: {},
+        paragraphs: state.paragraphs,
       };
     case "NEXT_SENTENCE":
       return { ...state, currentSentence: state.currentSentence + 1 };
@@ -113,6 +134,15 @@ const rewritingReducer = (state, action) => {
           [action.payload.key]: action.payload.sentence,
         },
       };
+    case "SET_PARAGRAPHS":
+      return {
+        ...state,
+        paragraphs: action.payload,
+        currentParagraph: 0,
+        currentSentence: -1,
+        sentenceStatuses: {},
+        rewrittenSentences: {},
+      };
     case "ACCEPT_REWRITE":
       const { key, newSentence } = action.payload;
       const [pIndex, sIndex] = key.split("-").map(Number);
@@ -138,7 +168,13 @@ const rewritingReducer = (state, action) => {
 };
 
 const useRewritingProcess = (state, dispatch) => {
-  const { isRewriting, currentSentence, currentParagraph, paragraphs } = state;
+  const {
+    isRewriting,
+    currentSentence,
+    currentParagraph,
+    paragraphs,
+    instruction,
+  } = state;
 
   useEffect(() => {
     if (!isRewriting) return;
@@ -157,6 +193,7 @@ const useRewritingProcess = (state, dispatch) => {
           });
           const rewrittenSentence = await rewriteSentence(
             sentences[nextSentenceId],
+            instruction,
             currentParagraph,
             nextSentenceId,
             dispatch
@@ -296,15 +333,67 @@ const Paragraph = React.memo(
   }
 );
 
+const TextAreaInput = ({ inputText, setInputText, onSubmit }) => {
+  return (
+    <div className="mb-4">
+      <textarea
+        className="w-full p-2 border rounded-md whitespace-pre-wrap"
+        rows="10"
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        placeholder="Paste your paragraphs here... (Separate paragraphs with blank lines)"
+      />
+      <button
+        onClick={onSubmit}
+        className="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition-colors duration-300"
+      >
+        Set Paragraphs
+      </button>
+    </div>
+  );
+};
+
+const InstructionInput = ({
+  instruction,
+  onInstructionChange,
+  onRewrite,
+  isRewriting,
+}) => {
+  return (
+    <div className="flex mt-4">
+      <textarea
+        className="flex-grow p-2 border rounded-l-md resize-none"
+        rows="2"
+        value={instruction}
+        onChange={(e) => onInstructionChange(e.target.value)}
+        placeholder="Enter rewriting instructions here..."
+      />
+      <button
+        onClick={onRewrite}
+        disabled={isRewriting}
+        className={`bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-r-md transition-colors duration-300 flex items-center ${
+          isRewriting ? "opacity-50 cursor-not-allowed" : ""
+        }`}
+      >
+        <FaSync className={`mr-2 ${isRewriting ? "animate-spin" : ""}`} />
+        {isRewriting ? "Rewriting..." : "Rewrite"}
+      </button>
+    </div>
+  );
+};
+
 const RewritingDemo = () => {
   const [state, dispatch] = useReducer(rewritingReducer, {
-    paragraphs: INITIAL_PARAGRAPHS,
+    paragraphs: [],
     currentParagraph: 0,
     currentSentence: -1,
     isRewriting: false,
     sentenceStatuses: {},
     rewrittenSentences: {},
+    instruction: "Change John's profession to a chef.",
   });
+
+  const [inputText, setInputText] = useState("");
 
   const {
     paragraphs,
@@ -313,15 +402,32 @@ const RewritingDemo = () => {
     isRewriting,
     sentenceStatuses,
     rewrittenSentences,
+    instruction,
   } = state;
 
   useRewritingProcess(state, dispatch);
 
-  const startRewriting = useCallback(
-    () => dispatch({ type: "START_REWRITING" }),
-    []
-  );
-  const resetDemo = useCallback(() => dispatch({ type: "RESET_DEMO" }), []);
+  const startRewriting = useCallback(() => {
+    if (state.instruction.trim() === "") {
+      alert("Please enter rewriting instructions.");
+      return;
+    }
+    dispatch({ type: "START_REWRITING" });
+  }, [state.instruction]);
+
+  const handleInstructionChange = useCallback((newInstruction) => {
+    dispatch({ type: "SET_INSTRUCTION", payload: newInstruction });
+  }, []);
+
+  const resetDemo = useCallback(() => {
+    dispatch({ type: "RESET_DEMO" });
+    setInputText("");
+  }, []);
+
+  const clear = useCallback(() => {
+    dispatch({ type: "CLEAR" });
+    setInputText("");
+  }, []);
 
   const handleAccept = useCallback((key, newSentence) => {
     dispatch({ type: "ACCEPT_REWRITE", payload: { key, newSentence } });
@@ -330,6 +436,14 @@ const RewritingDemo = () => {
   const handleReject = useCallback((key) => {
     dispatch({ type: "SET_SENTENCE_STATUS", payload: { key, status: "ok" } });
   }, []);
+
+  const handleSetParagraphs = useCallback(() => {
+    const formattedParagraphs = inputText
+      .split(/\n{2,}/)
+      .map((p) => p.trim())
+      .filter((p) => p !== "");
+    dispatch({ type: "SET_PARAGRAPHS", payload: formattedParagraphs });
+  }, [inputText]);
 
   const memoizedParagraphs = useMemo(
     () =>
@@ -353,6 +467,7 @@ const RewritingDemo = () => {
       currentSentence,
       isRewriting,
       sentenceStatuses,
+      rewrittenSentences,
       handleAccept,
       handleReject,
     ]
@@ -368,38 +483,49 @@ const RewritingDemo = () => {
               AI Paragraph Rewriting Demo
             </h1>
             <div className="divide-y divide-gray-200">
-              <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                {memoizedParagraphs}
-              </div>
-              <div className="pt-6 text-base leading-6 font-bold sm:text-lg sm:leading-7">
-                <div className="flex justify-between items-center">
-                  <button
-                    onClick={startRewriting}
-                    disabled={isRewriting}
-                    className={`bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded transition-colors duration-300 flex items-center ${
-                      isRewriting ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                    aria-label={
-                      isRewriting ? "Rewriting in progress" : "Start rewriting"
-                    }
-                  >
-                    <FaSync
-                      className={`mr-2 ${isRewriting ? "animate-spin" : ""}`}
-                    />
-                    {isRewriting ? "Rewriting..." : "Start Rewriting"}
-                  </button>
-                  <button
-                    onClick={resetDemo}
-                    disabled={isRewriting}
-                    className={`bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition-colors duration-300 ${
-                      isRewriting ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
-                    aria-label="Reset demo"
-                  >
-                    Reset
-                  </button>
-                </div>
-              </div>
+              {paragraphs.length === 0 ? (
+                <TextAreaInput
+                  inputText={inputText}
+                  setInputText={setInputText}
+                  onSubmit={handleSetParagraphs}
+                />
+              ) : (
+                <>
+                  <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
+                    {memoizedParagraphs}
+                  </div>
+                  <InstructionInput
+                    instruction={instruction}
+                    onInstructionChange={handleInstructionChange}
+                    onRewrite={startRewriting}
+                    isRewriting={isRewriting}
+                  />
+                  <div className="pt-6 text-base leading-6 font-bold sm:text-lg sm:leading-7">
+                    <div className="flex justify-between items-center">
+                      <button
+                        onClick={resetDemo}
+                        disabled={isRewriting}
+                        className={`bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition-colors duration-300 ${
+                          isRewriting ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                        aria-label="Reset demo"
+                      >
+                        Reset
+                      </button>
+                      <button
+                        onClick={clear}
+                        disabled={isRewriting}
+                        className={`bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition-colors duration-300 ${
+                          isRewriting ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                        aria-label="Clear"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

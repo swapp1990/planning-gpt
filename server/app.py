@@ -384,6 +384,7 @@ def rewrite_sentence():
                 else:
                     yield json.dumps({"status": "error", "message": "Unexpected response format"})
             except json.JSONDecodeError:
+                print(result)
                 yield json.dumps({"status": "error", "message": "Invalid JSON response from AI"})
 
     return Response(generate(), mimetype='text/event-stream')
