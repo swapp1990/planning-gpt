@@ -10,6 +10,8 @@ import { Provider } from "react-redux";
 import store from "./stores";
 import MainLayout from "./MainLayout";
 
+import { EbookProvider } from "./context/EbookContext";
+
 import BottomNavigation from "./components/BottomNavigation";
 import HomePage from "./pages/home/HomePage";
 import BookView from "./pages/ebook/BookView";
@@ -21,16 +23,18 @@ function App() {
   return (
     <>
       <Provider store={store}>
-        <Router>
-          <MainLayout>
-            <Switch>
-              <Route path="/login" component={Login} />
-              <Route path="/home" exact component={BookView} />
-              <Route path="/demo" exact component={RewritingDemo} />
-              <Route path="/" exact component={BookView} />
-            </Switch>
-          </MainLayout>
-        </Router>
+        <EbookProvider>
+          <Router>
+            <MainLayout>
+              <Switch>
+                <Route path="/login" component={Login} />
+                <Route path="/home" exact component={BookView} />
+                <Route path="/demo" exact component={RewritingDemo} />
+                <Route path="/" exact component={BookView} />
+              </Switch>
+            </MainLayout>
+          </Router>
+        </EbookProvider>
       </Provider>
     </>
   );
