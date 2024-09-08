@@ -10,6 +10,7 @@ services:
     ports:
       - 3000:80
     volumes:
+      - ./client:/app
       - /app/node_modules
     environment:
       - NODE_ENV=production
@@ -18,20 +19,23 @@ services:
         max-size: "25m"
         max-file: "100"
 
-  node-server:
+  python-server:
     build:
       context: ./server
-      target: production
-    image: planninggpt-server:3.4
-    container_name: planninggpt-server
+      dockerfile: Dockerfile.prod
+    image: planninggpt-server-prod:3.4
+    container_name: planninggpt-server-prod
     ports:
       - 5000:5000
     volumes:
       - ./server:/app
-    environment:
-      - NODE_ENV=production
     restart: unless-stopped
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    command: gunicorn --workers 4 --threads 2 --timeout 120 --bind 0.0.0.0:5000 app:app --capture-output --log-level=info
     logging:
+      driver: json-file
       options:
         max-size: "25m"
-        max-file: "100"
+        max-file: "5"
