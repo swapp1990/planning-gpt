@@ -463,6 +463,7 @@ def continue_chapter_suggestions():
 
 @app.route("/chapter/continue", methods=["POST"])
 def continue_chapter():
+    logger.info(f"Continue Chapter")
     data = request.get_json()
     parameters = data.get('parameters')
     synopsis = data.get('synopsis')
@@ -500,7 +501,7 @@ def continue_chapter():
 @app.route("/chapter/insert", methods=["POST"])
 def insert_chapter():
     data = request.get_json()
-    summary = data.get('summary')
+    synopsis = data.get('synopsis')
     instruction = data.get('instruction')
     systemPrompt = data.get('systemPrompt')
     previousParagraph = data.get('previousParagraph')
@@ -508,7 +509,7 @@ def insert_chapter():
     nextParagraph = data.get('nextParagraph')
     # print(nextParagraph)
 
-    prompt = f'\n\nYour task is to insert a new paragraph in an ongoing passage. Please write the new paragraph based on the following summary: `{summary}` and the following instruction: `{instruction}`.'
+    prompt = f'\n\nYour task is to insert a new paragraph in an ongoing passage. Please write the new paragraph based on the following synopsis: `{synopsis}` and the following instruction: `{instruction}`.'
     if previousParagraph != "":
         prompt += f'\n\nThe new paragraph should be added after this paragraph: `{previousParagraph}`'
     if nextParagraph != "":
