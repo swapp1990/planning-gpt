@@ -1,5 +1,38 @@
 import { streamedApiCall } from "../utils/api";
 
+export const streamRewrittenParagraph = async (
+  ebookState,
+  chapterId,
+  paragraphIndex,
+  instruction,
+  onChunk,
+  onError
+) => {
+  const { chapters, parameters, systemPrompts } = ebookState;
+  console.log("streamRewrittenParagraph");
+  const chapter = chapters.find((c) => c.id === chapterId);
+  const chapterIndex = chapters.findIndex((c) => c.id === chapterId);
+  const paragraphs = chapter.content;
+  let paragraph = paragraphs[paragraphIndex];
+  try {
+    await streamedApiCall(
+      `${process.env.REACT_APP_API_URL}/chapter/rewrite`,
+      "POST",
+      {
+        paragraph: paragraph,
+        synopsis: chapter.synopsis,
+        previousParagraph: paragraphs[paragraphs.length - 1],
+        systemPrompt: systemPrompts[0],
+        instruction: instruction,
+      },
+      onChunk,
+      onError
+    );
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
 export const streamContinueParagraph = async (
   ebookState,
   chapterId,

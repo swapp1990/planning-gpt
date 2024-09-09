@@ -130,6 +130,7 @@ const ChapterView = ({ chapter }) => {
           key={index}
           content={paragraph}
           index={index}
+          chapterId={chapter.id}
           onEdit={handleParagraphEdit}
           onDelete={handleParagraphDelete}
         />

@@ -1,12 +1,25 @@
 import React, { useState } from "react";
-import { FaPen, FaTrash, FaCheck, FaTimes } from "react-icons/fa";
+import {
+  FaPen,
+  FaTrash,
+  FaCheck,
+  FaTimes,
+  FaPlus,
+  FaShareAlt,
+} from "react-icons/fa";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
+import ParagraphReview from "./ParagraphReview";
+import ParagraphMenu from "./ParagraphMenu";
+import { useEbook } from "../../context/EbookContext";
 
-const Paragraph = ({ content, index, chapterId, onEdit, onDelete }) => {
+const Paragraph = ({ content, index, chapterId }) => {
+  const { chapterActions } = useEbook();
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isReviewOpen, setIsReviewOpen] = useState(false);
+  const [rewrittenContent, setRewrittenContent] = useState("");
 
   const handleEditClick = () => {
     setIsEditing(true);
@@ -15,7 +28,7 @@ const Paragraph = ({ content, index, chapterId, onEdit, onDelete }) => {
 
   const handleSave = async () => {
     setIsLoading(true);
-    await onEdit(index, editedContent);
+    await chapterActions.editParagraph(chapterId, index, editedContent);
     setIsEditing(false);
     setIsLoading(false);
   };
@@ -25,9 +38,37 @@ const Paragraph = ({ content, index, chapterId, onEdit, onDelete }) => {
     setIsEditing(false);
   };
 
-  const handleDeleteClick = async () => {
+  const handleDelete = async (chapterId, index) => {
+    console.log(chapterId, index);
     setIsLoading(true);
-    await onDelete(index);
+    await chapterActions.deleteParagraph(chapterId, index);
+    setIsLoading(false);
+  };
+
+  const handleRewrite = async (instruction) => {
+    setIsLoading(true);
+    const result = await chapterActions.rewriteParagraph(
+      chapterId,
+      index,
+      instruction
+    );
+    if (result.newParagraph) {
+      setRewrittenContent(result.newParagraph);
+      setIsReviewOpen(true);
+    }
+    setIsLoading(false);
+  };
+
+  const handleInsert = async (newContent) => {
+    setIsLoading(true);
+    await chapterActions.insertParagraph(chapterId, index + 1, newContent);
+    setIsLoading(false);
+  };
+
+  const handleReviewSave = async (finalContent) => {
+    setIsLoading(true);
+    await chapterActions.applyRewrite(chapterId, index, finalContent);
+    setIsReviewOpen(false);
     setIsLoading(false);
   };
 
@@ -67,37 +108,30 @@ const Paragraph = ({ content, index, chapterId, onEdit, onDelete }) => {
         <>
           <p
             className="p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer"
-            onClick={() => {
-              //   handleParagraphSelect(chapterId, index);
-              setIsMenuOpen(!isMenuOpen);
-            }}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             {content}
           </p>
           {isMenuOpen && (
-            <div className="flex justify-end space-x-2 mt-2">
-              <button
-                onClick={handleEditClick}
-                className="p-2 text-blue-500 hover:bg-blue-100 rounded-full transition-colors duration-200"
-                title="Edit"
-              >
-                <FaPen />
-              </button>
-              <button
-                onClick={handleDeleteClick}
-                className="p-2 text-red-500 hover:bg-red-100 rounded-full transition-colors duration-200"
-                title="Delete"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <AiOutlineLoading3Quarters className="animate-spin" />
-                ) : (
-                  <FaTrash />
-                )}
-              </button>
-            </div>
+            <ParagraphMenu
+              content={content}
+              chapterId={chapterId}
+              paragraphId={index}
+              onClose={() => setIsMenuOpen(false)}
+              onRewrite={handleRewrite}
+              onDelete={handleDelete}
+              onInsert={handleInsert}
+            />
           )}
         </>
+      )}
+      {isReviewOpen && (
+        <ParagraphReview
+          original={content}
+          edited={rewrittenContent}
+          onSave={handleReviewSave}
+          onCancel={() => setIsReviewOpen(false)}
+        />
       )}
     </div>
   );
