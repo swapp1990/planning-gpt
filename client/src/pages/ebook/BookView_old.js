@@ -12,8 +12,8 @@ import { useEbookStorage } from "../../utils/storage";
 
 import Chapter from "./Chapter";
 import Sidebar from "./Sidebar";
-import Header from "./Header";
-import ParametersPanel from "./ParametersPanel";
+// import Header from "./Header";
+import ParametersPanel from "./ParametersPanel_old";
 import ChapterSuggestions from "./ChapterSuggestions";
 
 import { BookProvider } from "./BookContext";

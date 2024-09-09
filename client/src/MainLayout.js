@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from "react";
-import Header from "./components/Header";
 import BottomNavigation from "./components/BottomNavigation";
 import useViewportHeight from "./utils/useViewportHeight";
 

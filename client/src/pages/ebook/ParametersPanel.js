@@ -10,6 +10,8 @@ import {
   FaEdit,
 } from "react-icons/fa";
 
+import { useEbook } from "../../context/EbookContext";
+
 const InputField = React.memo(
   ({ label, value, onChange, multiline = false }) => {
     const inputProps = {
@@ -113,23 +115,21 @@ const CharacterField = React.memo(({ character, onChange, onDelete }) => {
   );
 });
 
-const ParametersPanel = ({ parameters, onParametersChange }) => {
+const ParametersPanel = () => {
+  const { ebookState, ebookActions } = useEbook();
   const [isOpen, setIsOpen] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [localParameters, setLocalParameters] = useState(parameters);
+  const [localParameters, setLocalParameters] = useState({});
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    setLocalParameters(parameters);
-  }, [parameters]);
+    setLocalParameters(ebookState.parameters);
+  }, [ebookState.parameters]);
 
-  const handleInputChange = useCallback((key, value) => {
-    setLocalParameters((prev) => {
-      const newParams = { ...prev, [key]: value };
-      setIsDirty(true);
-      return newParams;
-    });
-  }, []);
+  const handleInputChange = (key, value) => {
+    setLocalParameters((prev) => ({ ...prev, [key]: value }));
+    setIsDirty(true);
+  };
 
   const handleNestedChange = useCallback((parent, key, value) => {
     setLocalParameters((prev) => {
@@ -151,23 +151,57 @@ const ParametersPanel = ({ parameters, onParametersChange }) => {
   }, []);
 
   const handleSave = () => {
-    onParametersChange(localParameters);
+    ebookActions.setParameters(localParameters);
     setIsDirty(false);
     setIsEditing(false);
   };
 
   const handleReset = () => {
-    setLocalParameters(parameters);
+    setLocalParameters(ebookState.parameters);
     setIsDirty(false);
   };
 
   const toggleEdit = () => {
+    if (!isEditing) {
+      setIsOpen(true);
+      setIsEditing(true);
+    } else {
+      setIsEditing(false);
+    }
     if (isEditing && isDirty) {
       handleReset();
     }
-    setIsEditing(!isEditing);
-    setIsOpen(true);
   };
+
+  const renderCompactView = () => (
+    <div className="text-sm">
+      <p>
+        <strong>Title:</strong> {localParameters.title || "Not set"}
+      </p>
+      <p>
+        <strong>Genre:</strong> {localParameters.genre || "Not set"}
+      </p>
+      <p>
+        <strong>Premise:</strong> {localParameters.premise || "Not set"}
+      </p>
+      <p>
+        <strong>Setting:</strong> {localParameters.setting?.place} (
+        {localParameters.setting?.time})
+      </p>
+      <p>
+        <p>
+          <strong>Main Characters:</strong>{" "}
+          {(localParameters.mainCharacters || [])
+            .map((char) => char.name)
+            .join(", ") || "None"}
+        </p>
+      </p>
+      <p>
+        <strong>Supporting Characters:</strong>{" "}
+        {localParameters.supportingCharacters?.length || 0}
+      </p>
+    </div>
+  );
 
   const renderEditView = () => (
     <div className="space-y-6">
@@ -256,61 +290,36 @@ const ParametersPanel = ({ parameters, onParametersChange }) => {
     </div>
   );
 
-  const renderCompactView = () => (
-    <div className="text-sm">
-      <p>
-        <strong>Title:</strong> {localParameters.title || "Not set"}
-      </p>
-      <p>
-        <strong>Genre:</strong> {localParameters.genre || "Not set"}
-      </p>
-      <p>
-        <strong>Setting:</strong> {localParameters.setting?.place} (
-        {localParameters.setting?.time})
-      </p>
-      <p>
-        <p>
-          <strong>Main Characters:</strong>{" "}
-          {(localParameters.mainCharacters || [])
-            .map((char) => char.name)
-            .join(", ") || "None"}
-        </p>
-      </p>
-      <p>
-        <strong>Supporting Characters:</strong>{" "}
-        {localParameters.supportingCharacters?.length || 0}
-      </p>
-    </div>
-  );
-
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden mb-4 transition-all duration-300 ease-in-out">
-      <div className="px-4 py-5 sm:px-6 flex items-center justify-between">
-        <h3 className="text-lg leading-6 font-medium text-gray-900">
-          Book Parameters
-        </h3>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={toggleEdit}
-            className={`inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 ${
-              isEditing
-                ? "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500"
-                : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
-            }`}
-          >
-            <FaEdit className="mr-2" /> {isEditing ? "View" : "Edit"}
-          </button>
-          <button
-            className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            <FaCog className="mr-2" />
-            {isOpen ? <FaChevronUp /> : <FaChevronDown />}
-          </button>
+    <div className="bg-white shadow rounded-lg mb-1 sm:mb-4">
+      <div className="px-4 py-5 sm:px-6">
+        <div className="flex items-center justify-between flex-wrap sm:flex-nowrap">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            Book Parameters
+          </h3>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={toggleEdit}
+              className={`inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 ${
+                isEditing
+                  ? "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500"
+                  : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+              }`}
+            >
+              <FaEdit className="mr-2" /> {isEditing ? "View" : "Edit"}
+            </button>
+            <button
+              className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              <FaCog className="mr-2" />
+              {isOpen ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+          </div>
         </div>
       </div>
       {isOpen && (
-        <div className="px-4 py-5 sm:p-6">
+        <div className="px-4 py-2 sm:p-2">
           {isEditing ? renderEditView() : renderCompactView()}
           {isEditing && (
             <div className="flex justify-end space-x-3 mt-6">

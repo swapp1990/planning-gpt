@@ -3,7 +3,7 @@ import { FaBook, FaEdit, FaSave, FaBars } from "react-icons/fa";
 
 import { useEbook } from "../../context/EbookContext";
 
-const BookHeader = ({ currentChapter, chapters }) => {
+const BookHeader = ({ setIsEbookListOpen }) => {
   const { ebookState, uiActions } = useEbook();
   const [showSaveStatus, setShowSaveStatus] = useState(false);
 
@@ -35,7 +35,7 @@ const BookHeader = ({ currentChapter, chapters }) => {
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-4">
             <button
-              onClick={uiActions.toggleEbookList}
+              onClick={() => setIsEbookListOpen(true)}
               className="bg-white bg-opacity-20 p-2 rounded-full hover:bg-opacity-30 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white"
               aria-label="Open chapters"
             >

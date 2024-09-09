@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
+import { v4 as uuidv4 } from "uuid";
+
 import {
   streamContinueParagraph,
   streamRewrittenParagraph,
@@ -7,7 +9,9 @@ import {
 
 const initialState = {
   systemPrompts: ["You are an agent."],
-  ebookTitle: "Ebook",
+  ebooks: [],
+  ebookId: null,
+  ebookTitle: null,
   chapters: [],
   currentChapter: null,
   parameters: {},
@@ -31,6 +35,53 @@ export function useEbookState() {
         parameters,
         ebookTitle: parameters.title || state.ebookTitle,
       }),
+    createNewEbook: () => {
+      const newEbook = {
+        id: uuidv4(),
+        title: "New Ebook",
+        chapters: [],
+        currentChapter: null,
+        systemPrompts: [],
+        parameters: {},
+      };
+      updateState({
+        ebookId: newEbook.id,
+        ebookTitle: newEbook.title,
+        chapters: newEbook.chapters,
+        currentChapter: newEbook.currentChapter,
+        parameters: newEbook.parameters,
+        ebooks: [...state.ebooks, newEbook],
+      });
+      localStorage.setItem("currentEbook", JSON.stringify(newEbook));
+      let storedEbooks = JSON.parse(localStorage.getItem("ebooks")) || [];
+      storedEbooks.push(newEbook);
+      localStorage.setItem("ebooks", JSON.stringify(storedEbooks));
+      return newEbook;
+    },
+    loadEbook: (ebookId) => {
+      const foundEbook = state.ebooks.find((e) => e.id === ebookId);
+      if (foundEbook) {
+        updateState({
+          ebookId: foundEbook.id,
+          ebookTitle: foundEbook.title,
+          chapters: foundEbook.chapters || [],
+          currentChapter: foundEbook.currentChapter || null,
+          parameters: foundEbook.parameters || {},
+        });
+        localStorage.setItem("currentEbook", JSON.stringify(foundEbook));
+      }
+    },
+    deleteEbook: (ebookId) => {
+      const updatedEbooks = state.ebooks.filter(
+        (ebook) => ebook.id !== ebookId
+      );
+      updateState({ ebooks: updatedEbooks });
+      localStorage.setItem("ebooks", JSON.stringify(updatedEbooks));
+      if (state.ebookId === ebookId) {
+        const newCurrentEbook = updatedEbooks[0] || createNewEbook();
+        ebookActions.loadEbook(newCurrentEbook.id);
+      }
+    },
   };
 
   const chapterActions = {
@@ -292,42 +343,52 @@ export function useEbookState() {
   };
 
   const saveToLocalStorage = useCallback(() => {
-    const dataToSave = {
+    const currentEbook = {
+      id: state.ebookId,
       title: state.ebookTitle,
       chapters: state.chapters,
+      currentChapter: state.currentChapter,
       parameters: state.parameters,
     };
+    localStorage.setItem("currentEbook", JSON.stringify(currentEbook));
 
-    localStorage.setItem("currentEbook", JSON.stringify(dataToSave));
-
-    let savedEbooks = JSON.parse(localStorage.getItem("ebooks") || "[]");
-    const existingEbookIndex = savedEbooks.findIndex(
-      (ebook) => ebook.title === state.ebookTitle
+    const updatedEbooks = state.ebooks.map((ebook) =>
+      ebook.id === state.ebookId ? currentEbook : ebook
     );
+    localStorage.setItem("ebooks", JSON.stringify(updatedEbooks));
 
-    if (existingEbookIndex !== -1) {
-      savedEbooks[existingEbookIndex] = {
-        title: state.ebookTitle,
-        bookData: dataToSave,
-      };
-    } else {
-      savedEbooks.push({ title: state.ebookTitle, bookData: dataToSave });
-    }
-
-    localStorage.setItem("ebooks", JSON.stringify(savedEbooks));
-    setState((prevState) => ({ ...prevState, isSaved: true }));
+    setState((prevState) => ({
+      ...prevState,
+      isSaved: true,
+      ebooks: updatedEbooks,
+    }));
   }, [state]);
 
-  const loadFromLocalStorage = useCallback((ebookToLoad = null) => {
-    const savedData = localStorage.getItem("currentEbook");
-    if (savedData) {
-      const parsedData = JSON.parse(savedData);
+  const loadFromLocalStorage = useCallback(() => {
+    const savedCurrentEbook = JSON.parse(localStorage.getItem("currentEbook"));
+    const savedEbooks = JSON.parse(localStorage.getItem("ebooks")) || [];
+
+    if (savedEbooks.length === 0 && !savedCurrentEbook) {
+      const newEbook = ebookActions.createNewEbook();
+      localStorage.setItem("currentEbook", JSON.stringify(newEbook));
+      localStorage.setItem("ebooks", JSON.stringify([newEbook]));
       setState({
         ...initialState,
-        ebookTitle: parsedData.title || "Untitled Ebook",
-        chapters: parsedData.chapters || [],
-        currentChapter: parsedData.currentChapter || null,
-        parameters: parsedData.parameters || {},
+        ebookId: newEbook.id,
+        ebookTitle: newEbook.title,
+        ebooks: [newEbook],
+      });
+    } else {
+      const currentEbook =
+        savedCurrentEbook || savedEbooks[0] || ebookActions.createNewEbook();
+      setState({
+        ...initialState,
+        ebookId: currentEbook.id,
+        ebookTitle: currentEbook.title,
+        chapters: currentEbook.chapters || [],
+        currentChapter: currentEbook.currentChapter || null,
+        parameters: currentEbook.parameters || {},
+        ebooks: savedEbooks,
       });
     }
   }, []);
