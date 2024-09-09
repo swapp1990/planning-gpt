@@ -2,22 +2,12 @@ import React, { useEffect, useState } from "react";
 import { useEbook } from "../../context/EbookContext";
 import { FaEdit, FaCheck, FaTimes, FaPlus } from "react-icons/fa";
 
+import Synopsis from "./Synopsis";
 import Paragraph from "./Paragraph";
 import AddParagraph from "./AddParagraph";
 
-const Synopsis = ({ synopsis, chapterId }) => {
-  return (
-    <div className="mb-6">
-      <div className="bg-gray-100 p-4 rounded-md h-24 overflow-y-auto relative">
-        <p className="text-gray-600 pr-2">{synopsis}</p>
-      </div>
-    </div>
-  );
-};
-
 const ChapterView = ({ chapter }) => {
   const { chapterActions } = useEbook();
-  const [paragraphs, setParagraphs] = useState([]);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isAddingParagraph, setIsAddingParagraph] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chapter.title);
@@ -48,6 +38,17 @@ const ChapterView = ({ chapter }) => {
     setIsLoading(false);
   };
 
+  const handleSynopsisEdit = async (newSynopsis) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await chapterActions.updateChapter(chapter.id, { synopsis: newSynopsis });
+    } catch (err) {
+      setError("Failed to update synopsis. Please try again.");
+    }
+    setIsLoading(false);
+  };
+
   const handleParagraphEdit = async (index, newContent) => {
     setIsLoading(true);
     setError(null);
@@ -67,17 +68,6 @@ const ChapterView = ({ chapter }) => {
     } catch (err) {
       console.log(err);
       setError("Failed to delete paragraph. Please try again.");
-    }
-    setIsLoading(false);
-  };
-
-  const handleAddParagraph = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      //   await chapterActions.addParagraph(chapter.id, "");
-    } catch (err) {
-      setError("Failed to add new paragraph. Please try again.");
     }
     setIsLoading(false);
   };
@@ -110,17 +100,22 @@ const ChapterView = ({ chapter }) => {
           </div>
         </div>
       ) : (
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-2xl font-bold">{chapter.title}</h2>
+        <div className="flex items-center mb-4">
+          <h2 className="text-2xl font-bold mr-2">{chapter.title}</h2>
           <button
             onClick={() => setIsEditingTitle(true)}
-            className="p-2 text-blue-500 hover:text-blue-600"
+            className="p-1 text-blue-500 hover:text-blue-600"
+            aria-label="Edit chapter title"
           >
-            <FaEdit />
+            <FaEdit className="w-5 h-5" />
           </button>
         </div>
       )}
-      <Synopsis synopsis={chapter.synopsis} chapterId={chapter.id} />
+      <Synopsis
+        synopsis={chapter.synopsis}
+        chapterId={chapter.id}
+        onEdit={handleSynopsisEdit}
+      />
       {chapter.content.map((p, index) => (
         <Paragraph
           key={index}

@@ -180,12 +180,18 @@ def openai_output(prompt, system_prompt, examples, parameters):
         return {"error": "An error occurred while processing the request."}
     
 def hermes_ai_output(prompt, system_prompt, examples, parameters):
-    client = OpenAI(
-        api_key=lambda_hermes_api_key,
-        base_url=openai_api_base,
-    )
-    model = "hermes-3-llama-3.1-405b-fp8"
+    # client = OpenAI(
+    #     api_key=lambda_hermes_api_key,
+    #     base_url=openai_api_base,
+    # )
+    # model = "hermes-3-llama-3.1-405b-fp8"
     # model = "wrong-model"
+
+    client = OpenAI(
+        api_key=openai_api_key,
+    )
+    model = "gpt-4o-mini"
+
     system_prompt = system_prompt + "\n\n" + parameters
     messages = []
     messages.append({
@@ -402,6 +408,50 @@ def rewrite_sentence():
 
     return Response(generate(), mimetype='text/event-stream')
 
+def get_user_prompt(field_type, current_value, context):
+    base_prompt = f"Based on the current value '{current_value}' and the following context: {context}, "
+
+    if field_type == 'title':
+        return base_prompt + "suggest a creative and engaging title for the story."
+    elif field_type == 'genre':
+        return base_prompt + "recommend a suitable genre or subgenre for the story."
+    elif field_type == 'premise':
+        return base_prompt + "provide a compelling premise for the story."
+    elif field_type == 'setting.time':
+        return base_prompt + "suggest an interesting time period for the story to take place."
+    elif field_type == 'setting.place':
+        return base_prompt + "recommend a unique and fitting location for the story."
+    elif field_type == 'character':
+        return base_prompt + """generate a character profile with the following details:
+        - name
+        - age
+        - occupation
+        Ensure the character fits well within the story's context."""
+    else:
+        return base_prompt + f"provide a suggestion for the {field_type} of the story."
+    
+@app.route("/parameters/suggestions", methods=["POST"])
+def parameters_suggestions():
+    data = request.get_json()
+    field_type = data.get('fieldType')
+    current_value = data.get('currentValue')
+    context = data.get('context', {})
+
+    system_prompt = """You are an AI assistant specialized in creative writing and story development. 
+    Your task is to provide suggestions for various aspects of a story, including plot elements, 
+    character details, and setting descriptions. Ensure your suggestions are creative, diverse, 
+    and contextually appropriate.
+    
+    Your output should be a valid JSON object where each element is an object containing 'text' which is the suggested output. Only return the json output, nothing else. An example of output is: {"text\": \"Echoes of the Forgotten Realm\"}
+    """
+
+    user_prompt = get_user_prompt(field_type, current_value, context)
+    print(user_prompt)
+
+    result = hermes_ai_output(user_prompt, system_prompt, [], "")
+    if isinstance(result, dict) and 'error' in result:
+        return jsonify(result), 500
+    return jsonify({'suggestions': result})
 
 @app.route("/chapter/suggestions", methods=["POST"])
 def chapter_suggestions():

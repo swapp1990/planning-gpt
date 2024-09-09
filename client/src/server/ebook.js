@@ -1,4 +1,4 @@
-import { streamedApiCall } from "../utils/api";
+import { streamedApiCall, regularApiCall } from "../utils/api";
 
 export const streamInsertedParagraph = async (
   ebookState,
@@ -106,6 +106,30 @@ export const streamContinueParagraph = async (
       onChunk,
       onError
     );
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+export const getSugggestedText = async (fieldType, current_value, context) => {
+  try {
+    const response = await regularApiCall(
+      `${process.env.REACT_APP_API_URL}/parameters/suggestions`,
+      "POST",
+      {
+        fieldType: fieldType,
+        current_value: current_value,
+        context: context,
+      }
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    // console.log(response);
+    let text = JSON.parse(response.suggestions).text;
+    // console.log(text);
+    return text;
   } catch (error) {
     throw new Error(error);
   }

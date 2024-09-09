@@ -12,6 +12,9 @@ import {
 
 import { useEbook } from "../../context/EbookContext";
 
+import SuggestableInput from "../../components/SuggestableInput";
+import SuggestableCharacterField from "../../components/SuggestableCharacter";
+
 const InputField = React.memo(
   ({ label, value, onChange, multiline = false }) => {
     const inputProps = {
@@ -150,6 +153,14 @@ const ParametersPanel = () => {
     });
   }, []);
 
+  const handleSupportingCharactersChange = useCallback((newCharacters) => {
+    setLocalParameters((prev) => {
+      const newParams = { ...prev, supportingCharacters: newCharacters };
+      setIsDirty(true);
+      return newParams;
+    });
+  }, []);
+
   const handleSave = () => {
     ebookActions.setParameters(localParameters);
     setIsDirty(false);
@@ -198,21 +209,25 @@ const ParametersPanel = () => {
       </p>
       <p>
         <strong>Supporting Characters:</strong>{" "}
-        {localParameters.supportingCharacters?.length || 0}
+        {(localParameters.supportingCharacters || [])
+          .map((char) => char.name)
+          .join(", ") || "None"}
       </p>
     </div>
   );
 
   const renderEditView = () => (
     <div className="space-y-6">
-      <InputField
+      <SuggestableInput
         label="Title"
         value={localParameters.title}
+        context={localParameters}
         onChange={(value) => handleInputChange("title", value)}
       />
-      <InputField
+      <SuggestableInput
         label="Genre"
         value={localParameters.genre}
+        context={localParameters}
         onChange={(value) => handleInputChange("genre", value)}
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -227,9 +242,10 @@ const ParametersPanel = () => {
           onChange={(value) => handleNestedChange("setting", "place", value)}
         />
       </div>
-      <InputField
+      <SuggestableInput
         label="Premise"
         value={localParameters.premise}
+        context={localParameters}
         onChange={(value) => handleInputChange("premise", value)}
         multiline
       />
@@ -238,9 +254,10 @@ const ParametersPanel = () => {
           Main Characters
         </h4>
         {(localParameters.mainCharacters || []).map((character, index) => (
-          <CharacterField
+          <SuggestableCharacterField
             key={index}
             character={character}
+            context={localParameters}
             onChange={(updatedCharacter) => {
               const newMainCharacters = [...localParameters.mainCharacters];
               newMainCharacters[index] = updatedCharacter;
@@ -267,26 +284,44 @@ const ParametersPanel = () => {
           <FaPlus className="mr-2" /> Add Main Character
         </button>
       </div>
-      <ArrayField
-        label="Supporting Characters"
-        items={localParameters.supportingCharacters || []}
-        onChange={(value) => handleInputChange("supportingCharacters", value)}
-        renderItem={(item, onChange) => (
-          <div className="flex-grow grid grid-cols-2 gap-2">
-            <InputField
-              label="Name"
-              value={item.name}
-              onChange={(value) => onChange({ ...item, name: value })}
+      <div>
+        <h4 className="text-lg font-medium text-gray-700 mb-2">
+          Supporting Characters
+        </h4>
+        {(localParameters.supportingCharacters || []).map(
+          (character, index) => (
+            <SuggestableCharacterField
+              key={index}
+              character={character}
+              context={localParameters}
+              onChange={(updatedCharacter) => {
+                const newCharacters = [...localParameters.supportingCharacters];
+                newCharacters[index] = updatedCharacter;
+                handleSupportingCharactersChange(newCharacters);
+              }}
+              onDelete={() => {
+                const newCharacters =
+                  localParameters.supportingCharacters.filter(
+                    (_, i) => i !== index
+                  );
+                handleSupportingCharactersChange(newCharacters);
+              }}
             />
-            <InputField
-              label="Role"
-              value={item.role}
-              onChange={(value) => onChange({ ...item, role: value })}
-            />
-          </div>
+          )
         )}
-      />
-      {/* Add more fields for plot, themes, and keyConflicts here */}
+        <button
+          onClick={() => {
+            const newCharacters = [
+              ...(localParameters.supportingCharacters || []),
+              { name: "", age: "", occupation: "" },
+            ];
+            handleSupportingCharactersChange(newCharacters);
+          }}
+          className="mt-2 inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          <FaPlus className="mr-2" /> Add Supporting Character
+        </button>
+      </div>
     </div>
   );
 
