@@ -8,7 +8,7 @@ const BookHeader = ({ currentChapter, chapters }) => {
   const [showSaveStatus, setShowSaveStatus] = useState(false);
 
   useEffect(() => {
-    console.log(ebookState);
+    // console.log(ebookState);
   }, [ebookState]);
 
   useEffect(() => {
@@ -83,7 +83,7 @@ const BookHeader = ({ currentChapter, chapters }) => {
 
         {ebookState.currentChapter && (
           <p className="text-sm mt-2 text-center sm:text-left truncate">
-            {ebookState.chapters[currentChapter - 1].title}
+            {/* {ebookState.chapters[currentChapter - 1].title} */}
           </p>
         )}
       </div>

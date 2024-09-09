@@ -123,7 +123,6 @@ const ParametersPanel = () => {
   const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    console.log(ebookState.parameters);
     setLocalParameters(ebookState.parameters);
   }, [ebookState.parameters]);
 

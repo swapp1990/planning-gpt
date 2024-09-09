@@ -10,7 +10,7 @@ import {
 } from "react-icons/fa";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { useBook } from "./BookContext";
-import Paragraph from "./Paragraph";
+import Paragraph from "./Paragraph_old";
 import ContinueChapter from "./ContinueChapter";
 
 const Summary = ({ summary, chapterId, isUpdatingSummary }) => {

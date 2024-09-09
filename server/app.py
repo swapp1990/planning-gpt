@@ -219,16 +219,21 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         return {"error": "An error occurred while processing the request."}
 
 def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
+    # client = OpenAI(
+    #     api_key=lambda_hermes_api_key,
+    #     base_url=openai_api_base,
+    # )        
+    # model = "hermes-3-llama-3.1-405b-fp8"
+    
     client = OpenAI(
-        api_key=lambda_hermes_api_key,
-        base_url=openai_api_base,
+        api_key=openai_api_key,
     )
+    model = "gpt-4o-mini"
     
     if prompt is None or len(prompt) == 0:
         yield "Please provide a valid prompt."
         return
-    
-    model = "hermes-3-llama-3.1-405b-fp8"
+
     # model = "wrong-model"
     system_prompt = system_prompt + "\n\n" + parameters
     messages = [

@@ -1,10 +1,9 @@
-import { useReducer, useCallback, useEffect } from "react";
-// import { useChapters } from "./useChapters";
-// import { useParameters } from "./useParameters";
-// import { useApi } from "./useApi";
+import { useState, useEffect, useCallback } from "react";
+import { streamContinueParagraph } from "../server/ebook";
 
 const initialState = {
-  ebookTitle: "Ebbok",
+  systemPrompts: ["You are an agent."],
+  ebookTitle: "Ebook",
   chapters: [],
   currentChapter: null,
   parameters: {},
@@ -14,87 +13,133 @@ const initialState = {
   isEbookListOpen: false,
 };
 
-const createSlice = (initialState) => {
-  const reducers = {};
-  const actions = {};
-
-  const addReducer = (name, reducer) => {
-    reducers[name] = reducer;
-    actions[name] = (payload) => ({ type: name, payload });
-  };
-
-  const combinedReducer = (state, action) => {
-    const reducer = reducers[action.type];
-    return reducer ? reducer(state, action.payload) : state;
-  };
-
-  return { addReducer, actions, reducer: combinedReducer, initialState };
-};
-
-const {
-  addReducer,
-  actions,
-  reducer,
-  initialState: sliceInitialState,
-} = createSlice(initialState);
-
-// Define reducers and automatically create corresponding actions
-addReducer("setEbookTitle", (state, title) => ({
-  ...state,
-  ebookTitle: title,
-  isSaved: false,
-}));
-addReducer("setChapters", (state, chapters) => ({ ...state, chapters }));
-addReducer("setCurrentChapter", (state, currentChapter) => ({
-  ...state,
-  currentChapter,
-}));
-addReducer("setParameters", (state, parameters) => ({
-  ...state,
-  parameters,
-  ebookTitle: parameters.title || state.ebookTitle,
-  isSaved: false,
-}));
-addReducer("setIsSaved", (state, isSaved) => ({ ...state, isSaved }));
-addReducer("toggleSidebar", (state) => ({
-  ...state,
-  isSidebarOpen: !state.isSidebarOpen,
-}));
-addReducer("toggleEditTitle", (state) => ({
-  ...state,
-  isEditingTitle: !state.isEditingTitle,
-}));
-addReducer("toggleEbookList", (state) => ({
-  ...state,
-  isEbookListOpen: !state.isEbookListOpen,
-}));
-addReducer("loadState", (state, loadedState) => ({
-  ...state,
-  ...loadedState,
-}));
-
 export function useEbookState() {
-  const [state, dispatch] = useReducer(reducer, sliceInitialState);
-  // const { chapterActions } = useChapters(state, dispatch);
-  // const { parameterActions } = useParameters(state, dispatch);
-  // const api = useApi();
+  const [state, setState] = useState(initialState);
 
-  const createAction = (actionName) =>
-    useCallback(
-      (payload) => dispatch(actions[actionName](payload)),
-      [dispatch]
-    );
+  const updateState = (updates) => {
+    setState((prevState) => ({ ...prevState, ...updates, isSaved: false }));
+  };
 
   const ebookActions = {
-    setEbookTitle: createAction("setEbookTitle"),
-    setIsSaved: createAction("setIsSaved"),
-    setParameters: createAction("setParameters"),
+    setEbookTitle: (title) => updateState({ ebookTitle: title }),
+    setParameters: (parameters) =>
+      updateState({
+        parameters,
+        ebookTitle: parameters.title || state.ebookTitle,
+      }),
+  };
+
+  const chapterActions = {
+    addChapter: (newChapter) =>
+      updateState({
+        chapters: [...state.chapters, newChapter],
+      }),
+    updateChapter: (chapterId, updatedChapter) =>
+      updateState({
+        chapters: state.chapters.map((ch) =>
+          ch.id === chapterId ? { ...ch, ...updatedChapter } : ch
+        ),
+      }),
+    updateChapterTitle: (chapterId, updatedTitle) =>
+      updateState({
+        chapters: state.chapters.map((ch) =>
+          ch.id === chapterId ? { ...ch, title: updatedTitle } : ch
+        ),
+      }),
+    deleteChapter: (chapterId) =>
+      updateState({
+        chapters: state.chapters.filter((ch) => ch.id !== chapterId),
+        currentChapter:
+          state.currentChapter === chapterId ? null : state.currentChapter,
+      }),
+    deleteParagraph: (chapterId, paragraphIndex) => {
+      const chapterIndex = state.chapters.findIndex((c) => c.id === chapterId);
+      if (chapterIndex === -1) {
+        console.error(`Chapter with id ${chapterId} not found`);
+        return { error: "Chapter not found" };
+      }
+      const chapter = state.chapters[chapterIndex];
+      if (paragraphIndex < 0 || paragraphIndex >= chapter.content.length) {
+        console.error(`Invalid paragraph index: ${paragraphIndex}`);
+        return { error: "Invalid paragraph index" };
+      }
+      const updatedParagraphs = [
+        ...chapter.content.slice(0, paragraphIndex),
+        ...chapter.content.slice(paragraphIndex + 1),
+      ];
+      const updatedChapters = state.chapters.map((c, index) =>
+        index === chapterIndex ? { ...c, content: updatedParagraphs } : c
+      );
+
+      updateState({ chapters: updatedChapters });
+      return { success: true };
+    },
+    continueChapter: async (chapterId, instruction) => {
+      let newParagraph = "";
+      const chapterIndex = state.chapters.findIndex((c) => c.id === chapterId);
+      if (chapterIndex === -1) {
+        return { error: "Chapter not found" };
+      }
+      try {
+        const onChunk = (data) => {
+          if (data.chunk) {
+            // console.log(data.chunk);
+            if (data.chunk !== "[DONE]") {
+              newParagraph += data.chunk + " ";
+              updateState({
+                chapters: state.chapters.map((c, index) =>
+                  index === chapterIndex
+                    ? {
+                        ...c,
+                        content: [...c.content, newParagraph.trim()],
+                        streaming: true,
+                      }
+                    : c
+                ),
+              });
+            } else {
+              // console.log(newParagraph);
+              updateState({
+                chapters: state.chapters.map((c, index) =>
+                  index === chapterIndex
+                    ? {
+                        ...c,
+                        content: [...c.content, newParagraph.trim()],
+                        streaming: false,
+                      }
+                    : c
+                ),
+              });
+            }
+          }
+        };
+        const onError = (error) => {
+          console.error("Error fetching continue chapter response:", error);
+          throw new Error(error.message || "Error from server");
+        };
+        await streamContinueParagraph(
+          state,
+          chapterId,
+          instruction,
+          onChunk,
+          onError
+        );
+        return { newParagraph };
+      } catch (error) {
+        console.log(error);
+        return { error: error.message };
+      }
+    },
+    setCurrentChapter: (chapterId) =>
+      updateState({ currentChapter: chapterId }),
   };
 
   const uiActions = {
-    toggleSidebar: createAction("toggleSidebar"),
-    toggleEditTitle: createAction("toggleEditTitle"),
-    toggleEbookList: createAction("toggleEbookList"),
+    toggleSidebar: () => updateState({ isSidebarOpen: !state.isSidebarOpen }),
+    toggleEditTitle: () =>
+      updateState({ isEditingTitle: !state.isEditingTitle }),
+    toggleEbookList: () =>
+      updateState({ isEbookListOpen: !state.isEbookListOpen }),
   };
 
   const saveToLocalStorage = useCallback(() => {
@@ -102,19 +147,11 @@ export function useEbookState() {
       title: state.ebookTitle,
       chapters: state.chapters,
       parameters: state.parameters,
-      // Add any other fields you want to save
     };
 
     localStorage.setItem("currentEbook", JSON.stringify(dataToSave));
 
-    // Update the ebooks list
-    let savedEbooks = localStorage.getItem("ebooks");
-    if (savedEbooks) {
-      savedEbooks = JSON.parse(savedEbooks);
-    } else {
-      savedEbooks = [];
-    }
-
+    let savedEbooks = JSON.parse(localStorage.getItem("ebooks") || "[]");
     const existingEbookIndex = savedEbooks.findIndex(
       (ebook) => ebook.title === state.ebookTitle
     );
@@ -125,36 +162,30 @@ export function useEbookState() {
         bookData: dataToSave,
       };
     } else {
-      savedEbooks.push({
-        title: state.ebookTitle,
-        bookData: dataToSave,
-      });
+      savedEbooks.push({ title: state.ebookTitle, bookData: dataToSave });
     }
 
     localStorage.setItem("ebooks", JSON.stringify(savedEbooks));
-    dispatch(actions.setIsSaved(true));
-  }, [state, dispatch]);
+    setState((prevState) => ({ ...prevState, isSaved: true }));
+  }, [state]);
 
   const loadFromLocalStorage = useCallback((ebookToLoad = null) => {
-    console.log("loadFromLocalStorage " + ebookToLoad);
     const savedData = localStorage.getItem("currentEbook");
     if (savedData) {
       const parsedData = JSON.parse(savedData);
-      dispatch(
-        actions.loadState({
-          ebookTitle: parsedData.title || "Untitled Ebook",
-          chapters: parsedData.chapters || [],
-          currentChapter: parsedData.currentChapter || null,
-          parameters: parsedData.parameters || [],
-          // Add other fields as necessary
-        })
-      );
+      setState({
+        ...initialState,
+        ebookTitle: parsedData.title || "Untitled Ebook",
+        chapters: parsedData.chapters || [],
+        currentChapter: parsedData.currentChapter || null,
+        parameters: parsedData.parameters || {},
+      });
     }
-  });
+  }, []);
 
   useEffect(() => {
     loadFromLocalStorage();
-  }, []);
+  }, [loadFromLocalStorage]);
 
   useEffect(() => {
     if (!state.isSaved) {
@@ -165,9 +196,7 @@ export function useEbookState() {
   return {
     ebookState: state,
     ebookActions,
+    chapterActions,
     uiActions,
-    // chapterActions,
-    // parameterActions,
-    // api,
   };
 }
