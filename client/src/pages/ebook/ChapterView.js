@@ -28,17 +28,13 @@ const ChapterView = ({ chapter }) => {
     // console.log(chapter);
     setEditedTitle(chapter.title);
   }, [chapter.title]);
-  //   useEffect(() => {
-  //     if (chapter.content) {
-  //       console.log(chapter.content);
-  //       setParagraphs(
-  //         chapter.content
-  //           .split("\n\n")
-  //           .filter((p) => p.trim() !== "")
-  //           .map((p) => p.trim())
-  //       );
-  //     }
-  //   }, [chapter.content]);
+
+  useEffect(() => {
+    if (chapter.content) {
+      // console.log(chapter.content);
+      // chapter.content.map((p, index) => console.log("test ", p));
+    }
+  }, [chapter.content]);
 
   const handleTitleSave = async () => {
     setIsLoading(true);
@@ -87,7 +83,7 @@ const ChapterView = ({ chapter }) => {
   };
 
   return (
-    <div className="bg-white shadow rounded-lg p-6">
+    <div className="bg-white shadow rounded-lg p-2 sm:p-6">
       {isEditingTitle ? (
         <div className="mb-4">
           <input
@@ -125,10 +121,10 @@ const ChapterView = ({ chapter }) => {
         </div>
       )}
       <Synopsis synopsis={chapter.synopsis} chapterId={chapter.id} />
-      {chapter.content.map((paragraph, index) => (
+      {chapter.content.map((p, index) => (
         <Paragraph
           key={index}
-          content={paragraph}
+          content={p}
           index={index}
           chapterId={chapter.id}
           onEdit={handleParagraphEdit}

@@ -73,7 +73,7 @@ const Paragraph = ({ content, index, chapterId }) => {
   };
 
   return (
-    <div className={`mb-4 ${isMenuOpen ? "bg-blue-50 rounded-lg" : ""}`}>
+    <div className={`${isMenuOpen ? "bg-blue-50 rounded-lg" : ""}`}>
       {isEditing ? (
         <div className="space-y-2">
           <textarea

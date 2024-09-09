@@ -260,11 +260,16 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
             stream=True
         )
         
+        actual_response = ""
         final_response = ""
         current_sentence = ""
         for chunk in chat_completion:
             msg = chunk.choices[0].delta.content or ""
+            actual_response += msg
             current_sentence += msg
+            current_sentence = current_sentence.replace("\n\n", "\\n\\n")
+            
+            # print(actual_response.replace("\n\n", "\\n\\n"))
             
             sentences = re.split(r'(?<=[.!?])\s+', current_sentence)
             
@@ -282,6 +287,7 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
             yield current_sentence.strip()
             final_response += current_sentence
         
+        # print(actual_response.replace("\n\n", "\\n\\n"))
         yield "[DONE]"
         
     except Exception as e:
@@ -465,7 +471,7 @@ def continue_chapter_suggestions():
 
 @app.route("/chapter/continue", methods=["POST"])
 def continue_chapter():
-    logger.info(f"Continue Chapter")
+    print(f"Continue Chapter")
     data = request.get_json()
     parameters = data.get('parameters')
     synopsis = data.get('synopsis')
@@ -481,7 +487,9 @@ def continue_chapter():
     if previousChapters is not None and previousChapters != "":
         prompt = f'{prompt}\nPrevious chapters for the story have following synopsis: `{previousChapters}`.' 
 
-    print(prompt)
+    # print(prompt)
+
+    # prompt = f'Write a story with exactly 3 paragraphs and 10 words each.'
 
     def generate():
         partial_result = ""

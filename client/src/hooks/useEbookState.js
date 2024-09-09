@@ -21,7 +21,7 @@ export function useEbookState() {
   const [state, setState] = useState(initialState);
 
   const updateState = (updates) => {
-    setState((prevState) => ({ ...prevState, ...updates, isSaved: false }));
+    setState((prevState) => ({ ...prevState, ...updates }));
   };
 
   const ebookActions = {
@@ -80,40 +80,59 @@ export function useEbookState() {
     },
     continueChapter: async (chapterId, instruction) => {
       let newParagraph = "";
+      let newParagraphs = [];
       const chapterIndex = state.chapters.findIndex((c) => c.id === chapterId);
       if (chapterIndex === -1) {
         return { error: "Chapter not found" };
       }
+
       try {
         const onChunk = (data) => {
           if (data.chunk) {
-            // console.log(data.chunk);
-            if (data.chunk !== "[DONE]") {
-              newParagraph += data.chunk + " ";
-              updateState({
-                chapters: state.chapters.map((c, index) =>
-                  index === chapterIndex
-                    ? {
-                        ...c,
-                        content: [...c.content, newParagraph.trim()],
-                        streaming: true,
-                      }
-                    : c
-                ),
-              });
+            if (data.chunk === "[DONE]") {
+              // const chapter = state.chapters[chapterIndex];
+              // let updatedParagraphs = [...chapter.content, ...newParagraphs];
+              // // console.log(updatedParagraphs);
+              // const updatedChapters = state.chapters.map((c, index) =>
+              //   index === chapterIndex
+              //     ? { ...c, content: updatedParagraphs }
+              //     : c
+              // );
+              // // console.log(updatedChapters);
+              // updateState({ chapters: updatedChapters });
             } else {
-              // console.log(newParagraph);
-              updateState({
-                chapters: state.chapters.map((c, index) =>
+              if (data.chunk.includes("\\n\\n")) {
+                let splits = data.chunk.split("\\n\\n");
+                newParagraph += splits[0];
+                const chapter = state.chapters[chapterIndex];
+                let currentParagraphs = chapter.content;
+                if (!currentParagraphs[currentParagraphs.length]) {
+                  currentParagraphs[currentParagraphs.length] = newParagraph;
+                } else {
+                  currentParagraphs[currentParagraphs.length] += newParagraph;
+                }
+
+                // console.log(currentParagraphs);
+                const updatedChapters = state.chapters.map((c, index) =>
                   index === chapterIndex
-                    ? {
-                        ...c,
-                        content: [...c.content, newParagraph.trim()],
-                        streaming: false,
-                      }
+                    ? { ...c, content: currentParagraphs }
                     : c
-                ),
-              });
+                );
+                updateState({ chapters: updatedChapters });
+                newParagraphs.push(newParagraph);
+                newParagraph = splits[1];
+              } else {
+                newParagraph += data.chunk;
+                const chapter = state.chapters[chapterIndex];
+                let updatedParagraphs = [...chapter.content, newParagraph];
+                // console.log(updatedParagraphs);
+                const updatedChapters = state.chapters.map((c, index) =>
+                  index === chapterIndex
+                    ? { ...c, content: updatedParagraphs }
+                    : c
+                );
+                updateState({ chapters: updatedChapters });
+              }
             }
           }
         };
