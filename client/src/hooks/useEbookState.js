@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import {
   streamContinueParagraph,
   streamRewrittenParagraph,
+  streamInsertedParagraph,
 } from "../server/ebook";
 
 const initialState = {
@@ -154,6 +155,73 @@ export function useEbookState() {
           throw new Error(error.message || "Error from server");
         };
         await streamRewrittenParagraph(
+          state,
+          chapterId,
+          paragraphIndex,
+          instruction,
+          onChunk,
+          onError
+        );
+        return { newParagraph };
+      } catch (error) {
+        console.log(error);
+        return { error: error.message };
+      }
+    },
+    insertParagraph: async (chapterId, paragraphIndex, instruction) => {
+      const chapterIndex = state.chapters.findIndex((c) => c.id === chapterId);
+      if (chapterIndex === -1) {
+        return { error: "Chapter not found" };
+      }
+      const chapter = state.chapters[chapterIndex];
+      if (paragraphIndex < 0 || paragraphIndex >= chapter.content.length) {
+        return { error: "Invalid paragraph index" };
+      }
+      let newParagraph = "";
+      try {
+        const onChunk = (data) => {
+          if (data.chunk) {
+            if (data.chunk !== "[DONE]") {
+              newParagraph += data.chunk + " ";
+              updateState({
+                chapters: state.chapters.map((c, index) =>
+                  index === chapterIndex
+                    ? {
+                        ...c,
+                        content: [
+                          ...c.content.slice(0, paragraphIndex),
+                          newParagraph.trim(),
+                          ...c.content.slice(paragraphIndex),
+                        ],
+                        streaming: true,
+                      }
+                    : c
+                ),
+              });
+            } else {
+              updateState({
+                chapters: state.chapters.map((c, index) =>
+                  index === chapterIndex
+                    ? {
+                        ...c,
+                        content: [
+                          ...c.content.slice(0, paragraphIndex),
+                          newParagraph.trim(),
+                          ...c.content.slice(paragraphIndex),
+                        ],
+                        streaming: false,
+                      }
+                    : c
+                ),
+              });
+            }
+          }
+        };
+        const onError = (error) => {
+          console.error("Error fetching rewritten paragraph response:", error);
+          throw new Error(error.message || "Error from server");
+        };
+        await streamInsertedParagraph(
           state,
           chapterId,
           paragraphIndex,

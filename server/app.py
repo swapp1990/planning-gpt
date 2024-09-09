@@ -514,11 +514,20 @@ def insert_chapter():
     if nextParagraph != "":
         prompt += f'\n\nThe new paragraph should be added before this paragraph: `{nextParagraph}`'
     prompt += f'\n\nOnly return the new paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+    print(prompt)
 
-    result = hermes_ai_output(prompt, systemPrompt, [], "")
-    # result = prompt
-    result = result.replace("\n\n", " ")
-    return jsonify({'insertedParagraph': result})
+    def generate():
+        partial_result = ""
+        try:
+            for chunk in hermes_ai_streamed_output(prompt, systemPrompt, [], ""):
+                if isinstance(chunk, dict) and 'error' in chunk:
+                    return jsonify(chunk), 500
+                partial_result += chunk
+                yield json.dumps({'chunk': chunk}) + '\n'
+        except Exception as e:
+            yield json.dumps({'error': "An error occured"})
+
+    return Response(stream_with_context(generate()), content_type='application/x-ndjson')
 
 @app.route("/chapter/rewrite", methods=["POST"])
 def rewrite_paragraph():
@@ -544,10 +553,6 @@ def rewrite_paragraph():
                 yield json.dumps({'chunk': chunk}) + '\n'
         except Exception as e:
             yield json.dumps({'error': "An error occured"})
-
-        # summary = generate_summary(partial_result, previousSummary)
-        # summary = previousSummary + " " + summary
-        # yield json.dumps({'summary': summary}) + '\n'
 
     return Response(stream_with_context(generate()), content_type='application/x-ndjson')
 
