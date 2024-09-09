@@ -21,7 +21,7 @@ export function useEbookState() {
   const [state, setState] = useState(initialState);
 
   const updateState = (updates) => {
-    setState((prevState) => ({ ...prevState, ...updates }));
+    setState((prevState) => ({ ...prevState, ...updates, isSaved: false }));
   };
 
   const ebookActions = {
