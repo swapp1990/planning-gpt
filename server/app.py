@@ -24,6 +24,8 @@ lambda_hermes_api_key = os.getenv('LAMBDA_API_KEY')
 openai_api_key = os.getenv('OPENAI_API_KEY')
 openai_api_base = "https://api.lambdalabs.com/v1"
 
+print("This is a test log message", flush=True)
+
 @app.before_request
 def before_request():
     request.start_time = time.time()

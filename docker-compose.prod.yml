@@ -33,7 +33,7 @@ services:
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
-    command: gunicorn --workers 4 --threads 2 --timeout 120 --bind 0.0.0.0:5000 app:app --capture-output --log-level=info
+    command: gunicorn --workers 4 --threads 2 --timeout 120 --bind 0.0.0.0:5000 app:app --capture-output --access-logfile - --error-logfile - --log-level=info
     logging:
       driver: json-file
       options:
