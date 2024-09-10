@@ -75,6 +75,7 @@ const SuggestableCharacterField = ({
       <SuggestableInput
         label="Name"
         value={character.name}
+        context={context}
         onChange={(value) => onChange({ ...character, name: value })}
       />
       <SuggestableInput
@@ -85,6 +86,7 @@ const SuggestableCharacterField = ({
       <SuggestableInput
         label="Occupation"
         value={character.occupation}
+        context={context}
         onChange={(value) => onChange({ ...character, occupation: value })}
       />
     </div>
