@@ -6,7 +6,7 @@ const CollapsiblePanel = ({ title, children, icon: Icon }) => {
 
   return (
     <div className="bg-white shadow rounded-lg mb-6">
-      <div className="px-4 py-5 sm:px-6">
+      <div className="px-4 py-2 sm:px-6">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-800 flex items-center">
             {Icon && <Icon className="mr-2" />}

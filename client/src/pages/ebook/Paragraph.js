@@ -8,11 +8,19 @@ import {
   FaShareAlt,
 } from "react-icons/fa";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
+
 import ParagraphReview from "./ParagraphReview";
 import ParagraphMenu from "./ParagraphMenu";
+import SelectableSentence from "./SelectableSentence";
 import { useEbook } from "../../context/EbookContext";
 
-const Paragraph = ({ content, index, chapterId }) => {
+const Paragraph = ({
+  content,
+  index,
+  chapterId,
+  isRewriteMode,
+  onNoteChange,
+}) => {
   const { chapterActions } = useEbook();
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(content);
@@ -106,12 +114,26 @@ const Paragraph = ({ content, index, chapterId }) => {
         </div>
       ) : (
         <>
-          <p
-            className="p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-          >
-            {content}
-          </p>
+          {isRewriteMode ? (
+            content
+              .split(". ")
+              .map((sentence, sentenceIndex) => (
+                <SelectableSentence
+                  key={sentenceIndex}
+                  sentence={sentence}
+                  index={`${index}-${sentenceIndex}`}
+                  onNoteChange={onNoteChange}
+                />
+              ))
+          ) : (
+            <p
+              className="p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+            >
+              {content}
+            </p>
+          )}
+
           {isMenuOpen && (
             <ParagraphMenu
               content={content}
