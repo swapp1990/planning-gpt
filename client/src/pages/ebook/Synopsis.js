@@ -1,9 +1,16 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
+import SuggestableParagraph from "../../components/SuggestableParagraph";
+import { useEbook } from "../../context/EbookContext";
 
-const Synopsis = ({ synopsis, chapterId, onEdit }) => {
+const Synopsis = ({ chapter, chapterId, onEdit }) => {
+  const { ebookState } = useEbook();
   const [isEditing, setIsEditing] = useState(false);
-  const [editedSynopsis, setEditedSynopsis] = useState(synopsis);
+  const [editedSynopsis, setEditedSynopsis] = useState(chapter.synopsis);
+
+  useEffect(() => {
+    setEditedSynopsis(chapter.synopsis);
+  }, [chapter.synopsis]);
 
   const handleSave = () => {
     onEdit(editedSynopsis);
@@ -11,20 +18,28 @@ const Synopsis = ({ synopsis, chapterId, onEdit }) => {
   };
 
   const handleCancel = () => {
-    setEditedSynopsis(synopsis);
+    setEditedSynopsis(editedSynopsis);
     setIsEditing(false);
+  };
+
+  const handleChange = (suggestion) => {
+    console.log(suggestion);
+    setEditedSynopsis(suggestion);
+  };
+
+  const synopsisContext = {
+    parameters: ebookState.parameters,
   };
 
   return (
     <div className="mb-6">
-      <div className="bg-gray-100 p-4 rounded-md min-h-24 relative">
+      <div className="bg-gray-100 p-4 rounded-md relative min-h-[100px]">
         {isEditing ? (
           <>
             <textarea
-              className="w-full h-full p-2 text-gray-600 bg-white border rounded"
+              className="w-full p-2 border rounded-md focus:ring-indigo-500 focus:border-indigo-500 min-h-[100px] resize-y"
               value={editedSynopsis}
               onChange={(e) => setEditedSynopsis(e.target.value)}
-              rows={3}
             />
             <div className="mt-2 flex justify-end space-x-2">
               <button
@@ -43,7 +58,12 @@ const Synopsis = ({ synopsis, chapterId, onEdit }) => {
           </>
         ) : (
           <>
-            <p className="text-gray-600 pr-2">{synopsis}</p>
+            <SuggestableParagraph
+              value={editedSynopsis}
+              onChange={handleChange}
+              fieldName="synopsis"
+              context={synopsisContext}
+            />
             <button
               onClick={() => setIsEditing(true)}
               className="absolute top-2 right-2 p-2 text-blue-500 hover:text-blue-600"

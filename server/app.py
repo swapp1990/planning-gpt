@@ -417,6 +417,8 @@ def get_user_prompt(field_type, current_value, context):
         return base_prompt + "recommend a suitable genre or subgenre for the story."
     elif field_type == 'premise':
         return base_prompt + "provide a compelling premise for the story."
+    elif field_type == 'synopsis':
+        return base_prompt + "provide a concise synopsis for the given chapter based on the context in one sentence."
     elif field_type == 'setting.time':
         return base_prompt + "suggest an interesting time period for the story to take place."
     elif field_type == 'setting.place':
@@ -427,6 +429,11 @@ def get_user_prompt(field_type, current_value, context):
         - age
         - occupation
         Ensure the character fits well within the story's context."""
+    elif field_type == 'chapters':
+        return base_prompt + """generate a list of 3 chapters based on the context. Each chapter should have the following keys:
+        - title
+        - synopsis
+        Ensure the chapters fit well within the story's context. The synopsis should be maximum one sentence in length."""
     else:
         return base_prompt + f"provide a suggestion for the {field_type} of the story."
     
@@ -449,6 +456,7 @@ def parameters_suggestions():
     print(user_prompt)
 
     result = hermes_ai_output(user_prompt, system_prompt, [], "")
+    print(result)
     if isinstance(result, dict) and 'error' in result:
         return jsonify(result), 500
     return jsonify({'suggestions': result})

@@ -112,7 +112,7 @@ const ChapterView = ({ chapter }) => {
         </div>
       )}
       <Synopsis
-        synopsis={chapter.synopsis}
+        chapter={chapter}
         chapterId={chapter.id}
         onEdit={handleSynopsisEdit}
       />

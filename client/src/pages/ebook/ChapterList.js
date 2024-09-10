@@ -1,16 +1,44 @@
-import React, { useState } from "react";
-import { FaPlus, FaBook, FaTrash } from "react-icons/fa";
+import React, { useState, useCallback } from "react";
+import { FaPlus, FaBook, FaTrash, FaLightbulb } from "react-icons/fa";
 import { useEbook } from "../../context/EbookContext";
 import { v4 as uuidv4 } from "uuid";
+import { getSugggestedList } from "../../server/ebook";
+
+const fetchSuggestedChapters = async (context) => {
+  let chapters = (await getSugggestedList("chapters", "", context)).chapters;
+  return chapters;
+};
 
 const ChapterList = () => {
   const { ebookState, chapterActions } = useEbook();
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [suggestedChapters, setSuggestedChapters] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleChapterClick = (chapterId) => {
-    console.log(chapterId);
     chapterActions.setCurrentChapter(chapterId);
   };
+
+  const handleSuggestChapters = useCallback(async () => {
+    let prevChapters = ebookState.chapters.map((c) => ({
+      title: c.title,
+      synopsis: c.synopsis,
+    }));
+
+    const chapterContext = {
+      parameters: ebookState.parameters,
+      previous_chapters: prevChapters,
+    };
+    setSuggestedChapters([]);
+    setIsLoading(true);
+    try {
+      const suggestions = await fetchSuggestedChapters(chapterContext);
+      setSuggestedChapters(suggestions);
+    } catch (error) {
+      console.error("Error fetching chapter suggestions:", error);
+    }
+    setIsLoading(false);
+  }, []);
 
   const handleAddChapter = () => {
     let newChapter = {
@@ -21,6 +49,22 @@ const ChapterList = () => {
     };
     chapterActions.addChapter(newChapter);
   };
+
+  const handleAddSuggestedChapter = useCallback(
+    (suggestedChapter) => {
+      const newChapter = {
+        id: uuidv4(),
+        title: suggestedChapter.title,
+        synopsis: suggestedChapter.synopsis,
+        content: [],
+      };
+      chapterActions.addChapter(newChapter);
+      setSuggestedChapters((prevSuggestions) =>
+        prevSuggestions.filter((ch) => ch.title !== suggestedChapter.title)
+      );
+    },
+    [chapterActions]
+  );
 
   const handleDeleteClick = (e, chapterId) => {
     e.stopPropagation();
@@ -42,13 +86,23 @@ const ChapterList = () => {
     <div className="bg-white shadow rounded-lg p-6 mb-6">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-800">Chapters</h2>
-        <button
-          onClick={handleAddChapter}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200"
-        >
-          <FaPlus className="mr-2" />
-          Add Chapter
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={handleSuggestChapters}
+            disabled={isLoading}
+            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200"
+          >
+            <FaLightbulb className="mr-2" />
+            {isLoading ? "Loading..." : "Suggest Chapters"}
+          </button>
+          <button
+            onClick={handleAddChapter}
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200"
+          >
+            <FaPlus className="mr-2" />
+            Add Chapter
+          </button>
+        </div>
       </div>
       {ebookState.chapters.length === 0 ? (
         <p className="text-gray-500 text-center">
@@ -98,6 +152,27 @@ const ChapterList = () => {
                   <FaTrash />
                 </button>
               )}
+            </li>
+          ))}
+          {suggestedChapters.map((chapter, index) => (
+            <li
+              key={`suggested-${index}`}
+              className="p-3 rounded-lg bg-yellow-50 border border-yellow-200"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="font-medium text-yellow-800">
+                    Suggested: {chapter.title}
+                  </span>
+                  <p className="text-sm text-yellow-600">{chapter.synopsis}</p>
+                </div>
+                <button
+                  onClick={() => handleAddSuggestedChapter(chapter)}
+                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-full text-sm transition-colors duration-200"
+                >
+                  Add
+                </button>
+              </div>
             </li>
           ))}
         </ul>

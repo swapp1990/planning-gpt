@@ -134,3 +134,24 @@ export const getSugggestedText = async (fieldType, current_value, context) => {
     throw new Error(error);
   }
 };
+
+export const getSugggestedList = async (fieldType, current_value, context) => {
+  try {
+    const response = await regularApiCall(
+      `${process.env.REACT_APP_API_URL}/parameters/suggestions`,
+      "POST",
+      {
+        fieldType: fieldType,
+        current_value: current_value,
+        context: context,
+      }
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return JSON.parse(response.suggestions);
+  } catch (error) {
+    throw new Error(error);
+  }
+};
