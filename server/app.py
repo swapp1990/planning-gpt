@@ -434,6 +434,9 @@ def get_user_prompt(field_type, current_value, context):
         - title
         - synopsis
         Ensure the chapters fit well within the story's context. The synopsis should be maximum one sentence in length."""
+    elif field_type == 'continue_chapter': 
+        return base_prompt + """suggest an instruction or guidance on how the chapter should continue for the novel writer based on the context. The suggested instruction should focus on plot, character development, tone of the following paragraphs or a mixture of this elements. The instruction should be maximum one sentence in length. 
+        """
     else:
         return base_prompt + f"provide a suggestion for the {field_type} of the story."
     

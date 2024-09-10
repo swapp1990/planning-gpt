@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { FaLightbulb, FaUndo, FaSpinner } from "react-icons/fa";
 import { getSugggestedText } from "../server/ebook";
 
@@ -17,7 +17,7 @@ const SuggestableParagraph = ({ value, onChange, fieldName, context }) => {
     try {
       const suggestion = await getSuggestion(fieldName, context);
       console.log(suggestion);
-      if (suggestion == previousValue) {
+      if (suggestion === previousValue) {
         console.log("suggested text is same as previous");
       } else {
         setPreviousValue(value);
@@ -34,9 +34,8 @@ const SuggestableParagraph = ({ value, onChange, fieldName, context }) => {
   };
 
   return (
-    <div className="relative group">
-      <p className="text-gray-600 pr-10">{value}</p>
-      <div className="absolute bottom-0 right-4 flex items-center space-x-2 opacity-100  transition-opacity">
+    <div className="relative group flex">
+      <div className="absolute top-0 left-0 flex flex-col space-y-2 opacity-100 transition-opacity">
         <button
           onClick={handleSuggest}
           disabled={isLoading}
@@ -59,6 +58,7 @@ const SuggestableParagraph = ({ value, onChange, fieldName, context }) => {
           </button>
         )}
       </div>
+      <p className="text-gray-600 pl-10 pr-4 flex-grow">{value}</p>
     </div>
   );
 };

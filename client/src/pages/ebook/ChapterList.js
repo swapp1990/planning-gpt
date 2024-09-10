@@ -104,79 +104,99 @@ const ChapterList = () => {
           </button>
         </div>
       </div>
-      {ebookState.chapters.length === 0 ? (
-        <p className="text-gray-500 text-center">
-          No chapters yet. Add one to get started!
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {ebookState.chapters.map((chapter, index) => (
-            <li
-              key={chapter.id}
-              className={`
-                p-3 rounded-lg cursor-pointer transition-colors duration-200 flex justify-between items-center
-                ${
-                  ebookState.currentChapter === chapter.id
-                    ? "bg-blue-100 text-blue-700"
-                    : "hover:bg-gray-100"
-                }
-              `}
-              onClick={() => handleChapterClick(chapter.id)}
-            >
-              <div className="flex items-center">
-                <FaBook className="mr-3 text-gray-500" />
-                <span className="font-medium">
-                  Chapter {index + 1}: {chapter.title}
-                </span>
-              </div>
-              {deleteConfirmId === chapter.id ? (
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={(e) => handleConfirmDelete(e, chapter.id)}
-                    className="text-red-600 hover:text-red-800 transition-colors duration-200"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    onClick={handleCancelDelete}
-                    className="text-gray-600 hover:text-gray-800 transition-colors duration-200"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={(e) => handleDeleteClick(e, chapter.id)}
-                  className="text-red-500 hover:text-red-700 transition-colors duration-200"
-                >
-                  <FaTrash />
-                </button>
-              )}
-            </li>
-          ))}
-          {suggestedChapters.map((chapter, index) => (
-            <li
-              key={`suggested-${index}`}
-              className="p-3 rounded-lg bg-yellow-50 border border-yellow-200"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <span className="font-medium text-yellow-800">
-                    Suggested: {chapter.title}
+
+      <div className="space-y-4">
+        {/* Existing chapters */}
+        {ebookState.chapters.length > 0 && (
+          <ul className="space-y-2">
+            {ebookState.chapters.map((chapter, index) => (
+              <li
+                key={chapter.id}
+                className={`
+                  p-3 rounded-lg cursor-pointer transition-colors duration-200 flex justify-between items-center
+                  ${
+                    ebookState.currentChapter === chapter.id
+                      ? "bg-blue-100 text-blue-700"
+                      : "hover:bg-gray-100"
+                  }
+                `}
+                onClick={() => handleChapterClick(chapter.id)}
+              >
+                <div className="flex items-center">
+                  <FaBook className="mr-3 text-gray-500" />
+                  <span className="font-medium">
+                    Chapter {index + 1}: {chapter.title}
                   </span>
-                  <p className="text-sm text-yellow-600">{chapter.synopsis}</p>
                 </div>
-                <button
-                  onClick={() => handleAddSuggestedChapter(chapter)}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-full text-sm transition-colors duration-200"
+                {deleteConfirmId === chapter.id ? (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={(e) => handleConfirmDelete(e, chapter.id)}
+                      className="text-red-600 hover:text-red-800 transition-colors duration-200"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      onClick={handleCancelDelete}
+                      className="text-gray-600 hover:text-gray-800 transition-colors duration-200"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => handleDeleteClick(e, chapter.id)}
+                    className="text-red-500 hover:text-red-700 transition-colors duration-200"
+                  >
+                    <FaTrash />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {/* Suggested chapters */}
+        {suggestedChapters.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+              Suggested Chapters
+            </h3>
+            <ul className="space-y-2">
+              {suggestedChapters.map((chapter, index) => (
+                <li
+                  key={`suggested-${index}`}
+                  className="p-3 rounded-lg bg-yellow-50 border border-yellow-200"
                 >
-                  Add
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <span className="font-medium text-yellow-800">
+                        {chapter.title}
+                      </span>
+                      <p className="text-sm text-yellow-600">
+                        {chapter.synopsis}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleAddSuggestedChapter(chapter)}
+                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-full text-sm transition-colors duration-200"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* No chapters message */}
+        {ebookState.chapters.length === 0 && suggestedChapters.length === 0 && (
+          <p className="text-gray-500 text-center">
+            No chapters yet. Add one or get suggestions to get started!
+          </p>
+        )}
+      </div>
     </div>
   );
 };

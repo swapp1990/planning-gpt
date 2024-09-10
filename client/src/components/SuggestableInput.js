@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import { FaLightbulb, FaUndo } from "react-icons/fa";
+import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { getSugggestedText } from "../server/ebook";
 
-// Mock API function (replace with actual API call later)
 const getSuggestion = async (fieldName, context) => {
   let text = await getSugggestedText(fieldName, "", context);
   return text;
@@ -15,12 +15,6 @@ const SuggestableInput = ({
   onChange,
   multiline = false,
 }) => {
-  //   useEffect(() => {
-  //     if (context) {
-  //       console.log(context);
-  //     }
-  //   }, [context]);
-
   const [isLoading, setIsLoading] = useState(false);
   const previousValueRef = useRef(value);
 
@@ -47,32 +41,46 @@ const SuggestableInput = ({
       <label className="block text-sm font-medium text-gray-700 mb-1">
         {label}
       </label>
-      <div className="relative">
-        <InputComponent
-          className="w-full p-2 pr-20 border rounded-md focus:ring-indigo-500 focus:border-indigo-500"
-          value={value || ""}
-          onChange={(e) => onChange(e.target.value)}
-          rows={multiline ? 3 : undefined}
-        />
-        <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+      <div
+        className={`relative flex ${
+          multiline ? "items-start" : "items-center"
+        }`}
+      >
+        <div
+          className={`flex ${
+            multiline ? "flex-col space-y-2" : "space-x-2"
+          } mr-2`}
+        >
           <button
             onClick={handleSuggest}
             disabled={isLoading}
-            className="p-1 text-blue-500 hover:text-blue-600 mr-1"
-            aria-label={`Suggest ${label}`}
+            className="p-1 text-yellow-500 hover:text-yellow-600"
+            aria-label={isLoading ? "Loading suggestion" : `Suggest ${label}`}
           >
-            <FaLightbulb className="w-5 h-5" />
+            {isLoading ? (
+              <AiOutlineLoading3Quarters className="w-5 h-5 animate-spin" />
+            ) : (
+              <FaLightbulb className="w-5 h-5" />
+            )}
           </button>
           {previousValueRef.current !== value && (
             <button
               onClick={handleUndo}
-              className="p-1 text-gray-500 hover:text-gray-600"
+              className="p-1 text-yellow-500 hover:text-yellow-600"
               aria-label="Undo"
             >
               <FaUndo className="w-5 h-5" />
             </button>
           )}
         </div>
+        <InputComponent
+          className={`w-full p-2 border rounded-md focus:ring-yellow-500 focus:border-yellow-500 ${
+            multiline ? "pl-10" : "pl-14"
+          }`}
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          rows={multiline ? 3 : undefined}
+        />
       </div>
     </div>
   );

@@ -4,12 +4,12 @@ import { FaEdit, FaCheck, FaTimes, FaPlus } from "react-icons/fa";
 
 import Synopsis from "./Synopsis";
 import Paragraph from "./Paragraph";
-import AddParagraph from "./AddParagraph";
+import ContinueChapter from "./ContinueChapter";
 
 const ChapterView = ({ chapter }) => {
   const { chapterActions } = useEbook();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [isAddingParagraph, setIsAddingParagraph] = useState(false);
+  const [isContinueChapter, setIsContinueChapter] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chapter.title);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -127,14 +127,14 @@ const ChapterView = ({ chapter }) => {
         />
       ))}
 
-      {isAddingParagraph ? (
-        <AddParagraph
+      {isContinueChapter ? (
+        <ContinueChapter
           chapterId={chapter.id}
-          onClose={() => setIsAddingParagraph(false)}
+          onClose={() => setIsContinueChapter(false)}
         />
       ) : (
         <button
-          onClick={() => setIsAddingParagraph(true)}
+          onClick={() => setIsContinueChapter(true)}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200"
         >
           Continue
