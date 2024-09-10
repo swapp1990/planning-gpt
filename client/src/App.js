@@ -16,6 +16,7 @@ import BottomNavigation from "./components/BottomNavigation";
 import HomePage from "./pages/home/HomePage";
 import BookView from "./pages/ebook/BookView";
 import TestPage from "./pages/TestPage";
+import MafiaGame from "./pages/mafia/MafiaGame";
 import RewritingDemo from "./pages/ebook/RewritingDemo";
 import Login from "./pages/Login";
 
@@ -30,6 +31,8 @@ function App() {
                 <Route path="/login" component={Login} />
                 <Route path="/home" exact component={BookView} />
                 <Route path="/demo" exact component={RewritingDemo} />
+                <Route path="/mafia" exact component={MafiaGame} />
+
                 <Route path="/" exact component={BookView} />
               </Switch>
             </MainLayout>
