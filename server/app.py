@@ -686,6 +686,220 @@ def get_prompt():
 def test():
     return jsonify({'message': 'Hello, World!'})
 
+def clean_json_string(json_string):
+    # Remove potential markdown code block formatting
+    json_string = re.sub(r'^```json\s*', '', json_string, flags=re.MULTILINE)
+    json_string = re.sub(r'\s*```$', '', json_string, flags=re.MULTILINE)
+    # Remove any leading/trailing whitespace
+    return json_string.strip()
+
+@app.route("/mafia/event", methods=["POST"])
+def generate_event():
+    data = request.get_json()
+    context = data.get('context', {})
+    system_prompt = """
+You are an AI assistant designed to generate events and choices for the game "Mafia Empire". Your task is to create engaging, narrative-driven events with meaningful choices that align with the game's mechanics and balance. 
+
+Follow these guidelines:
+-- Event Structure
+- Trigger: The player action that initiates the event.
+- Context: Current game phase, player's status, and relevant background.
+- Narrative: A brief, engaging description of the situation (2-3 sentences).
+- Choices: 3 options for the player to choose from.
+
+-- Choice Structure
+For each choice, provide:
+
+- Title: A short, action-oriented name (1-3 words).
+- Description: A brief explanation of the action (1 sentence).
+- Difficulty: Rate from 1 (Easy) to 5 (Very Hard).
+- Potential Outcomes: Success and failure states with specific consequences.
+
+-- Consequence Categories
+Outcomes should affect one or more of these player attributes:
+
+- Territory Control (%)
+
+Guidelines
+
+- Ensure choices are distinct and offer meaningful trade-offs.
+- Balance risk and reward based on the choice difficulty.
+- Align the event and choices with the current game phase and player status.
+- Use appropriate tone and language for a crime-themed strategy game.
+- Incorporate character interactions where relevant.
+- Avoid repetition by varying scenarios and consequences.
+"""
+    user_prompt = """
+Generate an event with 3 choices based on this information: {context}, following the structure and guidelines provided in the system prompt. Output the result in the specified JSON format. 
+{
+  "event": {
+    "trigger": "string",
+    "narrative": "string",
+    "choices": [
+      {
+        "title": "string",
+        "description": "string",
+        "difficulty": "number", //from 1-5 only
+        "successProbability": "number" //in % only
+        "outcomes": {
+          "success": {
+            "description": "string",
+            "consequences": {
+              "territory": "number",
+            }
+          },
+          "failure": {
+            "description": "string",
+            "consequences": {
+              "territory": "number",
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+"""
+    # 
+    result = """
+{
+    "event": {
+        "choices": [
+            {
+                "description": "Launch a full-scale assault on the rival hideout.",
+                "difficulty": 4,
+                "outcomes": {
+                    "failure": {
+                        "consequences": {
+                            "characterRelationships": [
+                                {
+                                    "change": -5,
+                                    "character": "Rocco"
+                                }
+                            ],
+                            "heat": 10,
+                            "influence": -5,
+                            "manpower": -5,
+                            "money": -500,
+                            "territory": -10
+                        },
+                        "description": "Your assault fails miserably, leading to heavy losses."
+                    },
+                    "success": {
+                        "consequences": {
+                            "characterRelationships": [
+                                {
+                                    "change": -3,
+                                    "character": "Rocco"
+                                }
+                            ],
+                            "heat": 5,
+                            "influence": 10,
+                            "manpower": -2,
+                            "money": 1000,
+                            "territory": 20
+                        },
+                        "description": "Your crew overwhelms the defenses and seizes control of the hideout."
+                    }
+                },
+                "title": "Forceful Takeover"
+            },
+            {
+                "description": "Attempt to negotiate with the rival for control of their hideout.",
+                "difficulty": 3,
+                "outcomes": {
+                    "failure": {
+                        "consequences": {
+                            "characterRelationships": [
+                                {
+                                    "change": -2,
+                                    "character": "Lena"
+                                }
+                            ],
+                            "heat": 8,
+                            "influence": -10,
+                            "manpower": -1,
+                            "money": -200,
+                            "territory": 0
+                        },
+                        "description": "The rival refuses and turns hostile, leading to a tense standoff."
+                    },
+                    "success": {
+                        "consequences": {
+                            "characterRelationships": [
+                                {
+                                    "change": 2,
+                                    "character": "Lena"
+                                }
+                            ],
+                            "heat": 3,
+                            "influence": 15,
+                            "manpower": 0,
+                            "money": -800,
+                            "territory": 15
+                        },
+                        "description": "You successfully convince the rival to hand over the hideout for a fair price."
+                    }
+                },
+                "title": "Diplomatic Negotiation"
+            },
+            {
+                "description": "Create a diversion to allow your crew to infiltrate the hideout unnoticed.",
+                "difficulty": 2,
+                "outcomes": {
+                    "failure": {
+                        "consequences": {
+                            "characterRelationships": [
+                                {
+                                    "change": -1,
+                                    "character": "Dante"
+                                }
+                            ],
+                            "heat": 4,
+                            "influence": -5,
+                            "manpower": 0,
+                            "money": -300,
+                            "territory": -5
+                        },
+                        "description": "The distraction fails, causing confusion and alerting the rival gang."
+                    },
+                    "success": {
+                        "consequences": {
+                            "characterRelationships": [
+                                {
+                                    "change": 3,
+                                    "character": "Dante"
+                                }
+                            ],
+                            "heat": 2,
+                            "influence": 12,
+                            "manpower": 1,
+                            "money": 500,
+                            "territory": 10
+                        },
+                        "description": "The distraction works flawlessly, and your crew slips in and takes control without a fight."
+                    }
+                },
+                "title": "Cunning Distraction"
+            }
+        ],
+        "narrative": "As you plot your next move, your eye falls on a nearby rival's hideout. Its defenses seem modest, but the potential gain of influence and resources tempts you to make your move. You can either stage a direct takeover, negotiate for the hideout, or launch a distraction to slip in quietly.",
+        "trigger": "The player decides to expand their territory by taking over a rival's hideout."
+    }
+}
+"""
+    result = hermes_ai_output(user_prompt, system_prompt, [], "")
+    
+    try:
+        # Attempt to parse the result as JSON
+        cleaned_result = clean_json_string(result)
+        print(cleaned_result)
+        event_json = json.loads(cleaned_result)
+        return jsonify(event_json)
+    except json.JSONDecodeError as e:
+        # If parsing fails, return an error
+        return jsonify({'error': f"Failed to parse AI output as JSON: {str(e)}"}), 500
+
 if __name__ == "__main__":
     print("Starting server...")
     app.run(host="0.0.0.0", debug=True, threaded=True)

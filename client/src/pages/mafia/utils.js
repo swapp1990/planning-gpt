@@ -1,57 +1,68 @@
 import { EVENT_CATEGORIES } from "./constants";
 
-export const generateEvent = (playerTerritory) => {
-  const category =
-    EVENT_CATEGORIES[Math.floor(Math.random() * EVENT_CATEGORIES.length)];
-  const difficulty = Math.floor(Math.random() * 5) + 1;
+export const generateEvent = async (playerStatus, gamePhase = "Early") => {
+  const apiUrl = "http://localhost:5000/mafia/event";
 
-  const event = {
-    category,
-    description: `Opportunity for ${category}`,
-    options: [
-      {
-        name: "Cautious Approach",
-        territoryGain: Math.floor(Math.random() * 5) + 3,
-        difficulty: Math.max(1, difficulty - 1),
+  const requestBody = {
+    context: {
+      trigger_action: "Territory Expansion",
+      game_phase: gamePhase,
+      player_status: {
+        territory: playerStatus.territory,
+        money: playerStatus.money,
+        influence: playerStatus.influence,
+        heat: playerStatus.heat,
+        manpower: playerStatus.manpower,
       },
-      {
-        name: "Balanced Strategy",
-        territoryGain: Math.floor(Math.random() * 5) + 5,
-        difficulty: difficulty,
-      },
-      {
-        name: "Aggressive Push",
-        territoryGain: Math.floor(Math.random() * 5) + 7,
-        difficulty: Math.min(5, difficulty + 1),
-      },
-    ],
-    difficulty,
+    },
   };
 
-  event.options.forEach((option) => {
-    option.probability = calculateProbability(
-      option.difficulty,
-      playerTerritory
-    );
-  });
+  try {
+    const response = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestBody),
+    });
 
-  return event;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+    return data.event;
+  } catch (error) {
+    console.error("There was a problem with the fetch operation:", error);
+    return null;
+  }
 };
 
-export const applySkillEffects = (option, skills) => {
-  let modifiedOption = { ...option };
+export const applySkillEffects = (choice, skills) => {
+  let modifiedChoice = JSON.parse(JSON.stringify(choice));
 
   const negotiationBonus = skills.negotiation * 0.05;
   const resourceBonus = Math.floor(skills.resourceManagement * 0.5);
 
-  modifiedOption.probability += negotiationBonus;
-  modifiedOption.territoryGain += resourceBonus;
-
-  return {
-    ...modifiedOption,
-    negotiationBonus,
-    resourceBonus,
+  const currentProbability = 0.5;
+  modifiedChoice.successProbability = Math.min(
+    1,
+    currentProbability + negotiationBonus
+  );
+  modifiedChoice.outcomes.success.consequences.territory += resourceBonus;
+  modifiedChoice.skillBonus = {
+    negotiation: negotiationBonus,
+    resourceManagement: resourceBonus,
   };
+  return modifiedChoice;
+
+  // return {
+  //   ...modifiedChoice,
+  //   skillBonus: {
+  //     negotiation: negotiationBonus,
+  //     resourceManagement: resourceBonus,
+  //   },
+  // };
 };
 
 export const calculateProbability = (difficulty, playerTerritory) => {
