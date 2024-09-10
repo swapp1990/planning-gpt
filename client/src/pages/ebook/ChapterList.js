@@ -1,7 +1,16 @@
 import React, { useState, useCallback } from "react";
-import { FaPlus, FaBook, FaTrash, FaLightbulb } from "react-icons/fa";
-import { useEbook } from "../../context/EbookContext";
+import {
+  FaPlus,
+  FaBook,
+  FaTrash,
+  FaLightbulb,
+  FaListUl,
+  FaSpinner,
+} from "react-icons/fa";
 import { v4 as uuidv4 } from "uuid";
+
+import CollapsiblePanel from "../../components/CollapsiblePanel";
+import { useEbook } from "../../context/EbookContext";
 import { getSugggestedList } from "../../server/ebook";
 
 const fetchSuggestedChapters = async (context) => {
@@ -43,7 +52,7 @@ const ChapterList = () => {
   const handleAddChapter = () => {
     let newChapter = {
       id: uuidv4(),
-      title: "Test Title",
+      title: "New Chpapter",
       synopsis: "This is a synopsis.",
       content: [],
     };
@@ -83,26 +92,26 @@ const ChapterList = () => {
   };
 
   return (
-    <div className="bg-white shadow rounded-lg p-6 mb-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-gray-800">Chapters</h2>
-        <div className="flex space-x-2">
-          <button
-            onClick={handleSuggestChapters}
-            disabled={isLoading}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200"
-          >
-            <FaLightbulb className="mr-2" />
-            {isLoading ? "Loading..." : "Suggest Chapters"}
-          </button>
-          <button
-            onClick={handleAddChapter}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200"
-          >
-            <FaPlus className="mr-2" />
-            Add Chapter
-          </button>
-        </div>
+    <CollapsiblePanel title="Chapters" icon={FaListUl}>
+      <div className="flex justify-end space-x-2 mb-4">
+        <button
+          onClick={handleSuggestChapters}
+          disabled={isLoading}
+          className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200"
+        >
+          {isLoading ? (
+            <FaSpinner className="w-5 h-5 animate-spin" />
+          ) : (
+            <FaLightbulb className="w-5 h-5" />
+          )}
+        </button>
+        <button
+          onClick={handleAddChapter}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200"
+        >
+          <FaPlus className="mr-2" />
+          Add Chapter
+        </button>
       </div>
 
       <div className="space-y-4">
@@ -197,7 +206,7 @@ const ChapterList = () => {
           </p>
         )}
       </div>
-    </div>
+    </CollapsiblePanel>
   );
 };
 

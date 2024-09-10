@@ -1,11 +1,13 @@
 import React, { useState } from "react";
+import { FaCog, FaListUl } from "react-icons/fa";
+
+import TabSystem from "../../components/TabSystem";
 import BookHeader from "../../components/ebook/BookHeader";
 import ParametersPanel from "./ParametersPanel";
+import ChapterList from "./ChapterList";
 import ChapterView from "./ChapterView";
 import Sidebar from "./Sidebar";
-
 import { useEbook } from "../../context/EbookContext";
-import ChapterList from "./ChapterList";
 
 const BookView = () => {
   const { ebookState, ebookActions } = useEbook();
@@ -16,6 +18,19 @@ const BookView = () => {
     console.log("select ebook " + ebookId);
     ebookActions.loadEbook(ebookId);
   };
+
+  const tabs = [
+    {
+      title: "Chapters",
+      icon: FaListUl,
+      content: <ChapterList />,
+    },
+    {
+      title: "Parameters",
+      icon: FaCog,
+      content: <ParametersPanel />,
+    },
+  ];
 
   return (
     <div className="h-full flex flex-col bg-gray-100">
@@ -32,9 +47,8 @@ const BookView = () => {
           onDeleteItem={ebookActions.deleteEbook}
         />
         <main className="h-full overflow-auto p-4">
-          <div className="max-w-3xl mx-auto">
-            <ParametersPanel />
-            <ChapterList />
+          <div className="max-w-5xl mx-auto">
+            <TabSystem tabs={tabs} />
             {ebookState.currentChapter && (
               <ChapterView
                 chapter={

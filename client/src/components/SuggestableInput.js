@@ -75,7 +75,7 @@ const SuggestableInput = ({
         </div>
         <InputComponent
           className={`w-full p-2 border rounded-md focus:ring-yellow-500 focus:border-yellow-500 ${
-            multiline ? "pl-10" : "pl-14"
+            multiline ? "pl-10" : "pl-4 sm:pl-8"
           }`}
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}

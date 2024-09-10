@@ -141,20 +141,10 @@ export function useEbookState() {
         const onChunk = (data) => {
           if (data.chunk) {
             if (data.chunk === "[DONE]") {
-              // const chapter = state.chapters[chapterIndex];
-              // let updatedParagraphs = [...chapter.content, ...newParagraphs];
-              // // console.log(updatedParagraphs);
-              // const updatedChapters = state.chapters.map((c, index) =>
-              //   index === chapterIndex
-              //     ? { ...c, content: updatedParagraphs }
-              //     : c
-              // );
-              // // console.log(updatedChapters);
-              // updateState({ chapters: updatedChapters });
             } else {
               if (data.chunk.includes("\\n\\n")) {
                 let splits = data.chunk.split("\\n\\n");
-                newParagraph += splits[0];
+                newParagraph += splits[0] + " ";
                 const chapter = state.chapters[chapterIndex];
                 let currentParagraphs = chapter.content;
                 if (!currentParagraphs[currentParagraphs.length]) {
@@ -173,7 +163,7 @@ export function useEbookState() {
                 newParagraphs.push(newParagraph);
                 newParagraph = splits[1];
               } else {
-                newParagraph += data.chunk;
+                newParagraph += data.chunk + " ";
                 const chapter = state.chapters[chapterIndex];
                 let updatedParagraphs = [...chapter.content, newParagraph];
                 // console.log(updatedParagraphs);

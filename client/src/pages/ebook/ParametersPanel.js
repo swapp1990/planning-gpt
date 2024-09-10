@@ -11,7 +11,7 @@ import {
 } from "react-icons/fa";
 
 import { useEbook } from "../../context/EbookContext";
-
+import CollapsiblePanel from "../../components/CollapsiblePanel";
 import SuggestableInput from "../../components/SuggestableInput";
 import SuggestableCharacterField from "../../components/SuggestableCharacter";
 
@@ -326,57 +326,39 @@ const ParametersPanel = () => {
   );
 
   return (
-    <div className="bg-white shadow rounded-lg mb-1 sm:mb-4">
-      <div className="px-4 py-5 sm:px-6">
-        <div className="flex items-center justify-between flex-wrap sm:flex-nowrap">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">
-            Book Parameters
-          </h3>
-          <div className="flex items-center space-x-2">
+    <CollapsiblePanel title="Book Parameters" icon={FaCog}>
+      <div className="space-y-6">
+        {isEditing ? renderEditView() : renderCompactView()}
+        {isEditing && (
+          <div className="flex justify-end space-x-3 mt-6">
             <button
-              onClick={toggleEdit}
-              className={`inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 ${
-                isEditing
-                  ? "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500"
-                  : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
-              }`}
+              onClick={handleReset}
+              disabled={!isDirty}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FaEdit className="mr-2" /> {isEditing ? "View" : "Edit"}
+              <FaUndo className="inline-block mr-2" /> Reset
             </button>
             <button
-              className="inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={handleSave}
+              disabled={!isDirty}
+              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <FaCog className="mr-2" />
-              {isOpen ? <FaChevronUp /> : <FaChevronDown />}
+              <FaSave className="inline-block mr-2" /> Save Changes
             </button>
           </div>
-        </div>
+        )}
       </div>
-      {isOpen && (
-        <div className="px-4 py-2 sm:p-2">
-          {isEditing ? renderEditView() : renderCompactView()}
-          {isEditing && (
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={handleReset}
-                disabled={!isDirty}
-                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FaUndo className="inline-block mr-2" /> Reset
-              </button>
-              <button
-                onClick={handleSave}
-                disabled={!isDirty}
-                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FaSave className="inline-block mr-2" /> Save Changes
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+      <button
+        onClick={toggleEdit}
+        className={`mt-4 inline-flex items-center px-3 py-1 border border-transparent rounded-md text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors duration-200 ${
+          isEditing
+            ? "bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500"
+            : "bg-blue-600 hover:bg-blue-700 focus:ring-blue-500"
+        }`}
+      >
+        <FaEdit className="mr-2" /> {isEditing ? "View" : "Edit"}
+      </button>
+    </CollapsiblePanel>
   );
 };
 
