@@ -1,5 +1,5 @@
 import React, { useReducer, useEffect, useState } from "react";
-import { FaCheck, FaTimes } from "react-icons/fa";
+import { FaCheck, FaTimes, FaCheckDouble, FaTimesCircle } from "react-icons/fa";
 import { streamedApiCallBasic } from "../../utils/api";
 
 const rewriteSentence = async (sentence, instruction) => {
@@ -47,6 +47,45 @@ const rewritingReducer = (state, action) => {
           [action.payload.key]: action.payload.status,
         },
       };
+    case "SET_SCANNING_COMPLETE":
+      return { ...state, isScanningComplete: true };
+    case "ACCEPT_ALL":
+      return {
+        ...state,
+        sentenceStatuses: Object.keys(state.sentenceStatuses).reduce(
+          (acc, key) => {
+            acc[key] = state.rewrittenSentences[key]
+              ? "accepted"
+              : state.sentenceStatuses[key];
+            return acc;
+          },
+          {}
+        ),
+        acceptedRewrites: {
+          ...state.acceptedRewrites,
+          ...Object.keys(state.rewrittenSentences).reduce((acc, key) => {
+            if (state.rewrittenSentences[key]) {
+              acc[key] = state.rewrittenSentences[key];
+            }
+            return acc;
+          }, {}),
+        },
+        rewrittenSentences: {},
+      };
+    case "REJECT_ALL":
+      return {
+        ...state,
+        sentenceStatuses: Object.keys(state.sentenceStatuses).reduce(
+          (acc, key) => {
+            acc[key] = state.rewrittenSentences[key]
+              ? "ok"
+              : state.sentenceStatuses[key];
+            return acc;
+          },
+          {}
+        ),
+        rewrittenSentences: {},
+      };
     case "SET_REWRITTEN_SENTENCE":
       return {
         ...state,
@@ -90,6 +129,15 @@ const rewritingReducer = (state, action) => {
           ...state.rewrittenSentences,
           [action.payload.key]: null,
         },
+      };
+    case "RESET":
+      return {
+        isRewriting: false,
+        currentSentence: -1,
+        sentenceStatuses: {},
+        rewrittenSentences: {},
+        acceptedRewrites: {},
+        isScanningComplete: false,
       };
     default:
       return state;
@@ -146,6 +194,7 @@ const RewriteParagraph = ({
   onRewriteComplete,
   isRewriting,
   onUpdateParagraph,
+  isCancelled,
 }) => {
   const [state, dispatch] = useReducer(rewritingReducer, {
     isRewriting: false,
@@ -153,17 +202,31 @@ const RewriteParagraph = ({
     sentenceStatuses: {},
     rewrittenSentences: {},
     acceptedRewrites: {},
+    isScanningComplete: false,
   });
 
   const [paragraphContent, setParagraphContent] = useState(content);
 
   useEffect(() => {
+    if (isCancelled) {
+      console.log("is cancelled");
+      dispatch({ type: "RESET" });
+      setParagraphContent(content);
+    }
+  }, [isCancelled, content]);
+
+  useEffect(() => {
     const processRewrite = async () => {
       if (!isRewriting) return;
+      console.log("processRewrite");
 
       dispatch({ type: "START_REWRITING" });
       const sentences = paragraphContent.match(/[^.!?]+[.!?]+|\s*$/g) || [];
       for (let i = 0; i < sentences.length; i++) {
+        if (isCancelled) {
+          dispatch({ type: "RESET" });
+          break;
+        }
         if (sentences[i].trim() !== "") {
           dispatch({
             type: "SET_SENTENCE_STATUS",
@@ -172,15 +235,11 @@ const RewriteParagraph = ({
           const rewrittenSentence = (
             await rewriteSentence(sentences[i], instruction)
           ).sentence;
-          if (rewrittenSentence != null) {
+          if (rewrittenSentence != null && !isCancelled) {
             dispatch({
               type: "SET_REWRITTEN_SENTENCE",
               payload: { key: `${index}-${i}`, sentence: rewrittenSentence },
             });
-            // dispatch({
-            //   type: "SET_SENTENCE_STATUS",
-            //   payload: { key: `${index}-${i}`, status: "rewriting" },
-            // });
           } else {
             dispatch({
               type: "SET_SENTENCE_STATUS",
@@ -188,39 +247,59 @@ const RewriteParagraph = ({
             });
           }
         }
-        dispatch({ type: "NEXT_SENTENCE" });
+        if (!isCancelled) {
+          dispatch({ type: "NEXT_SENTENCE" });
+        }
       }
-      dispatch({ type: "FINISH_REWRITING" });
-      onRewriteComplete(index);
+      if (!isCancelled) {
+        dispatch({ type: "FINISH_REWRITING" });
+        dispatch({ type: "SET_SCANNING_COMPLETE" });
+        onRewriteComplete(index);
+      }
     };
 
     processRewrite();
-  }, [isRewriting, paragraphContent, index, instruction, onRewriteComplete]);
+  }, [
+    isRewriting,
+    paragraphContent,
+    index,
+    instruction,
+    onRewriteComplete,
+    isCancelled,
+  ]);
 
   const handleAccept = (key, newSentence) => {
     dispatch({ type: "ACCEPT_REWRITE", payload: { key, newSentence } });
+    updateParagraphContent(key, newSentence);
+  };
+
+  const handleReject = (key) => {
+    dispatch({ type: "REJECT_REWRITE", payload: { key } });
+  };
+
+  const handleAcceptAll = () => {
+    dispatch({ type: "ACCEPT_ALL" });
+    Object.entries(state.rewrittenSentences).forEach(([key, sentence]) => {
+      updateParagraphContent(key, sentence);
+    });
+  };
+
+  const handleRejectAll = () => {
+    dispatch({ type: "REJECT_ALL" });
+  };
+
+  const updateParagraphContent = (key, newSentence) => {
     const [, sentenceIndex] = key.split("-").map(Number);
-
-    // Split content into sentences more accurately
     const sentences = paragraphContent.match(/[^.!?]+[.!?]+|\s*$/g) || [];
-
-    // Replace only the rewritten sentence, preserving original spacing
     if (sentences[sentenceIndex]) {
       const originalSpaceBefore = sentences[sentenceIndex].match(/^\s*/)[0];
       const originalSpaceAfter = sentences[sentenceIndex].match(/\s*$/)[0];
       sentences[sentenceIndex] =
         originalSpaceBefore + newSentence.trim() + originalSpaceAfter;
-
-      // Join sentences back together
       const updatedContent = sentences.join("");
-
       setParagraphContent(updatedContent);
       onUpdateParagraph(index, updatedContent);
     }
-  };
-
-  const handleReject = (key) => {
-    dispatch({ type: "REJECT_REWRITE", payload: { key } });
   };
 
   return (
@@ -245,6 +324,24 @@ const RewriteParagraph = ({
           );
         }
       )}
+      {state.isScanningComplete &&
+        !isCancelled &&
+        Object.keys(state.rewrittenSentences).length > 0 && (
+          <div className="mt-4 flex justify-end space-x-2">
+            <button
+              onClick={handleAcceptAll}
+              className="bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
+            >
+              <FaCheckDouble className="mr-1" /> Accept All
+            </button>
+            <button
+              onClick={handleRejectAll}
+              className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition-colors duration-200 flex items-center"
+            >
+              <FaTimesCircle className="mr-1" /> Reject All
+            </button>
+          </div>
+        )}
     </div>
   );
 };

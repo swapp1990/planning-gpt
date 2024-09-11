@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { FaSync, FaEdit, FaCheck, FaTimes } from "react-icons/fa";
+import { FaSync, FaEdit, FaCheck, FaTimes, FaBan } from "react-icons/fa";
 import RewriteParagraph from "./RewriteParagraph";
 
 const RewriteMode = ({ content, onUpdateContent, onExitRewriteMode }) => {
@@ -7,9 +7,13 @@ const RewriteMode = ({ content, onUpdateContent, onExitRewriteMode }) => {
   const [currentRewritingParagraph, setCurrentRewritingParagraph] =
     useState(-1);
   const [updatedContent, setUpdatedContent] = useState(content);
+  const [isRewriting, setIsRewriting] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
 
   const handleStartRewrite = useCallback(() => {
     setCurrentRewritingParagraph(0);
+    setIsRewriting(true);
+    setIsCancelled(false);
   }, []);
 
   const handleRewriteComplete = useCallback(() => {
@@ -17,6 +21,7 @@ const RewriteMode = ({ content, onUpdateContent, onExitRewriteMode }) => {
       if (prev + 1 < updatedContent.length) {
         return prev + 1;
       } else {
+        setIsRewriting(false);
         return -1; // Rewriting all paragraphs is complete
       }
     });
@@ -31,7 +36,11 @@ const RewriteMode = ({ content, onUpdateContent, onExitRewriteMode }) => {
   }, []);
 
   const handleCancelRewrite = () => {
-    onExitRewriteMode();
+    setIsRewriting(false);
+    setCurrentRewritingParagraph(-1);
+    setIsCancelled(true);
+    // Reset other relevant state
+    setUpdatedContent(content);
   };
 
   const handleSubmitRewrite = () => {
@@ -112,8 +121,9 @@ const RewriteMode = ({ content, onUpdateContent, onExitRewriteMode }) => {
               onRewriteComplete={handleRewriteComplete}
               isRewriting={currentRewritingParagraph === index}
               onUpdateParagraph={handleUpdateParagraph}
+              isCancelled={isCancelled}
             />
-            {currentRewritingParagraph === index && (
+            {currentRewritingParagraph === index && !isCancelled && (
               <div className="text-sm text-yellow-600 mt-2 flex items-center">
                 <FaSync className="animate-spin mr-2" />
                 Currently rewriting this paragraph...
