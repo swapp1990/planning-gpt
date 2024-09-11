@@ -224,7 +224,7 @@ const RewriteParagraph = ({
   };
 
   return (
-    <div className="mb-4 p-3 bg-gray-100 rounded-lg">
+    <div className="p-3 bg-gray-100 rounded-lg">
       {(paragraphContent.match(/[^.!?]+[.!?]+|\s*$/g) || []).map(
         (sentence, sentenceIndex) => {
           if (sentence.trim() === "") return null;

@@ -95,7 +95,11 @@ const ChapterView = ({ chapter }) => {
   };
 
   return (
-    <div className="bg-white shadow rounded-lg p-2 sm:p-6">
+    <div
+      className={`bg-white shadow rounded-lg p-2 sm:p-6 ${
+        isRewriteMode ? "border-4 border-blue-500" : ""
+      }`}
+    >
       {isEditingTitle ? (
         <div className="mb-4">
           <input
