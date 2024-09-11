@@ -1,5 +1,39 @@
 import React, { useReducer, useEffect, useState } from "react";
 import { FaCheck, FaTimes } from "react-icons/fa";
+import { streamedApiCallBasic } from "../../utils/api";
+
+const rewriteSentence = async (sentence, instruction) => {
+  try {
+    let revised_sentence = null;
+    const onChunk = (data) => {
+      let response = JSON.parse(data);
+      if (response.status == "rewriting") {
+      } else if (response.status == "complete") {
+        revised_sentence = response.revised_sentence;
+      } else if (response.status == "ok") {
+        revised_sentence = null;
+      }
+    };
+
+    const onError = (error) => {
+      console.error("Error fetching revised sentence:", error);
+      return null;
+    };
+    await streamedApiCallBasic(
+      `${process.env.REACT_APP_API_URL}/sentence/rewrite`,
+      "POST",
+      {
+        sentence: sentence,
+        instruction: instruction,
+      },
+      onChunk,
+      onError
+    );
+    return { sentence: revised_sentence };
+  } catch (error) {
+    return null;
+  }
+};
 
 const rewritingReducer = (state, action) => {
   switch (action.type) {
@@ -123,33 +157,30 @@ const RewriteParagraph = ({
 
   const [paragraphContent, setParagraphContent] = useState(content);
 
-  const rewriteSentence = async (sentence, instruction) => {
-    // Simulating API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    return `Rewritten: ${sentence}`;
-  };
-
   useEffect(() => {
     const processRewrite = async () => {
       if (!isRewriting) return;
 
       dispatch({ type: "START_REWRITING" });
-      const sentences = paragraphContent.split(".");
+      const sentences = paragraphContent.match(/[^.!?]+[.!?]+|\s*$/g) || [];
       for (let i = 0; i < sentences.length; i++) {
         if (sentences[i].trim() !== "") {
           dispatch({
             type: "SET_SENTENCE_STATUS",
             payload: { key: `${index}-${i}`, status: "scanning" },
           });
-          if (Math.random() < 0.2) {
-            const rewrittenSentence = await rewriteSentence(
-              sentences[i],
-              instruction
-            );
+          const rewrittenSentence = (
+            await rewriteSentence(sentences[i], instruction)
+          ).sentence;
+          if (rewrittenSentence != null) {
             dispatch({
               type: "SET_REWRITTEN_SENTENCE",
               payload: { key: `${index}-${i}`, sentence: rewrittenSentence },
             });
+            // dispatch({
+            //   type: "SET_SENTENCE_STATUS",
+            //   payload: { key: `${index}-${i}`, status: "rewriting" },
+            // });
           } else {
             dispatch({
               type: "SET_SENTENCE_STATUS",
@@ -194,24 +225,26 @@ const RewriteParagraph = ({
 
   return (
     <div className="mb-4 p-3 bg-gray-100 rounded-lg">
-      {paragraphContent.split(".").map((sentence, sentenceIndex) => {
-        if (sentence.trim() === "") return null;
-        const key = `${index}-${sentenceIndex}`;
-        const status = state.sentenceStatuses[key];
-        const newSentence = state.rewrittenSentences[key];
+      {(paragraphContent.match(/[^.!?]+[.!?]+|\s*$/g) || []).map(
+        (sentence, sentenceIndex) => {
+          if (sentence.trim() === "") return null;
+          const key = `${index}-${sentenceIndex}`;
+          const status = state.sentenceStatuses[key];
+          const newSentence = state.rewrittenSentences[key];
 
-        return (
-          <Sentence
-            key={key}
-            sentence={sentence}
-            status={status}
-            newSentence={newSentence}
-            onAccept={handleAccept}
-            onReject={handleReject}
-            sentenceKey={key}
-          />
-        );
-      })}
+          return (
+            <Sentence
+              key={key}
+              sentence={sentence}
+              status={status}
+              newSentence={newSentence}
+              onAccept={handleAccept}
+              onReject={handleReject}
+              sentenceKey={key}
+            />
+          );
+        }
+      )}
     </div>
   );
 };

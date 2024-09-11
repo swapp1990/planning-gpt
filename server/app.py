@@ -395,7 +395,8 @@ def rewrite_sentence():
             yield json.dumps({"status": "error", "message": result['error']})
         else:
             try:
-                parsed_result = json.loads(result)
+                cleaned_result = clean_json_string(result)
+                parsed_result = json.loads(cleaned_result)
                 if 'revised_sentence' in parsed_result:
                     yield json.dumps({"status": "complete", "revised_sentence": parsed_result['revised_sentence']})
                 elif 'revision_needed' in parsed_result and not parsed_result['revision_needed']:
@@ -904,7 +905,6 @@ Generate an event with 3 choices based on this information: {context}, following
     try:
         # Attempt to parse the result as JSON
         cleaned_result = clean_json_string(result)
-        print(cleaned_result)
         event_json = json.loads(cleaned_result)
         return jsonify(event_json)
     except json.JSONDecodeError as e:

@@ -47,7 +47,6 @@ const Paragraph = ({
   };
 
   const handleDelete = async (chapterId, index) => {
-    console.log(chapterId, index);
     setIsLoading(true);
     await chapterActions.deleteParagraph(chapterId, index);
     setIsLoading(false);
