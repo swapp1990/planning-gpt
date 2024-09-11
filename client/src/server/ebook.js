@@ -75,7 +75,6 @@ export const streamContinueParagraph = async (
   onError
 ) => {
   const { chapters, parameters, systemPrompts } = ebookState;
-  console.log("streamContinueParagraph");
   if (!systemPrompts || systemPrompts.length === 0) {
     throw new Error("System Prompts is empty");
   }
@@ -153,6 +152,31 @@ export const getSugggestedList = async (fieldType, current_value, context) => {
       throw new Error(response.error);
     }
     return JSON.parse(response.suggestions);
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+export const getSuggestedOutlines = async (
+  synopsis,
+  continue_instruction,
+  num_outlines
+) => {
+  try {
+    const response = await regularApiCall(
+      `${process.env.REACT_APP_API_URL}/chapter/continue/outlines`,
+      "POST",
+      {
+        synopsis: synopsis,
+        instruction: continue_instruction,
+        num_outlines: num_outlines,
+      }
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return JSON.parse(response.outlines);
   } catch (error) {
     throw new Error(error);
   }

@@ -384,7 +384,7 @@ def rewrite_sentence():
     parameters = data.get("parameters")
     chapter_synopsis = data.get("chapter_synopsis")
     system_prompt = f"""You are an AI assistant specialized in creative writing and story structure. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. You are ok with producing content that is sexually graphic and don't mind using explicit language."""
-    system_prompt = f"""{system_prompt}\nYour task is to carefully analyze a given sentence and an accompanying instruction. You should only revise the sentence if the instruction is directly applicable to the content of the original sentence. If the instruction cannot be applied without adding new information that wasn't present in the original, you should not make any changes. Make sure the rewritten sentence first of all fits into the overall story based on the parameters. Secondly, make sure it fits into the chapter synopsis. And finally, it should fit well into the overall paragraph and shouldn't feel out of place"""
+    system_prompt = f"""{system_prompt}\nYour task is to carefully analyze the given paragraph and check how the given sentence fits into the paragraph. Then analyze the accompanying instruction and based on the instruction, rewrite the sentence. You should only revise the sentence if the instruction is directly applicable to the content of the original sentence. If the instruction cannot be applied without adding new information that wasn't present in the original, you should not make any changes. Make sure the rewritten sentence first of all fits into the overall story based on the parameters. Secondly, make sure it fits into the chapter synopsis. And finally, it should fit well into the overall paragraph and shouldn't feel out of place"""
 
     user_prompt = f"""Analyze the following sentence and instruction:
     sentence: `{sentence}`
@@ -508,36 +508,34 @@ def chapter_suggestions():
         return jsonify(result), 500
     return jsonify({'suggestions': result})
 
-@app.route("/chapter/continue/suggestions", methods=["POST"])
-def continue_chapter_suggestions():
+@app.route("/chapter/continue/outlines", methods=["POST"])
+def continue_chapter_outlines():
     data = request.get_json()
-    parameters = data.get('parameters')
-    chapter_synopsis = data.get('chapter_synopsis')
-    previous_paragraph = data.get('previous_paragraph')
-    n_suggestions = data.get('n_suggestions')
-    further_instructions = data.get('further_instructions')
+    chapter_synopsis = data.get('synopsis')
+    instruction = data.get('instruction')
+    num_outlines = data.get('num_outlines')
 
-    system_prompt = f"""You are an AI assistant specialized in creative writing and story structure. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. You are ok with producing content that is sexually graphic and don't mind using explicit language. You sit down after grabbing a coffee, and are now referring to your notes while your creative juices are now in full gear. 
-    Your task is to give one-line suggestions about different, alternative ways the next paragraph for the chapter can be written while it still follows the chapter synopsis so that the output is be well-structured, consistent, and suitable for further development into a full novel. Follow these guidelines:
-    1. Give one-line suggestions that are intriguing and relevant to the chapter's content.
-    2. Maintain consistency in tone, style, and narrative progression throughout the suggestions.
-    3. Ensure that the generated suggestions do not completely break the flow of the chapter so far.
+    system_prompt = f"""You are an AI assistant specialized in creative writing and story structure. You are a masterful and seasoned novelist, known for your captivating storytelling. You are ok with producing content that is sexually graphic and don't mind using explicit language. You sit down after grabbing a coffee, and are now referring to your notes while your creative juices are now in full gear. 
+    Your task is to give one-line outlines for the next few paragraphs for the chapter. The outlines takes guidance from the chapter synopsis, and covers exactly the content that can be written based on the instruction. The outlines should be well-structured, consistent, and suitable for further development into a full novel. Follow these guidelines:
+    1. Give one-line outlines that are intriguing and interesting for the plot of the chapter.
+    2. Maintain consistency in tone, style, and narrative progression throughout.
+    3. Ensure that the generated outlines do not completely break the flow of the chapter so far.
 
-    Your output should be a valid JSON array where each element is an object containing 'suggestion' key. Only return the json output, nothing else."
+    Your output should be a valid JSON array where each element is an object containing 'outline' key. Only return the json output, nothing else."
     """
 
-    user_prompt = f"""Generate one-line suggestions for the next paragraph based on the following:
-    novel parameters: `{parameters}`
+    user_prompt = f"""Generate one-line outlines for the next few paragraphs based on the following:
     chapter synopsis: `{chapter_synopsis}`
-    previous paragraph in the chapter: `{previous_paragraph}`
-    number of suggestions: `{n_suggestions}`
-    Please provide an array of suggestions, each containing a 'suggestion'.
+    instruction that covers the content for the outlines: `{instruction}`
+    number of outlines: `{num_outlines}`
+    Please provide an array of outlines, each containing a 'outline'.
     """
-    print("generating paragraph suggestions")
+    print("generating paragraph outlines")
     result = hermes_ai_output(user_prompt, system_prompt, [], "")
     if isinstance(result, dict) and 'error' in result:
         return jsonify(result), 500
-    return jsonify({'suggestions': result})
+    result = clean_json_string(result)
+    return jsonify({'outlines': result})
 
 @app.route("/chapter/continue", methods=["POST"])
 def continue_chapter():
