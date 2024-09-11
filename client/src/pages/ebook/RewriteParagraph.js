@@ -1,8 +1,15 @@
 import React, { useReducer, useEffect, useState } from "react";
 import { FaCheck, FaTimes, FaCheckDouble, FaTimesCircle } from "react-icons/fa";
 import { streamedApiCallBasic } from "../../utils/api";
+import { useEbook } from "../../context/EbookContext";
 
-const rewriteSentence = async (sentence, instruction) => {
+const rewriteSentence = async (
+  sentence,
+  instruction,
+  paragraph,
+  parameters,
+  chapter_synopsis
+) => {
   try {
     let revised_sentence = null;
     const onChunk = (data) => {
@@ -25,6 +32,9 @@ const rewriteSentence = async (sentence, instruction) => {
       {
         sentence: sentence,
         instruction: instruction,
+        paragraph: paragraph,
+        parameters: parameters,
+        chapter_synopsis: chapter_synopsis,
       },
       onChunk,
       onError
@@ -161,7 +171,7 @@ const Sentence = ({
     <span className={className}>
       {status === "rewrite" && (
         <span className="text-blue-600 text-sm mb-1 new-sentence flex items-start">
-          <span className="mr-1">{newSentence}.</span>
+          <span className="mr-1">{newSentence}</span>
           <span className="inline-flex items-center flex-shrink-0">
             <button
               onClick={() => onAccept(sentenceKey, newSentence)}
@@ -181,7 +191,7 @@ const Sentence = ({
         </span>
       )}
       <span className={status === "rewrite" ? "text-gray-500" : ""}>
-        {sentence}.
+        {sentence}
       </span>
     </span>
   );
@@ -196,6 +206,7 @@ const RewriteParagraph = ({
   onUpdateParagraph,
   isCancelled,
 }) => {
+  const { ebookState } = useEbook();
   const [state, dispatch] = useReducer(rewritingReducer, {
     isRewriting: false,
     currentSentence: -1,
@@ -206,10 +217,12 @@ const RewriteParagraph = ({
   });
 
   const [paragraphContent, setParagraphContent] = useState(content);
+  const chapter = ebookState.chapters.find(
+    (c) => c.id === ebookState.currentChapter
+  );
 
   useEffect(() => {
     if (isCancelled) {
-      console.log("is cancelled");
       dispatch({ type: "RESET" });
       setParagraphContent(content);
     }
@@ -218,7 +231,6 @@ const RewriteParagraph = ({
   useEffect(() => {
     const processRewrite = async () => {
       if (!isRewriting) return;
-      console.log("processRewrite");
 
       dispatch({ type: "START_REWRITING" });
       const sentences = paragraphContent.match(/[^.!?]+[.!?]+|\s*$/g) || [];
@@ -233,7 +245,13 @@ const RewriteParagraph = ({
             payload: { key: `${index}-${i}`, status: "scanning" },
           });
           const rewrittenSentence = (
-            await rewriteSentence(sentences[i], instruction)
+            await rewriteSentence(
+              sentences[i],
+              instruction,
+              paragraphContent,
+              ebookState.parameters,
+              chapter.synopsis
+            )
           ).sentence;
           if (rewrittenSentence != null && !isCancelled) {
             dispatch({

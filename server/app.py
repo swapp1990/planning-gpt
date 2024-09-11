@@ -380,15 +380,23 @@ def rewrite_sentence():
     data = request.get_json()
     sentence = data.get("sentence")
     instruction = data.get("instruction")
+    paragraph = data.get("paragraph")
+    parameters = data.get("parameters")
+    chapter_synopsis = data.get("chapter_synopsis")
     system_prompt = f"""You are an AI assistant specialized in creative writing and story structure. You are a masterful and seasoned novelist, known for your captivating storytelling and rich, evocative prose. You are ok with producing content that is sexually graphic and don't mind using explicit language."""
-    system_prompt = f"""{system_prompt}\nYour task is to carefully analyze a given sentence and an accompanying instruction. You should only revise the sentence if the instruction is directly applicable to the content of the original sentence. If the instruction cannot be applied without adding new information that wasn't present in the original, you should not make any changes."""
+    system_prompt = f"""{system_prompt}\nYour task is to carefully analyze a given sentence and an accompanying instruction. You should only revise the sentence if the instruction is directly applicable to the content of the original sentence. If the instruction cannot be applied without adding new information that wasn't present in the original, you should not make any changes. Make sure the rewritten sentence first of all fits into the overall story based on the parameters. Secondly, make sure it fits into the chapter synopsis. And finally, it should fit well into the overall paragraph and shouldn't feel out of place"""
 
     user_prompt = f"""Analyze the following sentence and instruction:
     sentence: `{sentence}`
     instruction: `{instruction}`
+    paragraph in which this sentence is part of: `{paragraph}`
+    chapter synopsis: `{chapter_synopsis}`
+    story parameters: `{parameters}`
     If the instruction can be applied to revise the sentence without adding information that wasn't present in the original, provide a revised version. If no revision is needed or possible based solely on the original sentence's content, return false.
     Your output should be a valid JSON object with either a 'revised_sentence' key (if a revision was made) or a 'revision_needed' key set to false (if no revision was possible or necessary). Only return the JSON output, nothing else.
     """
+    # print(user_prompt)
+
     def generate():
         result = openai_output(user_prompt, system_prompt, [], "")
         if isinstance(result, dict) and 'error' in result:

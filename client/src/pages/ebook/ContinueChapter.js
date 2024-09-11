@@ -41,7 +41,7 @@ const ContinueChapter = ({ chapterId, onClose }) => {
   };
 
   return (
-    <div className="mt-6 bg-white rounded-lg shadow-lg p-6 transition-all duration-300 ease-in-out">
+    <div className="mt-2 sm:mt-6 bg-white rounded-lg shadow-lg p-6 transition-all duration-300 ease-in-out">
       <h3 className="text-2xl font-bold mb-4 text-gray-800">
         Continue Chapter
       </h3>
