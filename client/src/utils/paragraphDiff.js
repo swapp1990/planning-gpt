@@ -130,3 +130,59 @@ export const computeDiff = (original, edited) => {
 
   return diff;
 };
+
+export const splitSentences = (text) => {
+  const abbreviations = [
+    "Mr",
+    "Mrs",
+    "Dr",
+    "Ms",
+    "Sr",
+    "Jr",
+    "St",
+    "Prof",
+    "etc",
+  ];
+  const abbrevRegex = new RegExp(`\\b(${abbreviations.join("|")})\\.`, "g");
+
+  // Replace periods in abbreviations with a placeholder
+  text = text.replace(abbrevRegex, (match) => match.replace(".", "{{DOT}}"));
+
+  let result = [];
+  let currentSentence = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    currentSentence += text[i];
+
+    if (text[i] === '"') {
+      inQuotes = !inQuotes;
+
+      // If we're closing quotes and the previous character was a period, question mark, or exclamation mark
+      if (!inQuotes && i > 0 && /[.!?]/.test(text[i - 1])) {
+        // Check if the next character is not a comma
+        if (i === text.length - 1 || text[i + 1] !== ",") {
+          result.push(currentSentence.trim());
+          currentSentence = "";
+        }
+      }
+    } else if (
+      /[.!?]/.test(text[i]) &&
+      !inQuotes &&
+      (i === text.length - 1 || text[i + 1] === " ")
+    ) {
+      // Split on period, question mark, or exclamation mark outside quotes
+      result.push(currentSentence.trim());
+      currentSentence = "";
+    }
+  }
+
+  if (currentSentence) {
+    result.push(currentSentence.trim());
+  }
+
+  // Restore the periods in abbreviations
+  result = result.map((sentence) => sentence.replace(/{{DOT}}/g, "."));
+
+  return result;
+};

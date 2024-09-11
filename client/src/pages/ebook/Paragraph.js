@@ -9,9 +9,9 @@ import {
 } from "react-icons/fa";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 
-import ParagraphReview from "./ParagraphReview";
 import ParagraphMenu from "./ParagraphMenu";
 import SelectableSentence from "./SelectableSentence";
+import RewriteParagraph from "./RewriteParagraph";
 import { useEbook } from "../../context/EbookContext";
 
 const Paragraph = ({
@@ -22,29 +22,13 @@ const Paragraph = ({
   onNoteChange,
 }) => {
   const { chapterActions } = useEbook();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedContent, setEditedContent] = useState(content);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isReviewOpen, setIsReviewOpen] = useState(false);
-  const [rewrittenContent, setRewrittenContent] = useState("");
-
-  const handleEditClick = () => {
-    setIsEditing(true);
-    setIsMenuOpen(false);
-  };
-
-  const handleSave = async () => {
-    setIsLoading(true);
-    await chapterActions.editParagraph(chapterId, index, editedContent);
-    setIsEditing(false);
-    setIsLoading(false);
-  };
-
-  const handleCancel = () => {
-    setEditedContent(content);
-    setIsEditing(false);
-  };
+  const [isRewriting, setIsRewriting] = useState(false);
+  const [isRewritingComplete, setIsRewritingComplete] = useState(false);
+  const [openRewriting, setOpenRewriting] = useState(false);
+  const [rewriteInstruction, setRewriteInstruction] = useState("");
+  const [isCancelled, setIsCancelled] = useState(false);
 
   const handleDelete = async (chapterId, index) => {
     setIsLoading(true);
@@ -52,18 +36,17 @@ const Paragraph = ({
     setIsLoading(false);
   };
 
-  const handleRewrite = async (instruction) => {
-    setIsLoading(true);
-    const result = await chapterActions.rewriteParagraph(
-      chapterId,
-      index,
-      instruction
-    );
-    if (result.newParagraph) {
-      setRewrittenContent(result.newParagraph);
-      setIsReviewOpen(true);
-    }
-    setIsLoading(false);
+  const handleRewriteOpen = async (instruction) => {
+    setRewriteInstruction(instruction);
+    setOpenRewriting(true);
+    setIsRewriting(true);
+    setIsCancelled(false);
+  };
+
+  const handleRewriteComplete = () => {
+    // setIsRewriting(false);
+    // setRewriteInstruction("");
+    setIsRewritingComplete(true);
   };
 
   const handleInsert = async (newContent) => {
@@ -72,86 +55,76 @@ const Paragraph = ({
     setIsLoading(false);
   };
 
-  const handleReviewSave = async (finalContent) => {
-    setIsLoading(true);
-    await chapterActions.applyRewrite(chapterId, index, finalContent);
-    setIsReviewOpen(false);
+  const handleMenuRewriteCancel = () => {
+    console.log("handleMenuRewriteCancel");
+    setIsCancelled(true);
+    setIsRewriting(false);
+    setOpenRewriting(false);
+  };
+
+  const handleMenuClose = () => {
     setIsLoading(false);
+    setIsMenuOpen(false);
+    setRewriteInstruction("");
+    setIsRewriting(false);
+    setOpenRewriting(false);
+  };
+
+  const handleUpdateParagraph = async (index, newContent) => {
+    setIsRewritingComplete(true);
+    setIsLoading(false);
+    setIsMenuOpen(false);
+    setRewriteInstruction("");
+    setOpenRewriting(false);
+    await chapterActions.applyRewrite(chapterId, index, newContent);
   };
 
   return (
     <div className={`${isMenuOpen ? "bg-blue-50 rounded-lg" : ""}`}>
-      {isEditing ? (
-        <div className="space-y-2">
-          <textarea
-            className="w-full p-2 border rounded"
-            value={editedContent}
-            onChange={(e) => setEditedContent(e.target.value)}
-            rows={3}
-          />
-          <div className="flex justify-end space-x-2">
-            <button
-              onClick={handleCancel}
-              className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200"
-              disabled={isLoading}
-            >
-              <FaTimes className="mr-1" /> Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <AiOutlineLoading3Quarters className="animate-spin mr-2" />
-              ) : (
-                <FaCheck className="mr-1" />
-              )}
-              {isLoading ? "Saving..." : "Save"}
-            </button>
-          </div>
-        </div>
+      {openRewriting ? (
+        <RewriteParagraph
+          content={content}
+          index={index}
+          instruction={rewriteInstruction}
+          onRewriteComplete={handleRewriteComplete}
+          isRewriting={isRewriting}
+          onUpdateParagraph={handleUpdateParagraph}
+          isCancelled={isCancelled}
+        />
       ) : (
-        <>
-          {isRewriteMode ? (
-            content
-              .split(". ")
-              .map((sentence, sentenceIndex) => (
-                <SelectableSentence
-                  key={sentenceIndex}
-                  sentence={sentence}
-                  index={`${index}-${sentenceIndex}`}
-                  onNoteChange={onNoteChange}
-                />
-              ))
-          ) : (
-            <p
-              className="p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {content}
-            </p>
-          )}
-
-          {isMenuOpen && (
-            <ParagraphMenu
-              content={content}
-              chapterId={chapterId}
-              paragraphId={index}
-              onClose={() => setIsMenuOpen(false)}
-              onRewrite={handleRewrite}
-              onDelete={handleDelete}
-              onInsert={handleInsert}
-            />
-          )}
-        </>
+        <p
+          className="p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+        >
+          {content}
+        </p>
       )}
-      {isReviewOpen && (
-        <ParagraphReview
-          original={content}
-          edited={rewrittenContent}
-          onSave={handleReviewSave}
-          onCancel={() => setIsReviewOpen(false)}
+      {/* {isRewriting && !isRewritingComplete && (
+        <button
+          onClick={handleCancelRewrite}
+          className="mt-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
+        >
+          Cancel Rewrite
+        </button>
+      )}
+      {isRewritingComplete && (
+        <button
+          onClick={handleSubmitRewrite}
+          className="mt-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
+        >
+          Submit Rewrite
+        </button>
+      )} */}
+      {isMenuOpen && (
+        <ParagraphMenu
+          content={content}
+          chapterId={chapterId}
+          paragraphId={index}
+          onClose={handleMenuClose}
+          onRewrite={handleRewriteOpen}
+          onDelete={handleDelete}
+          onInsert={handleInsert}
+          onCancel={handleMenuRewriteCancel}
         />
       )}
     </div>

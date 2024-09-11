@@ -15,6 +15,7 @@ const ParagraphMenu = ({
   chapterId,
   paragraphId,
   onClose,
+  onCancel,
   onRewrite,
   onDelete,
   onInsert,
@@ -27,8 +28,13 @@ const ParagraphMenu = ({
   const handleRewriteSubmit = async (instruction) => {
     setIsLoading(true);
     await onRewrite(instruction);
+    // setIsLoading(false);
+    // setIsRewriteOpen(false);
+  };
+
+  const handleRewritCancel = async () => {
     setIsLoading(false);
-    setIsRewriteOpen(false);
+    onCancel();
   };
 
   const handleInsertSubmit = async () => {
@@ -86,7 +92,7 @@ const ParagraphMenu = ({
           content={content}
           isLoading={isLoading}
           onSubmit={handleRewriteSubmit}
-          onCancel={() => setIsRewriteOpen(false)}
+          onCancel={handleRewritCancel}
         />
       )}
       {isInsertOpen && (

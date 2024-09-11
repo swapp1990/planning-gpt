@@ -92,8 +92,10 @@ const SentenceSelector = ({
 
 const RewritePanel = ({ content, isLoading, onSubmit, onCancel }) => {
   const [rewritePrompt, setRewritePrompt] = useState("");
+  const [finalInstruction, setFinalInstruction] = useState("");
   const [selectedSentences, setSelectedSentences] = useState({});
   const [showSentenceSelector, setShowSentenceSelector] = useState(false);
+  const [closeInput, setCloseInput] = useState(false);
 
   const handleSelectionChange = (index, note) => {
     setSelectedSentences((prev) => {
@@ -113,47 +115,66 @@ const RewritePanel = ({ content, isLoading, onSubmit, onCancel }) => {
     const finalInstruction = `${rewritePrompt}\n\nSpecific instructions:\n${instructions.join(
       "\n"
     )}`;
+    setFinalInstruction(finalInstruction);
     onSubmit(finalInstruction);
+    setCloseInput(true);
+  };
+
+  const handleCancel = () => {
+    setFinalInstruction("");
+    setCloseInput(false);
+    onCancel();
   };
 
   return (
     <div className="mt-4 bg-white p-4 rounded-lg shadow">
       <h3 className="text-lg font-semibold mb-2">Rewrite Section</h3>
-      <button
-        onClick={() => setShowSentenceSelector(!showSentenceSelector)}
-        className="mb-2 px-2 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 flex items-center"
-      >
-        <FaPlus size={12} className="mr-1" />
-        {showSentenceSelector ? "Hide Sentence Selector" : "Add Sentence Notes"}
-      </button>
-      {showSentenceSelector && (
-        <SentenceSelector
-          content={content}
-          selectedSentences={selectedSentences}
-          onSelectionChange={handleSelectionChange}
-        />
-      )}
-      <div className="mb-2">
-        {Object.entries(selectedSentences).map(([index, { note }]) => (
-          <div key={index} className="text-sm text-gray-600 mb-1">
-            Sentence {parseInt(index) + 1}: {note}
+      {!closeInput && (
+        <div>
+          <button
+            onClick={() => setShowSentenceSelector(!showSentenceSelector)}
+            className="mb-2 px-2 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 flex items-center"
+          >
+            <FaPlus size={12} className="mr-1" />
+            {showSentenceSelector
+              ? "Hide Sentence Selector"
+              : "Add Sentence Notes"}
+          </button>
+
+          {showSentenceSelector && (
+            <SentenceSelector
+              content={content}
+              selectedSentences={selectedSentences}
+              onSelectionChange={handleSelectionChange}
+            />
+          )}
+
+          <div className="mb-2">
+            {Object.entries(selectedSentences).map(([index, { note }]) => (
+              <div key={index} className="text-sm text-gray-600 mb-1">
+                Sentence {parseInt(index) + 1}: {note}
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      <textarea
-        className="w-full p-2 border rounded-md mt-2"
-        rows="3"
-        placeholder="Enter general rewriting instructions here ..."
-        value={rewritePrompt}
-        onChange={(e) => setRewritePrompt(e.target.value)}
-      />
+
+          <textarea
+            className="w-full p-2 border rounded-md mt-2"
+            rows="3"
+            placeholder="Enter general rewriting instructions here ..."
+            value={rewritePrompt}
+            onChange={(e) => setRewritePrompt(e.target.value)}
+          />
+        </div>
+      )}
+      {closeInput && <div>{finalInstruction}</div>}
       <div className="flex justify-end mt-2 space-x-2">
         <button
-          onClick={onCancel}
+          onClick={handleCancel}
           className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200"
         >
           Cancel
         </button>
+
         <button
           onClick={handleSubmit}
           className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 flex items-center"

@@ -1,6 +1,7 @@
-import React, { useReducer, useEffect, useState } from "react";
+import React, { useReducer, useEffect, useState, useRef } from "react";
 import { FaCheck, FaTimes, FaCheckDouble, FaTimesCircle } from "react-icons/fa";
 import { streamedApiCallBasic } from "../../utils/api";
+import { splitSentences } from "../../utils/paragraphDiff";
 import { useEbook } from "../../context/EbookContext";
 
 const rewriteSentence = async (
@@ -162,7 +163,7 @@ const Sentence = ({
   onReject,
   sentenceKey,
 }) => {
-  let className = "transition-all duration-300 relative ";
+  let className = "transition-all duration-300 relative mt-2 ";
   if (status === "scanning") className += "bg-yellow-200 ";
   else if (status === "rewriting") className += "bg-red-200 ";
   else if (status === "accepted") className += "bg-green-200 ";
@@ -191,7 +192,7 @@ const Sentence = ({
         </span>
       )}
       <span className={status === "rewrite" ? "text-gray-500" : ""}>
-        {sentence}
+        {sentence}&nbsp;
       </span>
     </span>
   );
@@ -207,6 +208,7 @@ const RewriteParagraph = ({
   isCancelled,
 }) => {
   const { ebookState } = useEbook();
+  const cancelledRef = useRef(false);
   const [state, dispatch] = useReducer(rewritingReducer, {
     isRewriting: false,
     currentSentence: -1,
@@ -217,6 +219,7 @@ const RewriteParagraph = ({
   });
 
   const [paragraphContent, setParagraphContent] = useState(content);
+  const [sentences, setSentences] = useState([]);
   const chapter = ebookState.chapters.find(
     (c) => c.id === ebookState.currentChapter
   );
@@ -229,11 +232,15 @@ const RewriteParagraph = ({
   }, [isCancelled, content]);
 
   useEffect(() => {
+    cancelledRef.current = false;
     const processRewrite = async () => {
       if (!isRewriting) return;
-
+      if (state.isScanningComplete) return;
       dispatch({ type: "START_REWRITING" });
-      const sentences = paragraphContent.match(/[^.!?]+[.!?]+|\s*$/g) || [];
+
+      const sentences = splitSentences(paragraphContent);
+      // console.log(sentences);
+      setSentences(sentences);
       for (let i = 0; i < sentences.length; i++) {
         if (isCancelled) {
           dispatch({ type: "RESET" });
@@ -253,6 +260,9 @@ const RewriteParagraph = ({
               chapter.synopsis
             )
           ).sentence;
+          if (cancelledRef.current) {
+            break;
+          }
           if (rewrittenSentence != null && !isCancelled) {
             dispatch({
               type: "SET_REWRITTEN_SENTENCE",
@@ -265,9 +275,8 @@ const RewriteParagraph = ({
             });
           }
         }
-        if (!isCancelled) {
-          dispatch({ type: "NEXT_SENTENCE" });
-        }
+        if (cancelledRef.current) break;
+        dispatch({ type: "NEXT_SENTENCE" });
       }
       if (!isCancelled) {
         dispatch({ type: "FINISH_REWRITING" });
@@ -277,14 +286,14 @@ const RewriteParagraph = ({
     };
 
     processRewrite();
-  }, [
-    isRewriting,
-    paragraphContent,
-    index,
-    instruction,
-    onRewriteComplete,
-    isCancelled,
-  ]);
+    return () => {
+      cancelledRef.current = true;
+    };
+  }, [isRewriting, paragraphContent, index, instruction, onRewriteComplete]);
+
+  useEffect(() => {
+    cancelledRef.current = isCancelled;
+  }, [isCancelled]);
 
   const handleAccept = (key, newSentence) => {
     dispatch({ type: "ACCEPT_REWRITE", payload: { key, newSentence } });
@@ -306,25 +315,30 @@ const RewriteParagraph = ({
     dispatch({ type: "REJECT_ALL" });
   };
 
+  const handleCancelRewrite = () => {
+    console.log("handleCancelRewrite");
+    cancelledRef.current = true;
+  };
+
+  const handleSubmitRewrite = () => {
+    console.log("handleSubmitRewrite");
+    onUpdateParagraph(index, paragraphContent);
+  };
+
   const updateParagraphContent = (key, newSentence) => {
     const [, sentenceIndex] = key.split("-").map(Number);
-    const sentences = paragraphContent.match(/[^.!?]+[.!?]+|\s*$/g) || [];
     if (sentences[sentenceIndex]) {
-      const originalSpaceBefore = sentences[sentenceIndex].match(/^\s*/)[0];
-      const originalSpaceAfter = sentences[sentenceIndex].match(/\s*$/)[0];
-      sentences[sentenceIndex] =
-        originalSpaceBefore + newSentence.trim() + originalSpaceAfter;
-      const updatedContent = sentences.join("");
+      sentences[sentenceIndex] = newSentence;
+      const updatedContent = sentences.join(" ");
       setParagraphContent(updatedContent);
-      onUpdateParagraph(index, updatedContent);
     }
   };
 
   return (
     <div className="p-3 bg-gray-100 rounded-lg">
-      {(paragraphContent.match(/[^.!?]+[.!?]+|\s*$/g) || []).map(
-        (sentence, sentenceIndex) => {
-          if (sentence.trim() === "") return null;
+      {sentences &&
+        sentences.map((sentence, sentenceIndex) => {
+          if (!sentence || sentence.trim() === "") return null;
           const key = `${index}-${sentenceIndex}`;
           const status = state.sentenceStatuses[key];
           const newSentence = state.rewrittenSentences[key];
@@ -340,8 +354,7 @@ const RewriteParagraph = ({
               sentenceKey={key}
             />
           );
-        }
-      )}
+        })}
       {state.isScanningComplete &&
         !isCancelled &&
         Object.keys(state.rewrittenSentences).length > 0 && (
@@ -360,6 +373,25 @@ const RewriteParagraph = ({
             </button>
           </div>
         )}
+
+      <div>
+        {!state.isScanningComplete && (
+          <button
+            onClick={handleCancelRewrite}
+            className="mt-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
+          >
+            Cancel Rewrite
+          </button>
+        )}
+        {state.isScanningComplete && (
+          <button
+            onClick={handleSubmitRewrite}
+            className="mt-2 px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
+          >
+            Submit Rewrite
+          </button>
+        )}
+      </div>
     </div>
   );
 };
