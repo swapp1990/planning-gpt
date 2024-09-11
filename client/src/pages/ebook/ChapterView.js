@@ -1,10 +1,18 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useEbook } from "../../context/EbookContext";
-import { FaEdit, FaCheck, FaTimes, FaArrowDown } from "react-icons/fa";
+import {
+  FaEdit,
+  FaCheck,
+  FaTimes,
+  FaPlus,
+  FaSync,
+  FaArrowDown,
+} from "react-icons/fa";
 
 import Synopsis from "./Synopsis";
 import Paragraph from "./Paragraph";
 import ContinueChapter from "./ContinueChapter";
+import RewriteMode from "./RewriteMode";
 
 const ChapterView = ({ chapter }) => {
   const { chapterActions } = useEbook();
@@ -13,11 +21,21 @@ const ChapterView = ({ chapter }) => {
   const [editedTitle, setEditedTitle] = useState(chapter.title);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  const [isRewriteMode, setIsRewriteMode] = useState(false);
+  const [chapterContent, setChapterContent] = useState(chapter.content);
+
   const continueButtonRef = useRef(null);
 
   useEffect(() => {
     setEditedTitle(chapter.title);
   }, [chapter.title]);
+
+  useEffect(() => {
+    if (chapter.content) {
+      setChapterContent(chapter.content);
+    }
+  }, [chapter.content]);
 
   const handleTitleSave = async () => {
     setIsLoading(true);
@@ -65,6 +83,19 @@ const ChapterView = ({ chapter }) => {
     setIsLoading(false);
   };
 
+  const handleUpdateContent = async (newContent) => {
+    setChapterContent(newContent);
+    setIsLoading(true);
+    setError(null);
+    try {
+      await chapterActions.updateChapter(chapter.id, { content: newContent });
+    } catch (err) {
+      console.log(err);
+      setError("Failed to update chapter. Please try again.");
+    }
+    setIsLoading(false);
+  };
+
   const scrollToContinueButton = useCallback(() => {
     if (continueButtonRef.current) {
       continueButtonRef.current.scrollIntoView({
@@ -75,7 +106,11 @@ const ChapterView = ({ chapter }) => {
   }, []);
 
   return (
-    <div className="bg-white shadow rounded-lg p-2 sm:p-6">
+    <div
+      className={`bg-white shadow rounded-lg p-2 sm:p-6 ${
+        isRewriteMode ? "border-4 border-blue-500" : ""
+      }`}
+    >
       <div className="flex items-center justify-between mb-4">
         {isEditingTitle ? (
           <div className="flex-grow">
@@ -117,7 +152,7 @@ const ChapterView = ({ chapter }) => {
         <button
           onClick={scrollToContinueButton}
           className="p-2 text-gray-600 hover:text-gray-800 transition-colors duration-200"
-          aria-label="Scroll to bottom of chapter"
+          aria-label="Scroll to continue button"
         >
           <FaArrowDown className="w-5 h-5" />
         </button>
@@ -127,31 +162,55 @@ const ChapterView = ({ chapter }) => {
         chapterId={chapter.id}
         onEdit={handleSynopsisEdit}
       />
-      {chapter.content.map((p, index) => (
-        <Paragraph
-          key={index}
-          content={p}
-          index={index}
-          chapterId={chapter.id}
-          onEdit={handleParagraphEdit}
-          onDelete={handleParagraphDelete}
+      {isRewriteMode ? (
+        <RewriteMode
+          content={chapterContent}
+          onUpdateContent={handleUpdateContent}
+          onExitRewriteMode={() => setIsRewriteMode(false)}
         />
-      ))}
+      ) : (
+        chapterContent.map((p, index) => (
+          <Paragraph
+            key={index}
+            content={p}
+            index={index}
+            chapterId={chapter.id}
+            onEdit={chapterActions.updateChapter}
+            onDelete={chapterActions.deleteChapter}
+          />
+        ))
+      )}
 
-      {isContinueChapter ? (
+      {isContinueChapter && (
         <ContinueChapter
           chapterId={chapter.id}
           onClose={() => setIsContinueChapter(false)}
         />
-      ) : (
-        <button
-          onClick={() => setIsContinueChapter(true)}
-          ref={continueButtonRef}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200"
-        >
-          Continue
-        </button>
       )}
+
+      <div className="mt-4 flex justify-between items-center">
+        <button
+          onClick={() => setIsRewriteMode(!isRewriteMode)}
+          className={`px-4 py-2 rounded-md transition-colors duration-200 ${
+            isRewriteMode
+              ? "bg-red-500 text-white hover:bg-red-600"
+              : "bg-blue-500 text-white hover:bg-blue-600"
+          }`}
+        >
+          <FaSync className="inline-block mr-2" />
+          {isRewriteMode ? "Exit Rewrite Mode" : "Enter Rewrite Mode"}
+        </button>
+
+        {!isRewriteMode && (
+          <button
+            ref={continueButtonRef}
+            onClick={() => setIsContinueChapter(true)}
+            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200"
+          >
+            Continue
+          </button>
+        )}
+      </div>
 
       {isLoading && <p className="mt-4 text-gray-600">Loading...</p>}
       {error && <p className="mt-4 text-red-500">{error}</p>}
