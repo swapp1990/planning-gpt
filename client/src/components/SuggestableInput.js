@@ -38,9 +38,6 @@ const SuggestableInput = ({
 
   return (
     <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        {label}
-      </label>
       <div
         className={`relative flex ${
           multiline ? "items-start" : "items-center"
@@ -75,7 +72,7 @@ const SuggestableInput = ({
         </div>
         <InputComponent
           className={`w-full p-2 border rounded-md focus:ring-yellow-500 focus:border-yellow-500 ${
-            multiline ? "pl-10" : "pl-4 sm:pl-8"
+            multiline ? "sm:pl-10 pl-2" : "pl-4 sm:pl-8"
           }`}
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}

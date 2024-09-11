@@ -540,10 +540,11 @@ def continue_chapter():
     previousChapters = data.get('previousChapters')
     instruction = data.get('instruction')
     systemPrompt = data.get('systemPrompt')
+    numParagraphs = data.get('numParagraphs')
     # passage = data.get('passage')
     previousParagraph = data.get('previousParagraph')
 
-    prompt = f'Please continue the story for the current chapter based on the following synopsis for the chapter: `{synopsis}` and the following instruction: `{instruction}` The instruction are meant to guide the paragraph, it does not mean the paragraph needs to be started with exact words as the instruction. This are the parameters that guide the story: `{parameters}`' 
+    prompt = f'Please continue the story for the current chapter based on the following synopsis for the chapter: `{synopsis}` and the following instruction: `{instruction}` The instruction are meant to guide the paragraph, it does not mean the paragraph needs to be started with exact words as the instruction. This are the parameters that guide the overall story: `{parameters}`. Write exactly {numParagraphs} number of paragraphs.' 
     if previousParagraph is not None and previousParagraph != "":
         prompt = f'{prompt}\nHere is the previous paragraph of the current chapter: `{previousParagraph}`.'
     if previousChapters is not None and previousChapters != "":
