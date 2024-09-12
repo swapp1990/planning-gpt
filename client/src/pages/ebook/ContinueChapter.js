@@ -1,9 +1,10 @@
 import React, { useState, useCallback } from "react";
-import { FaCheck, FaTimes, FaOutdent } from "react-icons/fa";
+import { FaCheck, FaTimes, FaParagraph, FaListUl } from "react-icons/fa";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { useEbook } from "../../context/EbookContext";
 import SuggestableInput from "../../components/SuggestableInput";
 import { getSuggestedOutlines } from "../../server/ebook";
+import OutlineSection from "./OutlineSection";
 
 const ContinueChapter = ({ chapterId, onClose }) => {
   const { chapterActions, ebookState } = useEbook();
@@ -11,8 +12,8 @@ const ContinueChapter = ({ chapterId, onClose }) => {
   const [paragraphCount, setParagraphCount] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [generateOutlines, setGenerateOutlines] = useState(false);
   const [outlines, setOutlines] = useState([]);
+  const [mode, setMode] = useState("direct"); // "direct" or "outline"
 
   const chapter = ebookState.chapters.find((c) => c.id === chapterId);
 
@@ -20,17 +21,7 @@ const ContinueChapter = ({ chapterId, onClose }) => {
     setError(null);
     setIsLoading(true);
     try {
-      if (generateOutlines) {
-        // Simulate outlines for now
-        let outlines = await getSuggestedOutlines(
-          chapter.synopsis,
-          instruction,
-          paragraphCount
-        );
-        outlines = outlines.map((o) => o.outline);
-
-        setOutlines(outlines);
-      } else {
+      if (mode === "direct") {
         const response = await chapterActions.continueChapter(
           chapterId,
           instruction,
@@ -42,6 +33,15 @@ const ContinueChapter = ({ chapterId, onClose }) => {
           setInstruction("");
           onClose();
         }
+      } else {
+        let generatedOutlines = await getSuggestedOutlines(
+          chapter.synopsis,
+          instruction,
+          paragraphCount
+        );
+        setOutlines(
+          generatedOutlines.map((o) => ({ text: o.outline, status: "pending" }))
+        );
       }
     } catch (err) {
       console.error("Error in handleSubmit:", err);
@@ -55,24 +55,48 @@ const ContinueChapter = ({ chapterId, onClose }) => {
     setInstruction(suggestedContent);
   };
 
-  const handleOutlineClick = useCallback(
-    async (outline) => {
-      setIsLoading(true);
-      try {
-        await chapterActions.continueChapter(
-          chapterId,
-          outline,
-          paragraphCount
-        );
-        setOutlines(outlines.filter((o) => o !== outline));
-      } catch (err) {
-        console.error("Error expanding outline:", err);
-        setError("Failed to expand outline. Please try again.");
-      } finally {
-        setIsLoading(false);
+  const handleOutlineAction = useCallback(
+    async (action, outline, newText, paragraphCount) => {
+      switch (action) {
+        case "edit":
+          setOutlines(
+            outlines.map((o) =>
+              o.text === outline.text ? { ...o, text: newText } : o
+            )
+          );
+          break;
+        case "submit":
+          setIsLoading(true);
+          try {
+            await chapterActions.continueChapter(
+              chapterId,
+              outline.text,
+              paragraphCount
+            );
+            setOutlines(
+              outlines.map((o) =>
+                o.text === outline.text ? { ...o, status: "generated" } : o
+              )
+            );
+          } catch (err) {
+            console.error("Error expanding outline:", err);
+            setError("Failed to expand outline. Please try again.");
+          } finally {
+            setIsLoading(false);
+          }
+          break;
+        case "delete":
+          setOutlines(outlines.filter((o) => o.text !== outline.text));
+          break;
+        case "reload":
+          // Implement outline reloading logic here
+          console.log("Reload outline:", outline);
+          break;
+        default:
+          console.error("Unknown outline action:", action);
       }
     },
-    [chapterId, chapterActions, outlines, paragraphCount]
+    [outlines, chapterId, chapterActions, paragraphCount]
   );
 
   return (
@@ -80,6 +104,32 @@ const ContinueChapter = ({ chapterId, onClose }) => {
       <h3 className="text-2xl font-bold mb-4 text-gray-800">
         Continue Chapter
       </h3>
+      <div className="mb-4 flex justify-center">
+        <div className="inline-flex rounded-md shadow-sm" role="group">
+          <button
+            onClick={() => setMode("direct")}
+            className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
+              mode === "direct"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-50"
+            } border border-gray-200 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700`}
+          >
+            <FaParagraph className="mr-2 inline" />
+            Direct Generation
+          </button>
+          <button
+            onClick={() => setMode("outline")}
+            className={`px-4 py-2 text-sm font-medium rounded-r-lg ${
+              mode === "outline"
+                ? "bg-blue-600 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-50"
+            } border border-gray-200 focus:z-10 focus:ring-2 focus:ring-blue-700 focus:text-blue-700`}
+          >
+            <FaListUl className="mr-2 inline" />
+            Outline Generation
+          </button>
+        </div>
+      </div>
       <SuggestableInput
         value={instruction}
         onChange={setInstruction}
@@ -92,7 +142,9 @@ const ContinueChapter = ({ chapterId, onClose }) => {
         }}
         multiline={true}
         rows={4}
-        placeholder="Enter instructions to continue chapter..."
+        placeholder={`Enter instructions to ${
+          mode === "direct" ? "continue chapter" : "generate outlines"
+        }...`}
         className="w-full p-4 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
       />
       <div className="mt-6 flex flex-wrap items-center justify-between">
@@ -101,7 +153,7 @@ const ContinueChapter = ({ chapterId, onClose }) => {
             htmlFor="paragraphCount"
             className="block text-sm font-medium text-gray-700 mb-2"
           >
-            Number of paragraphs:{" "}
+            Number of {mode === "direct" ? "paragraphs" : "outlines"}:{" "}
             <span className="font-bold text-blue-600">{paragraphCount}</span>
           </label>
           <div className="relative">
@@ -128,33 +180,12 @@ const ContinueChapter = ({ chapterId, onClose }) => {
             </div>
           </div>
         </div>
-        <div className="w-full sm:w-1/3 flex items-center justify-end">
-          <label className="inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={generateOutlines}
-              onChange={() => setGenerateOutlines(!generateOutlines)}
-              className="form-checkbox h-5 w-5 text-blue-600 transition duration-150 ease-in-out"
-            />
-            <span className="ml-2 text-sm text-gray-700">
-              Generate Outlines
-            </span>
-          </label>
-        </div>
       </div>
-      {outlines.length > 0 && (
-        <div className="mt-4 space-y-2">
-          {outlines.map((outline, index) => (
-            <div
-              key={index}
-              onClick={() => handleOutlineClick(outline)}
-              className="p-2 bg-gray-100 rounded-md cursor-pointer hover:bg-gray-200 transition-colors duration-200 flex items-center"
-            >
-              <FaOutdent className="mr-2 text-gray-600" />
-              <span className="text-sm text-gray-800">{outline}</span>
-            </div>
-          ))}
-        </div>
+      {mode === "outline" && (
+        <OutlineSection
+          outlines={outlines}
+          onOutlineAction={handleOutlineAction}
+        />
       )}
       <div className="flex flex-col sm:flex-row justify-end mt-6 space-y-2 sm:space-y-0 sm:space-x-2">
         <button
@@ -174,7 +205,11 @@ const ContinueChapter = ({ chapterId, onClose }) => {
           ) : (
             <FaCheck size={16} className="mr-2" />
           )}
-          {isLoading ? "Generating..." : "Submit"}
+          {isLoading
+            ? "Generating..."
+            : mode === "direct"
+            ? "Generate Paragraphs"
+            : "Generate Outlines"}
         </button>
       </div>
       {error && (
