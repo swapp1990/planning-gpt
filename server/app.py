@@ -550,15 +550,37 @@ def continue_chapter():
     # passage = data.get('passage')
     previousParagraph = data.get('previousParagraph')
     outlines = data.get('outlines')
-
-    prompt = f'Please continue the story for the current chapter based on the following synopsis for the chapter: `{synopsis}` and the following instruction: `{instruction}` The instruction are meant to guide the paragraph, it does not mean the paragraph needs to be started with exact words as the instruction. This are the parameters that guide the overall story: `{parameters}`. Write exactly {numParagraphs} number of paragraphs. If outlines are present, and instruction is part of the outlines, remember to only write paragraphs for the given outline from the list of outlines. All the outlines are in sequence of the story. ' 
-    if previousParagraph is not None and previousParagraph != "":
-        prompt = f'{prompt}\nHere is the previous paragraph of the current chapter: `{previousParagraph}`.'
-    if previousChapters is not None and previousChapters != "":
-        prompt = f'{prompt}\nPrevious chapters for the story have following synopsis: `{previousChapters}`.' 
-    if outlines is not None:
+    if outlines is not None: 
         outlinesStr = "\n-".join(outlines)
-        prompt = f'{prompt}\nThis are the outlines for the passage: `{outlinesStr}`.'
+    else:
+        outlinesStr = None
+
+    prompt = f"""
+Please continue the story for the current chapter based on the following:
+
+1. Synopsis: {synopsis}
+2. Specific outline to expand: {instruction}
+3. Overall story parameters: {parameters}
+4. List of outlines (can be empty): {outlinesStr}
+5. Previously generated paragraph for the current chapter (can be empty): {previousParagraph}
+6. Previously generated chapter synopsis for the story (Can be empty): {previousChapters}
+
+Important context:
+- The list of outlines represents the sequential progression of the passage to be written for this chapter.
+- Each outline corresponds to a specific part of the chapter in the order they will appear.
+
+Important instructions:
+- Focus ONLY on expanding the outline specified in the instruction.
+- This outline is part of the sequential list provided, but you should only work on this specific one.
+- Generate exactly {numParagraphs} paragraph(s) for this outline.
+- Do not proceed to subsequent outlines or earlier parts of the sequence.
+- The instruction guides the content, but don't necessarily start the paragraph with its exact words.
+- Ensure your writing aligns with the given synopsis and overall story parameters.
+- Use the list of outlines for context of the chapter's flow, but do not expand on any outline other than the one specified.
+- Do not mention, reference, or allude to any other outlines in your generated content.
+
+Remember: You are expanding a single point in the chapter's progression. Earlier and subsequent parts of the sequence will be addressed separately.
+"""
 
     print(prompt)
 
