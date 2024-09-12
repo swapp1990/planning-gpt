@@ -71,6 +71,7 @@ export const streamContinueParagraph = async (
   chapterId,
   instruction,
   numParagraphs,
+  outlines,
   onChunk,
   onError
 ) => {
@@ -103,6 +104,7 @@ export const streamContinueParagraph = async (
         systemPrompt: systemPrompts[0],
         instruction: instruction,
         numParagraphs: numParagraphs,
+        outlines: outlines,
       },
       onChunk,
       onError

@@ -549,14 +549,18 @@ def continue_chapter():
     numParagraphs = data.get('numParagraphs')
     # passage = data.get('passage')
     previousParagraph = data.get('previousParagraph')
+    outlines = data.get('outlines')
 
-    prompt = f'Please continue the story for the current chapter based on the following synopsis for the chapter: `{synopsis}` and the following instruction: `{instruction}` The instruction are meant to guide the paragraph, it does not mean the paragraph needs to be started with exact words as the instruction. This are the parameters that guide the overall story: `{parameters}`. Write exactly {numParagraphs} number of paragraphs.' 
+    prompt = f'Please continue the story for the current chapter based on the following synopsis for the chapter: `{synopsis}` and the following instruction: `{instruction}` The instruction are meant to guide the paragraph, it does not mean the paragraph needs to be started with exact words as the instruction. This are the parameters that guide the overall story: `{parameters}`. Write exactly {numParagraphs} number of paragraphs. If outlines are present, and instruction is part of the outlines, remember to only write paragraphs for the given outline from the list of outlines. All the outlines are in sequence of the story. ' 
     if previousParagraph is not None and previousParagraph != "":
         prompt = f'{prompt}\nHere is the previous paragraph of the current chapter: `{previousParagraph}`.'
     if previousChapters is not None and previousChapters != "":
         prompt = f'{prompt}\nPrevious chapters for the story have following synopsis: `{previousChapters}`.' 
+    if outlines is not None:
+        outlinesStr = "\n-".join(outlines)
+        prompt = f'{prompt}\nThis are the outlines for the passage: `{outlinesStr}`.'
 
-    # print(prompt)
+    print(prompt)
 
     # prompt = f'Write a story with exactly 3 paragraphs and 10 words each.'
 

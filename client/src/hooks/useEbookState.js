@@ -129,7 +129,12 @@ export function useEbookState() {
       updateState({ chapters: updatedChapters });
       return { success: true };
     },
-    continueChapter: async (chapterId, instruction, numParagraphs = 3) => {
+    continueChapter: async (
+      chapterId,
+      instruction,
+      numParagraphs = 3,
+      outlines = []
+    ) => {
       let newParagraph = "";
       let newParagraphs = [];
       const chapterIndex = state.chapters.findIndex((c) => c.id === chapterId);
@@ -186,6 +191,7 @@ export function useEbookState() {
           chapterId,
           instruction,
           numParagraphs,
+          outlines,
           onChunk,
           onError
         );

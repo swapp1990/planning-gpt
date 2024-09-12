@@ -67,11 +67,13 @@ const ContinueChapter = ({ chapterId, onClose }) => {
           break;
         case "submit":
           setIsLoading(true);
+          let outlinesList = outlines.map((o) => o.text);
           try {
             await chapterActions.continueChapter(
               chapterId,
               outline.text,
-              paragraphCount
+              paragraphCount,
+              outlinesList
             );
             setOutlines(
               outlines.map((o) =>
