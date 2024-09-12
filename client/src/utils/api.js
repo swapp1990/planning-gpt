@@ -35,14 +35,14 @@ export const streamedApiCallBasic = async (
 };
 
 export const streamedApiCall = async (url, method, body, onChunk, onError) => {
+  const fetchOptions = {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  };
+
   try {
-    const response = await fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+    const response = await fetch(url, fetchOptions);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -53,27 +53,35 @@ export const streamedApiCall = async (url, method, body, onChunk, onError) => {
 
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value);
-      // console.log(chunk);
-      const lines = chunk.split("\n");
-      for (const line of lines) {
-        if (line.trim()) {
-          try {
-            const data = JSON.parse(line);
-            if (data.error) {
-              // If the API returns an error message, call onError and break the loop
-              onError(new Error(data.error));
-              return;
-            }
 
-            onChunk(data);
-          } catch (parseError) {
-            console.error("Error parsing JSON:", parseError);
-            onError(new Error("Error parsing server response"));
-            return;
-          }
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split("\n");
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        let data;
+        try {
+          data = JSON.parse(line);
+        } catch (parseError) {
+          onError(
+            new Error("Error parsing server response: " + parseError.message)
+          );
+          return;
         }
+
+        if (data.error) {
+          onError(new Error(data.error));
+          return;
+        }
+
+        if (data.chunk && data.chunk.startsWith("I'm sorry")) {
+          onError(new Error(data.chunk));
+          return;
+        }
+
+        onChunk(data);
       }
     }
   } catch (error) {
