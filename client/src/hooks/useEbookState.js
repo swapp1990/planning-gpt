@@ -107,6 +107,62 @@ export function useEbookState() {
         currentChapter:
           state.currentChapter === chapterId ? null : state.currentChapter,
       }),
+    addSection: (chapterId, newSection) => {
+      const chapterIndex = state.chapters.findIndex((c) => c.id === chapterId);
+      if (chapterIndex === -1) {
+        return { error: "Chapter not found" };
+      }
+      const chapter = state.chapters[chapterIndex];
+      let currentSections = chapter.sections;
+      currentSections.push(newSection);
+      const updatedChapters = state.chapters.map((c, index) =>
+        index === chapterIndex ? { ...c, sections: currentSections } : c
+      );
+      updateState({ chapters: updatedChapters });
+    },
+    deleteSection: (chapterId, sectionIndex) => {
+      const chapterIndex = state.chapters.findIndex((c) => c.id === chapterId);
+      if (chapterIndex === -1) {
+        console.error(`Chapter with id ${chapterId} not found`);
+        return { error: "Chapter not found" };
+      }
+      const chapter = state.chapters[chapterIndex];
+      if (sectionIndex < 0 || sectionIndex >= chapter.sections.length) {
+        console.error(`Invalid section index: ${sectionIndex}`);
+        return { error: "Invalid section index" };
+      }
+      const updatedSections = [
+        ...chapter.sections.slice(0, sectionIndex),
+        ...chapter.sections.slice(sectionIndex + 1),
+      ];
+      const updatedChapters = state.chapters.map((c, index) =>
+        index === chapterIndex ? { ...c, sections: updatedSections } : c
+      );
+
+      updateState({ chapters: updatedChapters });
+      return { success: true };
+    },
+    updateSection: (chapterId, sectionIndex, updatedSection) => {
+      const chapterIndex = state.chapters.findIndex((c) => c.id === chapterId);
+      if (chapterIndex === -1) {
+        console.error(`Chapter with id ${chapterId} not found`);
+        return { error: "Chapter not found" };
+      }
+      const chapter = state.chapters[chapterIndex];
+      if (sectionIndex < 0 || sectionIndex >= chapter.sections.length) {
+        console.error(`Invalid section index: ${sectionIndex}`);
+        return { error: "Invalid section index" };
+      }
+      const updatedSections = chapter.sections.map((section, index) =>
+        index === sectionIndex ? { ...section, ...updatedSection } : section
+      );
+      const updatedChapters = state.chapters.map((c, index) =>
+        index === chapterIndex ? { ...c, sections: updatedSections } : c
+      );
+
+      updateState({ chapters: updatedChapters });
+      return { success: true };
+    },
     deleteParagraph: (chapterId, paragraphIndex) => {
       const chapterIndex = state.chapters.findIndex((c) => c.id === chapterId);
       if (chapterIndex === -1) {

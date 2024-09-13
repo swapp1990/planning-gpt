@@ -1,552 +1,428 @@
-import React, {
-  useReducer,
-  useState,
-  useCallback,
-  useMemo,
-  useEffect,
-} from "react";
-import { FaSync, FaGithub, FaTwitter, FaCheck, FaTimes } from "react-icons/fa";
-import { streamedApiCallBasic } from "../../utils/api";
+// src/RewritingDemo.jsx
 
-const INITIAL_PARAGRAPHS = [
-  "John was a skilled carpenter, known for his intricate woodwork. He spent his days in his workshop, crafting beautiful furniture and ornate decorations. His passion for woodworking was evident in every piece he created.",
-  "As a carpenter, John's hands were rough and calloused from years of working with tools. He took great pride in his ability to transform raw lumber into works of art. His workshop was always filled with the sweet scent of freshly cut wood.",
-  "John's reputation as a master carpenter spread throughout the town. People would come from far and wide to commission his work. He loved the challenge of each new project and the satisfaction of seeing his creations in people's homes.",
-];
+import React, { useState, useEffect } from "react";
+import { FaPencilAlt, FaTrash, FaPlus, FaCopy } from "react-icons/fa";
+import "tailwindcss/tailwind.css";
 
-const rewriteSentence = async (
-  sentence,
-  instruction,
-  paragraphId,
-  sentenceId,
-  dispatch
-) => {
-  try {
-    let revised_sentence = null;
-    const onChunk = (data) => {
-      console.log(data);
-      let response = JSON.parse(data);
+// Understandable sample text with three paragraphs
+const sampleText = `Artificial Intelligence (AI) has revolutionized various industries by automating complex tasks and providing insightful data analysis. Its applications range from healthcare and finance to entertainment and transportation, making processes more efficient and accurate.
 
-      //   console.log(response);
-      if (response.status == "rewriting") {
-        dispatch({
-          type: "SET_SENTENCE_STATUS",
-          payload: {
-            key: `${paragraphId}-${sentenceId}`,
-            status: "rewriting",
-          },
-        });
-      } else if (response.status == "complete") {
-        revised_sentence = response.revised_sentence;
-      } else if (response.status == "ok") {
-        dispatch({
-          type: "SET_SENTENCE_STATUS",
-          payload: {
-            key: `${paragraphId}-${sentenceId}`,
-            status: "ok",
-          },
-        });
-        revised_sentence = response.revised_sentence;
-      }
-    };
+In the healthcare sector, AI assists in diagnosing diseases, personalizing treatment plans, and predicting patient outcomes. Machine learning algorithms analyze vast amounts of medical data, enabling early detection of conditions such as cancer and heart disease, thereby saving countless lives.
 
-    const onError = (error) => {
-      console.error("Error fetching revised sentence:", error);
-      return null;
-    };
-    await streamedApiCallBasic(
-      `${process.env.REACT_APP_API_URL}/sentence/rewrite`,
-      "POST",
-      {
-        sentence: sentence,
-        instruction: instruction,
-      },
-      onChunk,
-      onError
-    );
-    return revised_sentence;
-  } catch (error) {
-    return null;
-  }
-};
+The financial industry leverages AI for fraud detection, risk management, and customer service automation. By analyzing transaction patterns and market trends, AI systems can identify suspicious activities and optimize investment strategies, ensuring financial stability and growth.`;
 
-const rewritingReducer = (state, action) => {
-  switch (action.type) {
-    case "START_REWRITING":
-      return {
-        ...state,
-        isRewriting: true,
-        currentParagraph: 0,
-        currentSentence: -1,
-        sentenceStatuses: {},
-        rewrittenSentences: {},
-      };
-    case "SET_INSTRUCTION":
-      return {
-        ...state,
-        instruction: action.payload,
-      };
-    case "RESET_DEMO":
-      return {
-        ...state,
-        isRewriting: false,
-        currentParagraph: 0,
-        currentSentence: -1,
-        sentenceStatuses: {},
-        rewrittenSentences: {},
-        paragraphs: [],
-      };
-    case "CLEAR":
-      return {
-        ...state,
-        isRewriting: false,
-        currentParagraph: 0,
-        currentSentence: -1,
-        sentenceStatuses: {},
-        rewrittenSentences: {},
-        paragraphs: state.paragraphs,
-      };
-    case "NEXT_SENTENCE":
-      return { ...state, currentSentence: state.currentSentence + 1 };
-    case "NEXT_PARAGRAPH":
-      return {
-        ...state,
-        currentParagraph: state.currentParagraph + 1,
-        currentSentence: -1,
-      };
-    case "SET_SENTENCE_STATUS":
-      return {
-        ...state,
-        sentenceStatuses: {
-          ...state.sentenceStatuses,
-          [action.payload.key]: action.payload.status,
-        },
-      };
-    case "SET_REWRITTEN_SENTENCE":
-      return {
-        ...state,
-        sentenceStatuses: {
-          ...state.sentenceStatuses,
-          [action.payload.key]: "rewrite",
-        },
-        rewrittenSentences: {
-          ...state.rewrittenSentences,
-          [action.payload.key]: action.payload.sentence,
-        },
-      };
-    case "SET_PARAGRAPHS":
-      return {
-        ...state,
-        paragraphs: action.payload,
-        currentParagraph: 0,
-        currentSentence: -1,
-        sentenceStatuses: {},
-        rewrittenSentences: {},
-      };
-    case "ACCEPT_REWRITE":
-      const { key, newSentence } = action.payload;
-      const [pIndex, sIndex] = key.split("-").map(Number);
-      const updatedParagraphs = [...state.paragraphs];
-      const sentences = updatedParagraphs[pIndex].split(".");
-      sentences[sIndex] = newSentence;
-      updatedParagraphs[pIndex] = sentences.join(".");
+// Revised text with random changes (edits, removals, additions)
+const revisedText = `Artificial Intelligence (AI) has significantly transformed various industries by automating complex tasks and offering insightful data analysis. Its applications extend from healthcare and finance to entertainment and transportation, enhancing processes to be more efficient and precise.
 
-      return {
-        ...state,
-        paragraphs: updatedParagraphs,
-        sentenceStatuses: { ...state.sentenceStatuses, [key]: "accepted" },
-        rewrittenSentences: {
-          ...state.rewrittenSentences,
-          [key]: null,
-        },
-      };
-    case "FINISH_REWRITING":
-      return { ...state, isRewriting: false };
-    default:
-      return state;
-  }
-};
+In the healthcare sector, AI plays a crucial role in diagnosing diseases, customizing treatment plans, and forecasting patient outcomes. Advanced machine learning algorithms scrutinize vast amounts of medical data, enabling early detection of conditions such as cancer and cardiovascular diseases, thereby saving numerous lives.
 
-const useRewritingProcess = (state, dispatch) => {
-  const {
-    isRewriting,
-    currentSentence,
-    currentParagraph,
-    paragraphs,
-    instruction,
-  } = state;
+The financial industry utilizes AI for fraud detection, risk assessment, and customer service automation. By analyzing transaction patterns and market dynamics, AI systems can identify suspicious activities and refine investment strategies, ensuring financial stability and sustained growth.`;
 
-  useEffect(() => {
-    if (!isRewriting) return;
-
-    const processPassage = async () => {
-      const sentences = paragraphs[currentParagraph].split(".");
-      if (currentSentence < sentences.length - 1) {
-        const nextSentenceId = currentSentence + 1;
-        if (sentences[nextSentenceId].trim() !== "") {
-          dispatch({
-            type: "SET_SENTENCE_STATUS",
-            payload: {
-              key: `${currentParagraph}-${nextSentenceId}`,
-              status: "scanning",
-            },
-          });
-          const rewrittenSentence = await rewriteSentence(
-            sentences[nextSentenceId],
-            instruction,
-            currentParagraph,
-            nextSentenceId,
-            dispatch
-          );
-          //   console.log(rewrittenSentence);
-          if (rewrittenSentence != null) {
-            dispatch({
-              type: "SET_REWRITTEN_SENTENCE",
-              payload: {
-                key: `${currentParagraph}-${nextSentenceId}`,
-                sentence: rewrittenSentence,
-              },
-            });
-          } else {
-            dispatch({
-              type: "SET_SENTENCE_STATUS",
-              payload: {
-                key: `${currentParagraph}-${nextSentenceId}`,
-                status: "ok",
-              },
-            });
-          }
-          dispatch({ type: "NEXT_SENTENCE" });
-        } else if (currentParagraph < paragraphs.length - 1) {
-          dispatch({ type: "NEXT_PARAGRAPH" });
-        } else {
-          dispatch({ type: "FINISH_REWRITING" });
-        }
-      }
-    };
-
-    processPassage();
-  }, [isRewriting, currentSentence, currentParagraph, paragraphs, dispatch]);
-};
-
-const Sentence = React.memo(
-  ({
-    sentence,
-    status,
-    isCurrentSentence,
-    newSentence,
-    onAccept,
-    onReject,
-    sentenceKey,
-  }) => {
-    const [showLineThrough, setShowLineThrough] = useState(false);
-
-    useEffect(() => {
-      if (status === "rewriting") {
-        const timer = setTimeout(() => setShowLineThrough(true), 500);
-        return () => clearTimeout(timer);
-      } else {
-        setShowLineThrough(false);
-      }
-    }, [status]);
-
-    let className = "transition-all duration-300 relative";
-    if (status === "scanning") className += " bg-yellow-200";
-    else if (status === "rewriting") className += " bg-red-200";
-    else if (status === "accepted") className += " bg-green-200";
-    const textClassName = `transition-all duration-300 ${
-      (showLineThrough && status === "rewriting") || status === "rewrite"
-        ? "line-through"
-        : ""
-    } ${status === "rewrite" ? "text-gray-500" : ""}`;
-
-    return (
-      <span className={className}>
-        {status === "rewrite" && (
-          <span className="text-blue-600 text-sm mb-1 new-sentence flex items-start">
-            <span className="mr-1">{newSentence}.</span>
-            <span className="inline-flex items-center flex-shrink-0">
-              <button
-                onClick={() => onAccept(sentenceKey, newSentence)}
-                className="bg-gray-200 text-green-500 hover:text-green-700 transition-colors duration-200 mr-1 p-1 rounded"
-                aria-label="Accept rewrite"
-              >
-                <FaCheck size={14} />
-              </button>
-              <button
-                onClick={() => onReject(sentenceKey)}
-                className="bg-gray-200 text-red-500 hover:text-red-700 transition-colors duration-200 p-1 rounded"
-                aria-label="Reject rewrite"
-              >
-                <FaTimes size={14} />
-              </button>
-            </span>
-          </span>
-        )}
-        <span className={textClassName}>{sentence}.</span>
-      </span>
-    );
-  }
+// Icons for visualization
+const EditIcon = (
+  <FaPencilAlt className="inline text-yellow-500 mr-1" title="Edit" />
 );
-
-const Paragraph = React.memo(
-  ({
-    paragraph,
-    pIndex,
-    currentParagraph,
-    currentSentence,
-    isRewriting,
-    sentenceStatuses,
-    rewrittenSentences,
-    onAccept,
-    onReject,
-  }) => {
-    useEffect(() => {
-      //   console.log(rewrittenSentences);
-    }, [rewrittenSentences]);
-    return (
-      <p key={pIndex}>
-        {paragraph.split(".").map((sentence, sIndex) => {
-          if (sentence.trim() === "") return null;
-          const key = `${pIndex}-${sIndex}`;
-          const isCurrentSentence =
-            currentParagraph === pIndex && currentSentence === sIndex;
-          const status = sentenceStatuses[key];
-          const newSentence =
-            status === "rewrite" ? rewrittenSentences[key] : null;
-
-          return (
-            <Sentence
-              key={key}
-              sentence={sentence}
-              newSentence={newSentence}
-              status={status}
-              isCurrentSentence={isCurrentSentence && isRewriting}
-              onAccept={onAccept}
-              onReject={onReject}
-              sentenceKey={key}
-            />
-          );
-        })}
-      </p>
-    );
-  }
+const RemoveIcon = (
+  <FaTrash className="inline text-red-500 mr-1" title="Remove" />
 );
+const AddIcon = <FaPlus className="inline text-green-500 mr-1" title="Add" />;
 
-const TextAreaInput = ({ inputText, setInputText, onSubmit }) => {
+// Word Count Component
+const WordCount = ({ text }) => {
+  const count = text.trim() === "" ? 0 : text.trim().split(/\s+/).length;
+  return <div className="text-sm text-gray-600">Word Count: {count}</div>;
+};
+
+// Input Section Component
+const InputSection = ({ inputText, setInputText, onRevise, isScanning }) => {
+  const handleChange = (e) => {
+    setInputText(e.target.value);
+  };
+
   return (
-    <div className="mb-4">
+    <div className="w-full p-4 bg-white rounded shadow-md">
+      <label htmlFor="inputText" className="block text-lg font-medium mb-2">
+        Enter Your Text
+      </label>
       <textarea
-        className="w-full p-2 border rounded-md whitespace-pre-wrap"
+        id="inputText"
+        aria-label="Input Text Area"
+        className="w-full p-2 border rounded resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
         rows="10"
         value={inputText}
-        onChange={(e) => setInputText(e.target.value)}
-        placeholder="Paste your paragraphs here... (Separate paragraphs with blank lines)"
-      />
-      <button
-        onClick={onSubmit}
-        className="mt-2 bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition-colors duration-300"
-      >
-        Set Paragraphs
-      </button>
+        onChange={handleChange}
+        disabled={isScanning}
+      ></textarea>
+      <div className="flex justify-between items-center mt-2">
+        <WordCount text={inputText} />
+        <button
+          onClick={onRevise}
+          className={`flex items-center px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+            isScanning ? "opacity-50 cursor-not-allowed" : ""
+          }`}
+          disabled={isScanning}
+          aria-label="Revise Button"
+        >
+          {isScanning ? "Scanning..." : "Revise"}
+        </button>
+      </div>
     </div>
   );
 };
 
-const InstructionInput = ({
-  instruction,
-  onInstructionChange,
-  onRewrite,
-  isRewriting,
+// Enhanced Visualization Component to Maintain Paragraph Structure and Show Icons
+const EnhancedVisualization = ({
+  paragraphs,
+  currentParagraph,
+  currentSentence,
 }) => {
   return (
-    <div className="flex mt-4">
-      <textarea
-        className="flex-grow p-2 border rounded-l-md resize-none"
-        rows="2"
-        value={instruction}
-        onChange={(e) => onInstructionChange(e.target.value)}
-        placeholder="Enter rewriting instructions here..."
-      />
-      <button
-        onClick={onRewrite}
-        disabled={isRewriting}
-        className={`bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-2 px-4 rounded-r-md transition-colors duration-300 flex items-center ${
-          isRewriting ? "opacity-50 cursor-not-allowed" : ""
-        }`}
-      >
-        <FaSync className={`mr-2 ${isRewriting ? "animate-spin" : ""}`} />
-        {isRewriting ? "Rewriting..." : "Rewrite"}
-      </button>
+    <div className="w-full p-4 bg-gray-100 rounded shadow-md mt-4">
+      <h2 className="text-lg font-medium mb-2">AI Scanning Visualization</h2>
+      <div className="space-y-4">
+        {paragraphs.map((para, pIdx) => (
+          <p key={pIdx} className="mb-2">
+            {para.sentences.map((sentence, sIdx) => {
+              const isCurrent =
+                pIdx === currentParagraph && sIdx === currentSentence;
+              let icon = null;
+              if (sentence.type === "edit") {
+                icon = EditIcon;
+              } else if (sentence.type === "remove") {
+                icon = RemoveIcon;
+              } else if (sentence.type === "add") {
+                icon = AddIcon;
+              }
+
+              let bgColor = "";
+              if (sentence.type === "edit") {
+                bgColor = "bg-yellow-100";
+              } else if (sentence.type === "remove") {
+                bgColor = "bg-red-100";
+              } else if (sentence.type === "add") {
+                bgColor = "bg-green-100";
+              }
+
+              if (isCurrent) {
+                bgColor += " animate-pulse";
+              }
+
+              return (
+                <span key={sIdx} className="mr-1">
+                  {/* Display icon if there's a change */}
+                  {icon && <span>{icon}</span>}
+                  {/* Display sentence with appropriate background and line-through for removals */}
+                  <span
+                    className={`inline-block ${bgColor} ${
+                      sentence.type === "remove" ? "line-through" : ""
+                    }`}
+                  >
+                    {sentence.text}{" "}
+                  </span>
+                </span>
+              );
+            })}
+          </p>
+        ))}
+      </div>
     </div>
   );
 };
 
-const RewritingDemo = () => {
-  const [state, dispatch] = useReducer(rewritingReducer, {
-    paragraphs: [],
-    currentParagraph: 0,
-    currentSentence: -1,
-    isRewriting: false,
-    sentenceStatuses: {},
-    rewrittenSentences: {},
-    instruction: "Change John's profession to a chef.",
-  });
+// Comparison Component
+const Comparison = ({ original, revised, showChanges, changes }) => {
+  // Split text into paragraphs
+  const splitIntoParagraphs = (text) => {
+    return text
+      .split("\n")
+      .filter((paragraph) => paragraph.trim() !== "")
+      .map((paragraph) => paragraph.trim());
+  };
 
-  const [inputText, setInputText] = useState("");
+  // Split paragraph into sentences
+  const splitIntoSentences = (text) => {
+    const regex = /[^\.!\?]+[\.!\?]+/g;
+    const result = text.match(regex) || [];
+    return result.map((sentence) => sentence.trim());
+  };
 
-  const {
-    paragraphs,
-    currentParagraph,
-    currentSentence,
-    isRewriting,
-    sentenceStatuses,
-    rewrittenSentences,
-    instruction,
-  } = state;
+  const originalParagraphs = splitIntoParagraphs(original).map((paragraph) => ({
+    sentences: splitIntoSentences(paragraph),
+  }));
 
-  useRewritingProcess(state, dispatch);
-
-  const startRewriting = useCallback(() => {
-    if (state.instruction.trim() === "") {
-      alert("Please enter rewriting instructions.");
-      return;
-    }
-    dispatch({ type: "START_REWRITING" });
-  }, [state.instruction]);
-
-  const handleInstructionChange = useCallback((newInstruction) => {
-    dispatch({ type: "SET_INSTRUCTION", payload: newInstruction });
-  }, []);
-
-  const resetDemo = useCallback(() => {
-    dispatch({ type: "RESET_DEMO" });
-    setInputText("");
-  }, []);
-
-  const clear = useCallback(() => {
-    dispatch({ type: "CLEAR" });
-    setInputText("");
-  }, []);
-
-  const handleAccept = useCallback((key, newSentence) => {
-    dispatch({ type: "ACCEPT_REWRITE", payload: { key, newSentence } });
-  }, []);
-
-  const handleReject = useCallback((key) => {
-    dispatch({ type: "SET_SENTENCE_STATUS", payload: { key, status: "ok" } });
-  }, []);
-
-  const handleSetParagraphs = useCallback(() => {
-    const formattedParagraphs = inputText
-      .split(/\n{2,}/)
-      .map((p) => p.trim())
-      .filter((p) => p !== "");
-    dispatch({ type: "SET_PARAGRAPHS", payload: formattedParagraphs });
-  }, [inputText]);
-
-  const memoizedParagraphs = useMemo(
-    () =>
-      paragraphs.map((paragraph, pIndex) => (
-        <Paragraph
-          key={pIndex}
-          paragraph={paragraph}
-          pIndex={pIndex}
-          currentParagraph={currentParagraph}
-          currentSentence={currentSentence}
-          isRewriting={isRewriting}
-          sentenceStatuses={sentenceStatuses}
-          rewrittenSentences={rewrittenSentences}
-          onAccept={handleAccept}
-          onReject={handleReject}
-        />
-      )),
-    [
-      paragraphs,
-      currentParagraph,
-      currentSentence,
-      isRewriting,
-      sentenceStatuses,
-      rewrittenSentences,
-      handleAccept,
-      handleReject,
-    ]
-  );
+  const revisedParagraphs = splitIntoParagraphs(revised).map((paragraph) => ({
+    sentences: splitIntoSentences(paragraph),
+  }));
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-      <div className="relative p-6 sm:p-3 sm:mx-auto">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-light-blue-500 shadow-lg transform -skew-y-6 sm:skew-y-0 sm:-rotate-6 sm:rounded-3xl"></div>
-        <div className="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <div>
-            <h1 className="text-2xl font-semibold mb-4">
-              AI Paragraph Rewriting Demo
-            </h1>
-            <div className="divide-y divide-gray-200">
-              {paragraphs.length === 0 ? (
-                <TextAreaInput
-                  inputText={inputText}
-                  setInputText={setInputText}
-                  onSubmit={handleSetParagraphs}
-                />
-              ) : (
-                <>
-                  <div className="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                    {memoizedParagraphs}
-                  </div>
-                  <InstructionInput
-                    instruction={instruction}
-                    onInstructionChange={handleInstructionChange}
-                    onRewrite={startRewriting}
-                    isRewriting={isRewriting}
-                  />
-                  <div className="pt-6 text-base leading-6 font-bold sm:text-lg sm:leading-7">
-                    <div className="flex justify-between items-center">
-                      <button
-                        onClick={resetDemo}
-                        disabled={isRewriting}
-                        className={`bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition-colors duration-300 ${
-                          isRewriting ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                        aria-label="Reset demo"
-                      >
-                        Reset
-                      </button>
-                      <button
-                        onClick={clear}
-                        disabled={isRewriting}
-                        className={`bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded transition-colors duration-300 ${
-                          isRewriting ? "opacity-50 cursor-not-allowed" : ""
-                        }`}
-                        aria-label="Clear"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+    <div className="w-full p-4 bg-white rounded shadow-md mt-4">
+      <h2 className="text-lg font-medium mb-2">Comparison</h2>
+      <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4">
+        {/* Original Text */}
+        <div className="md:w-1/2">
+          <h3 className="font-semibold mb-1">Original Text</h3>
+          <div className="p-2 border rounded bg-gray-50 h-64 overflow-auto">
+            {originalParagraphs.map((para, pIdx) => (
+              <p key={pIdx} className="mb-2">
+                {para.sentences.map((sentence, sIdx) => {
+                  // Check if this sentence was removed
+                  const change = changes.find(
+                    (c) =>
+                      c.paragraph === pIdx &&
+                      c.sentence === sIdx &&
+                      c.type === "remove"
+                  );
+                  return (
+                    <span
+                      key={sIdx}
+                      className={`mr-1 ${
+                        change ? "bg-red-100 line-through" : ""
+                      }`}
+                      title={change ? "Removed" : ""}
+                    >
+                      {sentence}{" "}
+                    </span>
+                  );
+                })}
+              </p>
+            ))}
+          </div>
+        </div>
+        {/* Revised Text */}
+        <div className="md:w-1/2">
+          <h3 className="font-semibold mb-1">Revised Text</h3>
+          <div className="p-2 border rounded bg-gray-50 h-64 overflow-auto">
+            {revisedParagraphs.map((para, pIdx) => (
+              <p key={pIdx} className="mb-2">
+                {para.sentences.map((sentence, sIdx) => {
+                  // Check if this sentence was edited or added
+                  const change = changes.find(
+                    (c) => c.paragraph === pIdx && c.sentence === sIdx
+                  );
+                  let bgColor = "";
+                  if (showChanges && change) {
+                    if (change.type === "edit") {
+                      bgColor = "bg-yellow-100";
+                    } else if (change.type === "add") {
+                      bgColor = "bg-green-100";
+                    }
+                  }
+                  return (
+                    <span
+                      key={sIdx}
+                      className={`mr-1 ${bgColor}`}
+                      title={
+                        showChanges && change
+                          ? change.type === "edit"
+                            ? "Edited"
+                            : change.type === "add"
+                            ? "Added"
+                            : ""
+                          : ""
+                      }
+                    >
+                      {sentence}{" "}
+                    </span>
+                  );
+                })}
+              </p>
+            ))}
           </div>
         </div>
       </div>
-      <div className="mt-8 text-center">
-        <a
-          href="https://github.com/yourusername"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-gray-500 hover:text-gray-700 mx-2"
-        >
-          <FaGithub className="inline-block mr-1" /> GitHub
-        </a>
-        <a
-          href="https://twitter.com/yourusername"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-gray-500 hover:text-gray-700 mx-2"
-        >
-          <FaTwitter className="inline-block mr-1" /> Twitter
-        </a>
+      {/* Legend */}
+      <div className="mt-2 text-sm text-gray-600 flex space-x-4">
+        <div className="flex items-center">
+          <span className="w-4 h-4 bg-yellow-100 inline-block mr-1"></span>{" "}
+          Edited
+        </div>
+        <div className="flex items-center">
+          <span className="w-4 h-4 bg-green-100 inline-block mr-1"></span> Added
+        </div>
+        <div className="flex items-center">
+          <span className="w-4 h-4 bg-red-100 inline-block mr-1 line-through"></span>{" "}
+          Removed
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Main RewritingDemo Component
+const RewritingDemo = () => {
+  const [inputText, setInputText] = useState(sampleText);
+  const [revised, setRevised] = useState("");
+  const [isScanning, setIsScanning] = useState(false);
+  const [currentParagraph, setCurrentParagraph] = useState(-1);
+  const [currentSentence, setCurrentSentence] = useState(-1);
+  const [paragraphs, setParagraphs] = useState([]);
+  const [showChanges, setShowChanges] = useState(true);
+  const [error, setError] = useState("");
+
+  // Helper function to split text into paragraphs
+  const splitIntoParagraphs = (text) => {
+    return text
+      .split("\n")
+      .filter((paragraph) => paragraph.trim() !== "")
+      .map((paragraph) => paragraph.trim());
+  };
+
+  // Helper function to split paragraph into sentences
+  const splitIntoSentences = (text) => {
+    const regex = /[^\.!\?]+[\.!\?]+/g;
+    const result = text.match(regex) || [];
+    return result.map((sentence) => sentence.trim());
+  };
+
+  // Predefined changes for simulation (paragraph and sentence indices start at 0)
+  const simulatedChanges = [
+    { paragraph: 0, sentence: 2, type: "edit" }, // 3rd sentence of 1st paragraph
+    { paragraph: 1, sentence: 1, type: "remove" }, // 2nd sentence of 2nd paragraph
+    { paragraph: 2, sentence: 3, type: "add" }, // 4th sentence of 3rd paragraph
+  ];
+
+  // Handle Revise Button Click
+  const handleRevise = () => {
+    // Error handling for empty or too short input
+    if (inputText.trim().length === 0) {
+      setError("Input text cannot be empty.");
+      return;
+    }
+    const paragraphCount = splitIntoParagraphs(inputText).length;
+    if (paragraphCount < 3) {
+      setError("Please enter at least 3 paragraphs.");
+      return;
+    }
+
+    setError("");
+    setIsScanning(true);
+    setRevised("");
+    setParagraphs([]);
+    setCurrentParagraph(-1);
+    setCurrentSentence(-1);
+
+    // Split input into paragraphs and sentences
+    const inputParagraphs = splitIntoParagraphs(inputText).map((paragraph) => ({
+      sentences: splitIntoSentences(paragraph).map((sentence) => ({
+        text: sentence,
+        type: null,
+      })),
+    }));
+
+    setParagraphs(inputParagraphs);
+    let pIdx = 0;
+    let sIdx = 0;
+
+    const scanInterval = setInterval(() => {
+      if (pIdx < inputParagraphs.length) {
+        if (sIdx < inputParagraphs[pIdx].sentences.length) {
+          // Check if current sentence has a simulated change
+          const change = simulatedChanges.find(
+            (c) => c.paragraph === pIdx && c.sentence === sIdx
+          );
+          setParagraphs((prevParagraphs) => {
+            const newParagraphs = [...prevParagraphs];
+            if (change) {
+              newParagraphs[pIdx].sentences[sIdx].type = change.type;
+            }
+            return newParagraphs;
+          });
+          setCurrentParagraph(pIdx);
+          setCurrentSentence(sIdx);
+          sIdx++;
+        } else {
+          pIdx++;
+          sIdx = 0;
+        }
+      } else {
+        clearInterval(scanInterval);
+        // After scanning, show revised text
+        setTimeout(() => {
+          setRevised(revisedText);
+          setIsScanning(false);
+        }, 500);
+      }
+    }, 1000);
+  };
+
+  // Handle Copy Revised Text
+  const handleCopy = () => {
+    navigator.clipboard.writeText(revised);
+    alert("Revised text copied to clipboard!");
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-200 p-4">
+      <div className="max-w-4xl mx-auto">
+        <header className="mb-6">
+          <h1 className="text-3xl font-bold text-center">
+            AI-Powered Text Revision Tool
+          </h1>
+        </header>
+
+        {/* Input Section */}
+        <InputSection
+          inputText={inputText}
+          setInputText={setInputText}
+          onRevise={handleRevise}
+          isScanning={isScanning}
+        />
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-2 p-2 bg-red-100 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+
+        {/* Visualization */}
+        {isScanning && (
+          <EnhancedVisualization
+            paragraphs={paragraphs}
+            currentParagraph={currentParagraph}
+            currentSentence={currentSentence}
+          />
+        )}
+
+        {/* Revision Process */}
+        {!isScanning && revised && (
+          <>
+            {/* Side-by-Side Comparison */}
+            <Comparison
+              original={inputText}
+              revised={revised}
+              showChanges={showChanges}
+              changes={simulatedChanges}
+            />
+
+            {/* Additional Features */}
+            <div className="flex justify-between items-center mt-4">
+              <WordCount text={revised} />
+              <div className="flex space-x-2">
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  aria-label="Copy Revised Text"
+                >
+                  <FaCopy className="mr-2" />
+                  Copy Revised Text
+                </button>
+                <button
+                  onClick={() => setShowChanges(!showChanges)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                  aria-label="Toggle Show Changes"
+                >
+                  {showChanges ? "Show Clean Version" : "Show Changes"}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Footer */}
+        <footer className="mt-8 text-center text-sm text-gray-500">
+          &copy; {new Date().getFullYear()} AI Text Revision Tool Demo
+        </footer>
       </div>
     </div>
   );

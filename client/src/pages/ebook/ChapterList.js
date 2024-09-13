@@ -47,14 +47,14 @@ const ChapterList = () => {
       console.error("Error fetching chapter suggestions:", error);
     }
     setIsLoading(false);
-  }, []);
+  }, [ebookState.parameters, ebookState.chapters]);
 
   const handleAddChapter = () => {
     let newChapter = {
       id: uuidv4(),
-      title: "New Chpapter",
+      title: "New Chapter",
       synopsis: "This is a synopsis.",
-      content: [],
+      sections: [],
     };
     chapterActions.addChapter(newChapter);
   };
@@ -65,7 +65,7 @@ const ChapterList = () => {
         id: uuidv4(),
         title: suggestedChapter.title,
         synopsis: suggestedChapter.synopsis,
-        content: [],
+        sections: [],
       };
       chapterActions.addChapter(newChapter);
       setSuggestedChapters((prevSuggestions) =>
@@ -137,29 +137,35 @@ const ChapterList = () => {
                     Chapter {index + 1}: {chapter.title}
                   </span>
                 </div>
-                {deleteConfirmId === chapter.id ? (
-                  <div className="flex items-center space-x-2">
+                <div className="flex items-center">
+                  <span className="mr-3 text-sm text-gray-500">
+                    {chapter.sections.length} section
+                    {chapter.sections.length !== 1 ? "s" : ""}
+                  </span>
+                  {deleteConfirmId === chapter.id ? (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={(e) => handleConfirmDelete(e, chapter.id)}
+                        className="text-red-600 hover:text-red-800 transition-colors duration-200"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={handleCancelDelete}
+                        className="text-gray-600 hover:text-gray-800 transition-colors duration-200"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
                     <button
-                      onClick={(e) => handleConfirmDelete(e, chapter.id)}
-                      className="text-red-600 hover:text-red-800 transition-colors duration-200"
+                      onClick={(e) => handleDeleteClick(e, chapter.id)}
+                      className="text-red-500 hover:text-red-700 transition-colors duration-200"
                     >
-                      Confirm
+                      <FaTrash />
                     </button>
-                    <button
-                      onClick={handleCancelDelete}
-                      className="text-gray-600 hover:text-gray-800 transition-colors duration-200"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={(e) => handleDeleteClick(e, chapter.id)}
-                    className="text-red-500 hover:text-red-700 transition-colors duration-200"
-                  >
-                    <FaTrash />
-                  </button>
-                )}
+                  )}
+                </div>
               </li>
             ))}
           </ul>

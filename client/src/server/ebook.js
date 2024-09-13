@@ -67,44 +67,20 @@ export const streamRewrittenParagraph = async (
 };
 
 export const streamContinueParagraph = async (
-  ebookState,
-  chapterId,
+  context,
   instruction,
   numParagraphs,
-  outlines,
   onChunk,
   onError
 ) => {
-  const { chapters, parameters, systemPrompts } = ebookState;
-  if (!systemPrompts || systemPrompts.length === 0) {
-    throw new Error("System Prompts is empty");
-  }
-
-  const chapter = chapters.find((c) => c.id === chapterId);
-  const chapterIndex = chapters.findIndex((c) => c.id === chapterId);
-  const paragraphs = chapter.content;
-
-  const previousChaptersSynopsis = chapters
-    .slice(0, chapterIndex)
-    .map(
-      (chapter, index) =>
-        `Chapter ${index + 1}: ${chapter.title}\n${chapter.synopsis}`
-    )
-    .join("\n\n");
-
   try {
     await streamedApiCall(
       `${process.env.REACT_APP_API_URL}/chapter/continue`,
       "POST",
       {
-        parameters: parameters,
-        synopsis: chapter.synopsis,
-        previousChapters: previousChaptersSynopsis,
-        previousParagraph: paragraphs[paragraphs.length - 1],
-        systemPrompt: systemPrompts[0],
+        context: context,
         instruction: instruction,
         numParagraphs: numParagraphs,
-        outlines: outlines,
       },
       onChunk,
       onError
@@ -160,7 +136,7 @@ export const getSugggestedList = async (fieldType, current_value, context) => {
 };
 
 export const getSuggestedOutlines = async (
-  synopsis,
+  context,
   continue_instruction,
   num_outlines
 ) => {
@@ -169,7 +145,7 @@ export const getSuggestedOutlines = async (
       `${process.env.REACT_APP_API_URL}/chapter/continue/outlines`,
       "POST",
       {
-        synopsis: synopsis,
+        context: context,
         instruction: continue_instruction,
         num_outlines: num_outlines,
       }
@@ -181,5 +157,53 @@ export const getSuggestedOutlines = async (
     return JSON.parse(response.outlines);
   } catch (error) {
     throw new Error(error);
+  }
+};
+
+export const getGeneratedParagraphs = async (
+  context,
+  instruction,
+  numParagraphs
+) => {
+  let newParagraphs = [];
+  let currentParagraph = "";
+
+  const onChunk = (data) => {
+    if (data.chunk) {
+      if (data.chunk === "[DONE]") {
+        if (currentParagraph.trim()) {
+          newParagraphs.push(currentParagraph.trim());
+        }
+      } else {
+        if (data.chunk.includes("\\n\\n")) {
+          let splits = data.chunk.split("\\n\\n");
+          currentParagraph += splits[0] + " ";
+          newParagraphs.push(currentParagraph.trim());
+          currentParagraph = splits[1];
+        } else {
+          currentParagraph += data.chunk + " ";
+        }
+      }
+    }
+  };
+
+  const onError = (error) => {
+    // console.error("Error generating paragraphs:", error);
+    throw new Error(error.message || "Error generating paragraphs");
+  };
+
+  try {
+    await streamContinueParagraph(
+      context,
+      instruction,
+      numParagraphs,
+      onChunk,
+      onError
+    );
+
+    return newParagraphs;
+  } catch (error) {
+    console.error("Failed to generate paragraphs:", error);
+    throw error;
   }
 };

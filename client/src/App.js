@@ -17,8 +17,8 @@ import HomePage from "./pages/home/HomePage";
 import BookView from "./pages/ebook/BookView";
 import TestPage from "./pages/TestPage";
 import MafiaGame from "./pages/mafia/MafiaGame";
-import RewritingDemo from "./pages/ebook/RewritingDemo";
 import Login from "./pages/Login";
+import RewritingDemo from "./pages/ebook/RewritingDemo";
 
 function App() {
   return (

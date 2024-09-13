@@ -511,7 +511,7 @@ def chapter_suggestions():
 @app.route("/chapter/continue/outlines", methods=["POST"])
 def continue_chapter_outlines():
     data = request.get_json()
-    chapter_synopsis = data.get('synopsis')
+    context = data.get('context')
     instruction = data.get('instruction')
     num_outlines = data.get('num_outlines')
 
@@ -525,12 +525,12 @@ def continue_chapter_outlines():
     """
 
     user_prompt = f"""Generate one-line outlines for the next few paragraphs based on the following:
-    chapter synopsis: `{chapter_synopsis}`
+    context: `{context}`
     instruction that covers the content for the outlines: `{instruction}`
     number of outlines: `{num_outlines}`
     Please provide an array of outlines, each containing a 'outline'.
     """
-    print("generating paragraph outlines")
+    print("generating section outlines " + user_prompt)
     result = hermes_ai_output(user_prompt, system_prompt, [], "")
     if isinstance(result, dict) and 'error' in result:
         return jsonify(result), 500
@@ -541,29 +541,23 @@ def continue_chapter_outlines():
 def continue_chapter():
     print(f"Continue Chapter")
     data = request.get_json()
-    parameters = data.get('parameters')
-    synopsis = data.get('synopsis')
-    previousChapters = data.get('previousChapters')
+    context = data.get('context')
+    print(context)
     instruction = data.get('instruction')
-    systemPrompt = data.get('systemPrompt')
     numParagraphs = data.get('numParagraphs')
-    # passage = data.get('passage')
-    previousParagraph = data.get('previousParagraph')
-    outlines = data.get('outlines')
-    if outlines is not None: 
-        outlinesStr = "\n-".join(outlines)
-    else:
-        outlinesStr = None
-
+    
+#     4. List of outlines (can be empty): {outlinesStr}
+# 5. Previously generated paragraph for the current chapter (can be empty): {previousParagraph}
+# 6. Previously generated chapter synopsis for the story (Can be empty): {previousChapters}
+    
+    prompts = load_prompts()
+    systemPrompt = prompts["writing_assistant"]["prompts"][0]
     prompt = f"""
 Please continue the story for the current chapter based on the following:
 
-1. Synopsis: {synopsis}
+1. Synopsis: {context["synopsis"]}
 2. Specific outline to expand: {instruction}
-3. Overall story parameters: {parameters}
-4. List of outlines (can be empty): {outlinesStr}
-5. Previously generated paragraph for the current chapter (can be empty): {previousParagraph}
-6. Previously generated chapter synopsis for the story (Can be empty): {previousChapters}
+3. Overall story parameters: {context["parameters"]}
 
 Important context:
 - The list of outlines represents the sequential progression of the passage to be written for this chapter.
