@@ -55,7 +55,7 @@ const Paragraph = ({
         />
       ) : (
         <p
-          className="p-2 rounded-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer"
+          className="p-1 rounded-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer"
           onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
           {content}

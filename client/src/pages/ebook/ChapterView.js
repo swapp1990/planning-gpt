@@ -12,6 +12,7 @@ import {
 import { useEbook } from "../../context/EbookContext";
 import Synopsis from "./Synopsis";
 import Section from "./Section";
+import GenerationMenu from "./GenerationMenu";
 import { getSuggestedOutlines } from "../../server/ebook";
 
 const OutlineCard = ({ outline, index, onEdit, onDelete }) => {
@@ -70,6 +71,90 @@ const OutlineCard = ({ outline, index, onEdit, onDelete }) => {
         )}
       </div>
     </li>
+  );
+};
+
+const GeneratedOutlinesSection = ({
+  generatedOutlines,
+  outlineInstruction,
+  setOutlineInstruction,
+  numOutlines,
+  setNumOutlines,
+  handleGenerateOutlines,
+  handleReloadOutlines,
+  handleAddOutlines,
+  handleCloseOutlines,
+  setGeneratedOutlines,
+  isLoading,
+}) => {
+  if (generatedOutlines.length === 0) {
+    return (
+      <GenerationMenu
+        instruction={outlineInstruction}
+        setInstruction={setOutlineInstruction}
+        count={numOutlines}
+        setCount={setNumOutlines}
+        onGenerate={handleGenerateOutlines}
+        isLoading={isLoading}
+        isRegeneration={false}
+        generationType="outlines"
+      />
+    );
+  }
+
+  return (
+    <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg shadow-md p-6 sm:p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h4 className="text-xl font-semibold text-gray-800">
+          Generated Section Outlines
+        </h4>
+        <div className="flex space-x-2">
+          <button
+            onClick={handleAddOutlines}
+            className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
+          >
+            <FaPlus className="mr-2" />
+            Add
+          </button>
+          <button
+            onClick={handleCloseOutlines}
+            className="p-2 text-gray-500 hover:text-red-500 transition-colors duration-200"
+            aria-label="Close generated outlines"
+          >
+            <FaTimes className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+      <div className="space-y-4 mb-6">
+        {generatedOutlines.map((outline, index) => (
+          <OutlineCard
+            key={index}
+            outline={outline}
+            onEdit={(newOutline) => {
+              const updatedOutlines = [...generatedOutlines];
+              updatedOutlines[index] = newOutline;
+              setGeneratedOutlines(updatedOutlines);
+            }}
+            onDelete={() => {
+              const updatedOutlines = generatedOutlines.filter(
+                (_, i) => i !== index
+              );
+              setGeneratedOutlines(updatedOutlines);
+            }}
+          />
+        ))}
+      </div>
+      <GenerationMenu
+        instruction={outlineInstruction}
+        setInstruction={setOutlineInstruction}
+        count={numOutlines}
+        setCount={setNumOutlines}
+        onGenerate={handleGenerateOutlines}
+        isLoading={isLoading}
+        isRegeneration={true}
+        generationType="outlines"
+      />
+    </div>
   );
 };
 
@@ -148,6 +233,11 @@ const ChapterView = ({ chapter }) => {
     setGeneratedOutlines([]);
   };
 
+  const handleCloseOutlines = useCallback(() => {
+    setGeneratedOutlines([]);
+    setOutlineInstruction("");
+  }, []);
+
   return (
     <div className="bg-white shadow rounded-lg p-2 sm:p-6">
       <div className="flex items-center justify-between mb-4">
@@ -206,78 +296,19 @@ const ChapterView = ({ chapter }) => {
         />
       ))}
 
-      <div className="mt-8">
-        <h3 className="text-xl font-semibold mb-4">Generate New Outlines</h3>
-        <div className="space-y-4">
-          <textarea
-            value={outlineInstruction}
-            onChange={(e) => setOutlineInstruction(e.target.value)}
-            placeholder="Enter instruction for outline generation"
-            className="w-full p-2 border rounded h-24 resize-none"
-          />
-          <div className="flex items-center space-x-4">
-            <input
-              type="number"
-              value={numOutlines}
-              onChange={(e) =>
-                setNumOutlines(Math.max(1, parseInt(e.target.value) || 1))
-              }
-              min="1"
-              className="w-20 p-2 border rounded"
-            />
-            <button
-              onClick={handleGenerateOutlines}
-              disabled={isLoading || !outlineInstruction.trim()}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors duration-200 flex items-center"
-            >
-              {isLoading ? (
-                <FaSpinner className="animate-spin mr-2" />
-              ) : (
-                <FaPlus className="mr-2" />
-              )}
-              Generate Outlines
-            </button>
-          </div>
-        </div>
-
-        {generatedOutlines.length > 0 && (
-          <div className="mt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="text-lg font-semibold">Generated Outlines</h4>
-              <button
-                onClick={handleReloadOutlines}
-                className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors duration-200 flex items-center"
-              >
-                <FaSyncAlt className="mr-2" />
-                Reload Outlines
-              </button>
-            </div>
-            {generatedOutlines.map((outline, index) => (
-              <OutlineCard
-                key={index}
-                outline={outline}
-                onEdit={(newOutline) => {
-                  const updatedOutlines = [...generatedOutlines];
-                  updatedOutlines[index] = newOutline;
-                  setGeneratedOutlines(updatedOutlines);
-                }}
-                onDelete={() => {
-                  const updatedOutlines = generatedOutlines.filter(
-                    (_, i) => i !== index
-                  );
-                  setGeneratedOutlines(updatedOutlines);
-                }}
-              />
-            ))}
-            <button
-              onClick={handleAddOutlines}
-              className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200"
-            >
-              Add Outlines to Chapter
-            </button>
-          </div>
-        )}
-      </div>
+      <GeneratedOutlinesSection
+        generatedOutlines={generatedOutlines}
+        outlineInstruction={outlineInstruction}
+        setOutlineInstruction={setOutlineInstruction}
+        numOutlines={numOutlines}
+        setNumOutlines={setNumOutlines}
+        handleGenerateOutlines={handleGenerateOutlines}
+        handleReloadOutlines={handleReloadOutlines}
+        handleAddOutlines={handleAddOutlines}
+        handleCloseOutlines={handleCloseOutlines}
+        setGeneratedOutlines={setGeneratedOutlines}
+        isLoading={isLoading}
+      />
 
       {error && <p className="mt-4 text-red-500">{error}</p>}
     </div>

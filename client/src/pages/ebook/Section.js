@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   FaChevronDown,
   FaChevronUp,
@@ -8,80 +8,14 @@ import {
   FaCheck,
   FaTimes,
   FaRedo,
-  FaSave,
+  FaPlus,
   FaMagic,
+  FaTimesCircle,
 } from "react-icons/fa";
 import { useEbook } from "../../context/EbookContext";
 import { getGeneratedParagraphs } from "../../server/ebook";
 import Paragraph from "./Paragraph";
-
-const ParagraphGenerationMenu = ({
-  instruction,
-  setInstruction,
-  numParagraphs,
-  setNumParagraphs,
-  onGenerate,
-  isGenerating,
-  hasDraft,
-}) => {
-  return (
-    <div className="space-y-4 bg-gray-50 p-4 rounded-lg shadow-sm">
-      <div className="flex flex-col space-y-2">
-        <label
-          htmlFor="instruction"
-          className="text-sm font-medium text-gray-700"
-        >
-          Instructions for AI:
-        </label>
-        <textarea
-          id="instruction"
-          value={instruction}
-          onChange={(e) => setInstruction(e.target.value)}
-          className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          rows="3"
-          placeholder="Enter instructions for generating or rewriting paragraphs..."
-        />
-      </div>
-      <div className="flex flex-wrap items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <label
-            htmlFor="numParagraphs"
-            className="text-sm font-medium text-gray-700"
-          >
-            Paragraphs:
-          </label>
-          <input
-            type="number"
-            id="numParagraphs"
-            value={numParagraphs}
-            onChange={(e) =>
-              setNumParagraphs(Math.max(1, parseInt(e.target.value) || 1))
-            }
-            className="w-16 p-1 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            min="1"
-          />
-        </div>
-        <button
-          onClick={onGenerate}
-          disabled={isGenerating}
-          className="flex-grow sm:flex-grow-0 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center"
-        >
-          {isGenerating ? (
-            <>
-              <FaSpinner className="animate-spin mr-2" />
-              Generating...
-            </>
-          ) : (
-            <>
-              <FaMagic className="mr-2" />
-              {hasDraft ? "Rewrite Paragraphs" : "Generate Paragraphs"}
-            </>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-};
+import GenerationMenu from "./GenerationMenu";
 
 const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -92,13 +26,22 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [numParagraphs, setNumParagraphs] = useState(3);
   const [draftParagraphs, setDraftParagraphs] = useState([]);
   const [instruction, setInstruction] = useState("");
+
   const { ebookState, chapterActions } = useEbook();
+
+  const draftRef = useRef(null);
 
   useEffect(() => {
     setEditedOutline(section.outline);
   }, [section.outline]);
 
   const handleGenerateParagraphs = useCallback(async () => {
+    setTimeout(() => {
+      draftRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 100);
     setIsGenerating(true);
     setError(null);
 
@@ -267,6 +210,11 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     []
   );
 
+  const handleCloseDraft = useCallback(() => {
+    setDraftParagraphs([]);
+    setInstruction("");
+  }, []);
+
   const renderParagraphs = useCallback(
     (paragraphs, isDraft = false) => {
       return paragraphs.map((paragraph, pIndex) => (
@@ -302,15 +250,15 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   );
 
   return (
-    <div className="my-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
+    <div className="my-4 p-1 bg-white rounded-lg shadow-md border border-gray-200">
       <div
-        className={`p-4 cursor-pointer transition-colors duration-200 ${
+        className={`p-2 sm:p-4 cursor-pointer transition-colors duration-200 ${
           isExpanded ? "bg-gray-50" : "hover:bg-gray-50"
         }`}
         onClick={toggleExpand}
       >
         <div className="flex items-center justify-between">
-          <div className="flex-grow mr-4">
+          <div className="flex-grow mr-4 w-[50px]">
             {isEditing ? (
               <textarea
                 rows="2"
@@ -320,7 +268,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
                 onClick={(e) => e.stopPropagation()}
               />
             ) : (
-              <h3 className="text-lg font-semibold text-gray-800 break-words">
+              <h3 className="text-lg font-semibold text-gray-800 break-words sm:break-normal sm:whitespace-normal truncate sm:overflow-visible sm:text-ellipsis">
                 {section.outline}
               </h3>
             )}
@@ -384,41 +332,71 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       </div>
 
       {isExpanded && (
-        <div className="mt-4">
+        <div className="p-1 border-t border-gray-200">
           {section.paragraphs && section.paragraphs.length > 0 && (
             <div className="mb-4">{renderParagraphs(section.paragraphs)}</div>
           )}
-          {draftParagraphs.length > 0 && (
-            <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h4 className="text-md font-semibold text-blue-700 mb-2">
-                Draft Paragraphs
-              </h4>
-              {renderParagraphs(draftParagraphs, true)}
-              <div className="mt-4 flex justify-end space-x-2">
-                <button
-                  onClick={handleRewriteDraft}
-                  className="px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors duration-200 flex items-center"
-                >
-                  <FaRedo className="mr-2" /> Rewrite Draft
-                </button>
-                <button
-                  onClick={handleFinalizeDraft}
-                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
-                >
-                  <FaSave className="mr-2" /> Finalize Draft
-                </button>
+          {draftParagraphs.length > 0 ? (
+            <div
+              ref={draftRef}
+              className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <h4 className="text-md font-semibold text-yellow-700">
+                  Draft Paragraphs
+                </h4>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={handleFinalizeDraft}
+                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
+                  >
+                    <FaPlus className="mr-2" />
+                    Finalize
+                  </button>
+                  <button
+                    onClick={handleCloseDraft}
+                    className="p-2 text-gray-500 hover:text-red-500 transition-colors duration-200"
+                    aria-label="Close generated outlines"
+                  >
+                    <FaTimes className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
+
+              {isGenerating ? (
+                <div className="flex items-center justify-center p-4">
+                  <FaSpinner className="animate-spin text-blue-500 mr-2" />
+                  <span className="text-blue-500">
+                    Regenerating paragraphs...
+                  </span>
+                </div>
+              ) : (
+                <>
+                  {renderParagraphs(draftParagraphs, true)}
+                  <GenerationMenu
+                    instruction={instruction}
+                    setInstruction={setInstruction}
+                    count={numParagraphs}
+                    setCount={setNumParagraphs}
+                    onGenerate={handleRewriteDraft}
+                    isLoading={isGenerating}
+                    isRegeneration={true}
+                    generationType="paragraphs"
+                  />
+                </>
+              )}
             </div>
+          ) : (
+            <GenerationMenu
+              instruction={instruction}
+              setInstruction={setInstruction}
+              count={numParagraphs}
+              setCount={setNumParagraphs}
+              onGenerate={handleGenerateParagraphs}
+              isLoading={isGenerating}
+              generationType="paragraphs"
+            />
           )}
-          <ParagraphGenerationMenu
-            instruction={instruction}
-            setInstruction={setInstruction}
-            numParagraphs={numParagraphs}
-            setNumParagraphs={setNumParagraphs}
-            onGenerate={handleGenerateParagraphs}
-            isGenerating={isGenerating}
-            hasDraft={draftParagraphs.length > 0}
-          />
         </div>
       )}
       {error && <p className="mt-2 text-red-500">{error}</p>}

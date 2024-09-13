@@ -6,9 +6,11 @@ import {
   FaLightbulb,
   FaListUl,
   FaSpinner,
+  FaTimes,
 } from "react-icons/fa";
 import { v4 as uuidv4 } from "uuid";
 
+import GenerationMenu from "./GenerationMenu";
 import CollapsiblePanel from "../../components/CollapsiblePanel";
 import { useEbook } from "../../context/EbookContext";
 import { getSugggestedList } from "../../server/ebook";
@@ -23,6 +25,8 @@ const ChapterList = () => {
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [suggestedChapters, setSuggestedChapters] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [chaptersInstruction, setChaptersInstruction] = useState("");
+  const [numChapters, setNumChapters] = useState(3);
 
   const handleChapterClick = (chapterId) => {
     chapterActions.setCurrentChapter(chapterId);
@@ -89,6 +93,10 @@ const ChapterList = () => {
   const handleCancelDelete = (e) => {
     e.stopPropagation();
     setDeleteConfirmId(null);
+  };
+
+  const handleCloseSuggestions = () => {
+    setSuggestedChapters([]);
   };
 
   return (
@@ -171,12 +179,20 @@ const ChapterList = () => {
           </ul>
         )}
 
-        {/* Suggested chapters */}
         {suggestedChapters.length > 0 && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">
-              Suggested Chapters
-            </h3>
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                Suggested Chapters
+              </h3>
+              <button
+                onClick={handleCloseSuggestions}
+                className="p-2 text-gray-500 hover:text-red-500 transition-colors duration-200"
+                aria-label="Close generated outlines"
+              >
+                <FaTimes className="w-5 h-5" />
+              </button>
+            </div>
             <ul className="space-y-2">
               {suggestedChapters.map((chapter, index) => (
                 <li
@@ -194,7 +210,7 @@ const ChapterList = () => {
                     </div>
                     <button
                       onClick={() => handleAddSuggestedChapter(chapter)}
-                      className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-full text-sm transition-colors duration-200"
+                      className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-full text-sm transition-colors duration-200"
                     >
                       Add
                     </button>
@@ -202,6 +218,16 @@ const ChapterList = () => {
                 </li>
               ))}
             </ul>
+            <GenerationMenu
+              instruction={chaptersInstruction}
+              setInstruction={setChaptersInstruction}
+              count={numChapters}
+              setCount={setNumChapters}
+              onGenerate={handleSuggestChapters}
+              isLoading={isLoading}
+              isRegeneration={true}
+              generationType="chapters"
+            />
           </div>
         )}
 
