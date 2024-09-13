@@ -134,6 +134,10 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     ebookState.chapters,
   ]);
 
+  const toggleExpand = useCallback(() => {
+    setIsExpanded(!isExpanded);
+  }, [isExpanded]);
+
   const handleFinalizeDraft = useCallback(async () => {
     const result = await chapterActions.updateSection(chapterId, sectionIndex, {
       ...section,
@@ -299,65 +303,83 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
 
   return (
     <div className="my-4 p-4 bg-white rounded-lg shadow-md border border-gray-200">
-      <div className="flex items-center justify-between">
-        {isEditing ? (
-          <textarea
-            rows="2"
-            value={editedOutline}
-            onChange={(e) => setEditedOutline(e.target.value)}
-            className="flex-grow mr-2 p-2 border rounded"
-          />
-        ) : (
-          <h3 className="text-lg font-semibold text-gray-800 flex-grow">
-            {section.outline}
-          </h3>
-        )}
-        <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">
-            {section.paragraphs ? section.paragraphs.length : 0} paragraph(s)
-          </span>
-          {isEditing ? (
-            <>
-              <button
-                onClick={handleSaveEdit}
-                className="p-1 text-green-600 hover:text-green-800"
-                title="Save changes"
-              >
-                <FaCheck />
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                className="p-1 text-red-600 hover:text-red-800"
-                title="Cancel editing"
-              >
-                <FaTimes />
-              </button>
-            </>
-          ) : (
-            <>
-              <button
-                onClick={handleEditSection}
-                className="p-1 text-blue-600 hover:text-blue-800"
-                title="Edit section"
-              >
-                <FaEdit />
-              </button>
-              <button
-                onClick={handleDeleteSection}
-                className="p-1 text-red-600 hover:text-red-800"
-                title="Delete section"
-              >
-                <FaTrash />
-              </button>
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1 text-gray-600 hover:text-gray-800"
-                title={isExpanded ? "Collapse section" : "Expand section"}
-              >
-                {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-              </button>
-            </>
-          )}
+      <div
+        className={`p-4 cursor-pointer transition-colors duration-200 ${
+          isExpanded ? "bg-gray-50" : "hover:bg-gray-50"
+        }`}
+        onClick={toggleExpand}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex-grow mr-4">
+            {isEditing ? (
+              <textarea
+                rows="2"
+                value={editedOutline}
+                onChange={(e) => setEditedOutline(e.target.value)}
+                className="w-full p-2 text-lg font-semibold text-gray-800 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <h3 className="text-lg font-semibold text-gray-800 break-words">
+                {section.outline}
+              </h3>
+            )}
+          </div>
+          <div className="flex items-center space-x-2 flex-shrink-0">
+            <span className="text-sm text-gray-500 hidden sm:inline">
+              {section.paragraphs ? section.paragraphs.length : 0} paragraph(s)
+            </span>
+            {isEditing ? (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSaveEdit();
+                  }}
+                  className="p-1 text-green-600 hover:text-green-800"
+                  title="Save changes"
+                >
+                  <FaCheck />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCancelEdit();
+                  }}
+                  className="p-1 text-red-600 hover:text-red-800"
+                  title="Cancel editing"
+                >
+                  <FaTimes />
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditSection();
+                  }}
+                  className="p-1 text-blue-600 hover:text-blue-800"
+                  title="Edit section"
+                >
+                  <FaEdit />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteSection();
+                  }}
+                  className="p-1 text-red-600 hover:text-red-800"
+                  title="Delete section"
+                >
+                  <FaTrash />
+                </button>
+              </>
+            )}
+            <div className="text-gray-400">
+              {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
+            </div>
+          </div>
         </div>
       </div>
 
