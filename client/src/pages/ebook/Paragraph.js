@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from "react";
-import { FaPen, FaTrash, FaCheck, FaTimes, FaPlus } from "react-icons/fa";
 import ParagraphMenu from "./ParagraphMenu";
 import RewriteParagraph from "./RewriteParagraph";
 
@@ -20,10 +19,17 @@ const Paragraph = ({
     setIsRewriting(true);
   }, []);
 
-  const handleRewriteComplete = useCallback(
+  const handleRewriteComplete = () => {
+    // console.log("handleRewriteComplete");
+    // setIsRewriting(false);
+    // setRewriteInstruction("");
+  };
+
+  const handleUpdateParagraph = useCallback(
     (newContent) => {
       onUpdate(newContent);
       setIsRewriting(false);
+      setIsMenuOpen(false);
       setRewriteInstruction("");
     },
     [onUpdate]
@@ -44,7 +50,7 @@ const Paragraph = ({
           instruction={rewriteInstruction}
           onRewriteComplete={handleRewriteComplete}
           isRewriting={isRewriting}
-          onUpdateParagraph={handleRewriteComplete}
+          onUpdateParagraph={handleUpdateParagraph}
           isCancelled={false}
         />
       ) : (

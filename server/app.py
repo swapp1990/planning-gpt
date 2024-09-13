@@ -542,7 +542,7 @@ def continue_chapter():
     print(f"Continue Chapter")
     data = request.get_json()
     context = data.get('context')
-    print(context)
+    # print(context)
     instruction = data.get('instruction')
     numParagraphs = data.get('numParagraphs')
     
@@ -555,15 +555,18 @@ def continue_chapter():
     prompt = f"""
 Please continue the story for the current chapter based on the following:
 
-1. Synopsis: {context["synopsis"]}
-2. Specific outline to expand: {instruction}
+1. Synopsis for the entire chapter: {context["synopsis"]}
+2. Specific outline for guidance: {context["outline"]}
 3. Overall story parameters: {context["parameters"]}
+4. Previously generated paragraphs: {context["previous_paragraphs"]}
+5. List of outlines for the chapter: {context["outlinesList"]}
 
 Important context:
 - The list of outlines represents the sequential progression of the passage to be written for this chapter.
 - Each outline corresponds to a specific part of the chapter in the order they will appear.
 
 Important instructions:
+- Follow the instructions: {instruction}
 - Focus ONLY on expanding the outline specified in the instruction.
 - This outline is part of the sequential list provided, but you should only work on this specific one.
 - Generate exactly {numParagraphs} paragraph(s) for this outline.

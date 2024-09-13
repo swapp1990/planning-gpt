@@ -1,4 +1,8 @@
-import { streamedApiCall, regularApiCall } from "../utils/api";
+import {
+  streamedApiCall,
+  streamedApiCallBasic,
+  regularApiCall,
+} from "../utils/api";
 
 export const streamInsertedParagraph = async (
   ebookState,
@@ -205,5 +209,47 @@ export const getGeneratedParagraphs = async (
   } catch (error) {
     console.error("Failed to generate paragraphs:", error);
     throw error;
+  }
+};
+
+export const rewriteSentence = async (
+  sentence,
+  instruction,
+  paragraph,
+  parameters,
+  chapter_synopsis
+) => {
+  try {
+    let revised_sentence = null;
+    const onChunk = (data) => {
+      let response = JSON.parse(data);
+      if (response.status == "rewriting") {
+      } else if (response.status == "complete") {
+        revised_sentence = response.revised_sentence;
+      } else if (response.status == "ok") {
+        revised_sentence = null;
+      }
+    };
+
+    const onError = (error) => {
+      console.error("Error fetching revised sentence:", error);
+      return null;
+    };
+    await streamedApiCallBasic(
+      `${process.env.REACT_APP_API_URL}/sentence/rewrite`,
+      "POST",
+      {
+        sentence: sentence,
+        instruction: instruction,
+        paragraph: paragraph,
+        parameters: parameters,
+        chapter_synopsis: chapter_synopsis,
+      },
+      onChunk,
+      onError
+    );
+    return { sentence: revised_sentence };
+  } catch (error) {
+    return null;
   }
 };

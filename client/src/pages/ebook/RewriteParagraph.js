@@ -1,50 +1,8 @@
 import React, { useReducer, useEffect, useState, useRef } from "react";
 import { FaCheck, FaTimes, FaCheckDouble, FaTimesCircle } from "react-icons/fa";
-import { streamedApiCallBasic } from "../../utils/api";
 import { splitSentences } from "../../utils/paragraphDiff";
 import { useEbook } from "../../context/EbookContext";
-
-const rewriteSentence = async (
-  sentence,
-  instruction,
-  paragraph,
-  parameters,
-  chapter_synopsis
-) => {
-  try {
-    let revised_sentence = null;
-    const onChunk = (data) => {
-      let response = JSON.parse(data);
-      if (response.status == "rewriting") {
-      } else if (response.status == "complete") {
-        revised_sentence = response.revised_sentence;
-      } else if (response.status == "ok") {
-        revised_sentence = null;
-      }
-    };
-
-    const onError = (error) => {
-      console.error("Error fetching revised sentence:", error);
-      return null;
-    };
-    await streamedApiCallBasic(
-      `${process.env.REACT_APP_API_URL}/sentence/rewrite`,
-      "POST",
-      {
-        sentence: sentence,
-        instruction: instruction,
-        paragraph: paragraph,
-        parameters: parameters,
-        chapter_synopsis: chapter_synopsis,
-      },
-      onChunk,
-      onError
-    );
-    return { sentence: revised_sentence };
-  } catch (error) {
-    return null;
-  }
-};
+import { rewriteSentence } from "../../server/ebook";
 
 const rewritingReducer = (state, action) => {
   switch (action.type) {
@@ -307,7 +265,9 @@ const RewriteParagraph = ({
   const handleAcceptAll = () => {
     dispatch({ type: "ACCEPT_ALL" });
     Object.entries(state.rewrittenSentences).forEach(([key, sentence]) => {
-      updateParagraphContent(key, sentence);
+      if (sentence != null) {
+        updateParagraphContent(key, sentence);
+      }
     });
   };
 
@@ -321,8 +281,7 @@ const RewriteParagraph = ({
   };
 
   const handleSubmitRewrite = () => {
-    console.log("handleSubmitRewrite");
-    onUpdateParagraph(index, paragraphContent);
+    onUpdateParagraph(paragraphContent);
   };
 
   const updateParagraphContent = (key, newSentence) => {
