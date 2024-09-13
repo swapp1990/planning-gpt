@@ -179,19 +179,26 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   }, [section.outline]);
 
   const handleParagraphUpdate = useCallback(
-    async (paragraphIndex, newContent) => {
-      const updatedParagraphs = [...section.paragraphs];
-      updatedParagraphs[paragraphIndex] = newContent;
-      const result = await chapterActions.updateSection(
-        chapterId,
-        sectionIndex,
-        {
-          ...section,
-          paragraphs: updatedParagraphs,
+    async (paragraphIndex, newContent, isDraft) => {
+      if (isDraft) {
+        const updatedDrafts = draftParagraphs;
+        updatedDrafts[paragraphIndex] = newContent;
+        setDraftParagraphs(updatedDrafts);
+      } else {
+        // Update finalized paragraphs
+        const updatedParagraphs = [...section.paragraphs];
+        updatedParagraphs[paragraphIndex] = newContent;
+        const result = await chapterActions.updateSection(
+          chapterId,
+          sectionIndex,
+          {
+            ...section,
+            paragraphs: updatedParagraphs,
+          }
+        );
+        if (result.error) {
+          setError(result.error);
         }
-      );
-      if (result.error) {
-        setError(result.error);
       }
     },
     [chapterActions, chapterId, sectionIndex, section]
@@ -239,6 +246,23 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     [chapterActions, chapterId, sectionIndex, section]
   );
 
+  const handleDraftParagraphDelete = useCallback((paragraphIndex) => {
+    setDraftParagraphs((prevDrafts) =>
+      prevDrafts.filter((_, index) => index !== paragraphIndex)
+    );
+  }, []);
+
+  const handleDraftParagraphInsert = useCallback(
+    (paragraphIndex, newContent) => {
+      setDraftParagraphs((prevDrafts) => [
+        ...prevDrafts.slice(0, paragraphIndex + 1),
+        newContent,
+        ...prevDrafts.slice(paragraphIndex + 1),
+      ]);
+    },
+    []
+  );
+
   const renderParagraphs = useCallback(
     (paragraphs, isDraft = false) => {
       return paragraphs.map((paragraph, pIndex) => (
@@ -247,9 +271,19 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
           content={paragraph}
           index={pIndex}
           chapterId={chapterId}
-          onUpdate={(newContent) => handleParagraphUpdate(pIndex, newContent)}
-          onDelete={() => handleParagraphDelete(pIndex)}
-          onInsert={(newContent) => handleParagraphInsert(pIndex, newContent)}
+          onUpdate={(newContent) =>
+            handleParagraphUpdate(pIndex, newContent, isDraft)
+          }
+          onDelete={() =>
+            isDraft
+              ? handleDraftParagraphDelete(pIndex)
+              : handleParagraphDelete(pIndex)
+          }
+          onInsert={(newContent) =>
+            isDraft
+              ? handleDraftParagraphInsert(pIndex, newContent)
+              : handleParagraphInsert(pIndex, newContent)
+          }
           isDraft={isDraft}
         />
       ));
@@ -259,6 +293,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       handleParagraphUpdate,
       handleParagraphDelete,
       handleParagraphInsert,
+      draftParagraphs,
     ]
   );
 

@@ -564,6 +564,7 @@ Please continue the story for the current chapter based on the following:
 Important context:
 - The list of outlines represents the sequential progression of the passage to be written for this chapter.
 - Each outline corresponds to a specific part of the chapter in the order they will appear.
+- Previously generated paragraphs are for the current outline, so make sure the newly generated paragraphs follow them accurately and also not repeat content.
 
 Important instructions:
 - Follow the instructions: {instruction}
