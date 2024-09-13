@@ -219,6 +219,13 @@ const ParametersPanel = () => {
   const renderEditView = () => (
     <div className="space-y-6">
       <SuggestableInput
+        label="Premise"
+        value={localParameters.premise}
+        context={localParameters}
+        onChange={(value) => handleInputChange("premise", value)}
+        multiline
+      />
+      <SuggestableInput
         label="Title"
         value={localParameters.title}
         context={localParameters}
@@ -242,13 +249,6 @@ const ParametersPanel = () => {
           onChange={(value) => handleNestedChange("setting", "place", value)}
         />
       </div>
-      <SuggestableInput
-        label="Premise"
-        value={localParameters.premise}
-        context={localParameters}
-        onChange={(value) => handleInputChange("premise", value)}
-        multiline
-      />
       <div>
         <h4 className="text-lg font-medium text-gray-700 mb-2">
           Main Characters

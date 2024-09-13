@@ -52,6 +52,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
         parameters: ebookState.parameters,
         synopsis: chapter.synopsis,
         previous_paragraphs: section.paragraphs.join("\n"),
+        draft_paragraphs: draftParagraphs.join("\n\n"),
         outline: editedOutline,
         outlinesList: outlinesList,
       };

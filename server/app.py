@@ -236,7 +236,7 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
     client = OpenAI(
         api_key=openai_api_key,
     )
-    model = "gpt-4o-mini"
+    model = "gpt-4o"
     
     if prompt is None or len(prompt) == 0:
         yield "Please provide a valid prompt."
@@ -542,6 +542,8 @@ def continue_chapter():
     print(f"Continue Chapter")
     data = request.get_json()
     context = data.get('context')
+    draft_paragraphs = context["draft_paragraphs"]
+    prev_paragraphs = context["previous_paragraphs"]
     # print(context)
     instruction = data.get('instruction')
     numParagraphs = data.get('numParagraphs')
@@ -558,24 +560,23 @@ Please continue the story for the current chapter based on the following:
 1. Synopsis for the entire chapter: {context["synopsis"]}
 2. Specific outline for guidance: {context["outline"]}
 3. Overall story parameters: {context["parameters"]}
-4. Previously generated paragraphs: {context["previous_paragraphs"]}
-5. List of outlines for the chapter: {context["outlinesList"]}
+4. Current draft paragraphs: {context["draft_paragraphs"]}
+5. Finalized paragraphs so far: {context["previous_paragraphs"]}
 
 Important context:
-- The list of outlines represents the sequential progression of the passage to be written for this chapter.
-- Each outline corresponds to a specific part of the chapter in the order they will appear.
-- Previously generated paragraphs are for the current outline, so make sure the newly generated paragraphs follow them accurately and also not repeat content.
+- Draft paragraphs (Point 4): These are initial attempts at addressing the current outline. Use this content as a starting point, but rewrite and improve it based on the instructions and number of paragraphs. Do not simply continue from where these drafts end, you have to write from the beggining. 
+- Previously finalized paragraphs (Point 5): This is finalized content for the current outline. Your new paragraphs should follow these logically, and not repeat any content from the finalized paragraphs.
 
 Important instructions:
-- Follow the instructions: {instruction}
-- Focus ONLY on expanding the outline specified in the instruction.
-- This outline is part of the sequential list provided, but you should only work on this specific one.
-- Generate exactly {numParagraphs} paragraph(s) for this outline.
-- Do not proceed to subsequent outlines or earlier parts of the sequence.
+- Follow these specific instructions: {instruction}
+- Focus ONLY on expanding the current outline specified in Point 2.
+- Generate exactly {numParagraphs} paragraph(s) for this outline focusing ONLY on the current outline provided.
+Use the draft paragraphs as inspiration, but rewrite from the beginning. If instructed to generate more paragraphs than the draft, expand on the ideas. If fewer, condense the most important elements.
 - The instruction guides the content, but don't necessarily start the paragraph with its exact words.
 - Ensure your writing aligns with the given synopsis and overall story parameters.
-- Use the list of outlines for context of the chapter's flow, but do not expand on any outline other than the one specified.
-- Do not mention, reference, or allude to any other outlines in your generated content.
+
+Additional Context:
+The outline `{context["outline"]}` is part of this list of outlines: `{context["outlinesList"]}`. The entire list is provided to you so you understand the flow of the chapter and help guide you in generating paragraphs for the current outline. Do not mention, reference, or allude to any other outlines in your generated content.
 
 Remember: You are expanding a single point in the chapter's progression. Earlier and subsequent parts of the sequence will be addressed separately.
 """
