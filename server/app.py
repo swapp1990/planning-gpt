@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify,Response, stream_with_context
 from flask_cors import CORS
 from openai import OpenAI
+from anthropic import Anthropic
 
 # Load environment variables from .env file
 load_dotenv()
@@ -22,6 +23,7 @@ logger.setLevel(logging.INFO)
 
 lambda_hermes_api_key = os.getenv('LAMBDA_API_KEY')
 openai_api_key = os.getenv('OPENAI_API_KEY')
+clause_api_key = os.getenv('CLAUDE_API_KEY')
 openai_api_base = "https://api.lambdalabs.com/v1"
 
 print("This is a test log message", flush=True)
@@ -236,7 +238,7 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
     client = OpenAI(
         api_key=openai_api_key,
     )
-    model = "gpt-4o"
+    model = "gpt-4o-2024-08-06"
     
     if prompt is None or len(prompt) == 0:
         yield "Please provide a valid prompt."
@@ -544,6 +546,7 @@ def continue_chapter():
     context = data.get('context')
     draft_paragraphs = context["draft_paragraphs"]
     prev_paragraphs = context["previous_paragraphs"]
+    next_outline = context["next_outline"]
     # print(context)
     instruction = data.get('instruction')
     numParagraphs = data.get('numParagraphs')
@@ -557,28 +560,39 @@ def continue_chapter():
     prompt = f"""
 Please continue the story for the current chapter based on the following:
 
-1. Synopsis for the entire chapter: {context["synopsis"]}
-2. Specific outline for guidance: {context["outline"]}
-3. Overall story parameters: {context["parameters"]}
-4. Current draft paragraphs: {context["draft_paragraphs"]}
-5. Finalized paragraphs so far: {context["previous_paragraphs"]}
+1. Synopsis for the entire chapter: {context['synopsis']}
+2. Current outline to expand: {context['outline']}
+3. Overall story parameters: {context['parameters']}
 
-Important context:
-- Draft paragraphs (Point 4): These are initial attempts at addressing the current outline. Use this content as a starting point, but rewrite and improve it based on the instructions and number of paragraphs. Do not simply continue from where these drafts end, you have to write from the beggining. 
-- Previously finalized paragraphs (Point 5): This is finalized content for the current outline. Your new paragraphs should follow these logically, and not repeat any content from the finalized paragraphs.
+CRITICAL INSTRUCTIONS:
+1. Generate EXACTLY {numParagraphs} paragraph(s).
+2. Focus SOLELY on the current outline (point 2 above). DO NOT address any content beyond this outline.
+3. Follow these specific instructions: {instruction}
+4. Use the draft paragraphs as a starting point, but rewrite completely: {draft_paragraphs}
+5. Ensure logical continuation from previously finalized paragraphs: {prev_paragraphs}
 
-Important instructions:
-- Follow these specific instructions: {instruction}
-- Focus ONLY on expanding the current outline specified in Point 2.
-- Generate exactly {numParagraphs} paragraph(s) for this outline focusing ONLY on the current outline provided.
-Use the draft paragraphs as inspiration, but rewrite from the beginning. If instructed to generate more paragraphs than the draft, expand on the ideas. If fewer, condense the most important elements.
-- The instruction guides the content, but don't necessarily start the paragraph with its exact words.
-- Ensure your writing aligns with the given synopsis and overall story parameters.
+DIALOGUE EMPHASIS:
+- Include approximately 70% dialogue and conversations in your paragraphs if the scene requires it or asked in instruction.
+- Use dialogue to reveal character personalities, advance the plot, and show rather than tell.
+- Ensure conversations feel natural and fit the characters' voices and the story's tone.
 
-Additional Context:
-The outline `{context["outline"]}` is part of this list of outlines: `{context["outlinesList"]}`. The entire list is provided to you so you understand the flow of the chapter and help guide you in generating paragraphs for the current outline. Do not mention, reference, or allude to any other outlines in your generated content.
+STRICT BOUNDARIES:
+- Next outline which is for the following section (DO NOT INCLUDE ANY OF THIS CONTENT): {next_outline}
+- Your writing must NOT contain or allude to any elements from the next outline.
 
-Remember: You are expanding a single point in the chapter's progression. Earlier and subsequent parts of the sequence will be addressed separately.
+WRITING PROCESS:
+1. Analyze the current outline and specific instructions.
+2. Review the draft paragraphs for ideas, but do not copy them directly.
+3. Ensure continuity with previously finalized paragraphs.
+4. Write {numParagraphs} new paragraph(s) that ONLY expand on the current outline.
+5. Double-check that your content does not overlap with the next outline.
+
+FINAL VERIFICATION:
+- Have you written exactly {numParagraphs} paragraph(s)?
+- Does your content strictly adhere to the current outline without touching on the next outline?
+- Have you included sufficient dialogue and conversations as requested?
+
+[SYSTEM NOTE: Content generation for this outline stops here. Do not proceed beyond this point in the story.]
 """
 
     print(prompt)

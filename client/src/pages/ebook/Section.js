@@ -35,6 +35,19 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     setEditedOutline(section.outline);
   }, [section.outline]);
 
+  function getNextOutline(outlinesList, targetOutline) {
+    const index = outlinesList.indexOf(targetOutline);
+    if (index === -1) {
+      console.warn(`Outline "${targetOutline}" not found in the list.`);
+      return "";
+    }
+    if (index === outlinesList.length - 1) {
+      // It's the last outline
+      return "";
+    }
+    return outlinesList[index + 1];
+  }
+
   const handleGenerateParagraphs = useCallback(async () => {
     setTimeout(() => {
       draftRef.current?.scrollIntoView({
@@ -47,14 +60,30 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
 
     try {
       const chapter = ebookState.chapters.find((c) => c.id === chapterId);
-      const outlinesList = chapter.sections.map((s) => s.outline).join("\n");
+      let outlinesList = chapter.sections.map((s) => s.outline);
+      let next_outline = getNextOutline(outlinesList, section.outline);
+
+      let previous_paragraphs = "";
+      if (section.paragraphs.length > 0) {
+        previous_paragraphs = section.paragraphs.slice(-2).join("\n-");
+      } else {
+        if (sectionIndex > 0) {
+          const previousSection = chapter.sections[sectionIndex - 1];
+          previous_paragraphs = previousSection.paragraphs
+            .slice(-2)
+            .join("\n-");
+        } else {
+          previous_paragraphs = "";
+        }
+      }
+
       const context = {
         parameters: ebookState.parameters,
         synopsis: chapter.synopsis,
-        previous_paragraphs: section.paragraphs.join("\n"),
+        previous_paragraphs: previous_paragraphs,
         draft_paragraphs: draftParagraphs.join("\n\n"),
         outline: editedOutline,
-        outlinesList: outlinesList,
+        next_outline: next_outline,
       };
       const generatedParagraphs = await getGeneratedParagraphs(
         context,
