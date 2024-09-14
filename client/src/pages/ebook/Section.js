@@ -11,11 +11,37 @@ import {
   FaPlus,
   FaMagic,
   FaTimesCircle,
+  FaFileAlt,
 } from "react-icons/fa";
 import { useEbook } from "../../context/EbookContext";
-import { getGeneratedParagraphs } from "../../server/ebook";
+import { getGeneratedParagraphs, getSectionSummary } from "../../server/ebook";
 import Paragraph from "./Paragraph";
 import GenerationMenu from "./GenerationMenu";
+
+const Modal = ({ isOpen, onClose, title, children }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+      <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div className="mt-3 text-center">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            {title}
+          </h3>
+          <div className="mt-2 px-7 py-3">{children}</div>
+          <div className="items-center px-4 py-3">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-300"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -26,10 +52,16 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [numParagraphs, setNumParagraphs] = useState(3);
   const [draftParagraphs, setDraftParagraphs] = useState([]);
   const [instruction, setInstruction] = useState("");
+  const [summary, setSummary] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { ebookState, chapterActions } = useEbook();
 
   const draftRef = useRef(null);
+
+  useEffect(() => {
+    // console.log(ebookState);
+  }, [ebookState]);
 
   useEffect(() => {
     setEditedOutline(section.outline);
@@ -47,6 +79,10 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     }
     return outlinesList[index + 1];
   }
+
+  const openSummaryModal = useCallback(() => {
+    setIsModalOpen(true);
+  }, []);
 
   const handleGenerateParagraphs = useCallback(async () => {
     setTimeout(() => {
@@ -107,7 +143,36 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     ebookState.chapters,
   ]);
 
-  const toggleExpand = useCallback(() => {
+  const handleGenerateSummary = useCallback(async () => {
+    const chapter = ebookState.chapters.find((c) => c.id === chapterId);
+    let context = {
+      parameters: ebookState.parameters,
+      synopsis: chapter.synopsis,
+    };
+    let paragraphs = section.paragraphs.join("\n");
+    try {
+      const generatedSummary = await getSectionSummary(context, paragraphs);
+      // setSummary(generatedSummary);
+      const result = await chapterActions.updateSection(
+        chapterId,
+        sectionIndex,
+        {
+          ...section,
+          summary: generatedSummary,
+        }
+      );
+    } catch (error) {
+      console.error("Error generating summary:", error);
+      setError("Failed to generate summary. Please try again.");
+    }
+  }, [
+    ebookState.chapters,
+    ebookState.parameters,
+    chapterId,
+    section.paragraphs,
+  ]);
+
+  const toggleExpand = useCallback(async () => {
     setIsExpanded(!isExpanded);
   }, [isExpanded]);
 
@@ -352,6 +417,16 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
                 >
                   <FaTrash />
                 </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleGenerateSummary();
+                  }}
+                  className="p-1 text-green-600 hover:text-green-800"
+                  title="Generate summary"
+                >
+                  <FaFileAlt />
+                </button>
               </>
             )}
             <div className="text-gray-400">
@@ -363,6 +438,21 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
 
       {isExpanded && (
         <div className="p-1 border-t border-gray-200">
+          {section.summary && section.summary != "" ? (
+            <div className="mt-2 p-2 bg-gray-100 rounded-md">
+              <h4 className="text-sm font-semibold text-gray-700 mb-1">
+                Summary:
+              </h4>
+              <p
+                className="text-sm text-blue-600 cursor-pointer hover:underline"
+                onClick={openSummaryModal}
+              >
+                Click to view summary
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600">No Summary Found</p>
+          )}
           {section.paragraphs && section.paragraphs.length > 0 && (
             <div className="mb-4">{renderParagraphs(section.paragraphs)}</div>
           )}
@@ -430,6 +520,15 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
         </div>
       )}
       {error && <p className="mt-2 text-red-500">{error}</p>}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        title="Section Summary"
+      >
+        <pre className="text-left whitespace-pre-wrap break-words">
+          {JSON.stringify(section.summary, null, 2)}
+        </pre>
+      </Modal>
     </div>
   );
 };

@@ -212,6 +212,26 @@ export const getGeneratedParagraphs = async (
   }
 };
 
+export const getSectionSummary = async (context, paragraphs) => {
+  try {
+    const response = await regularApiCall(
+      `${process.env.REACT_APP_API_URL}/chapter/section/summary`,
+      "POST",
+      {
+        context: context,
+        paragraphs: paragraphs,
+      }
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return JSON.parse(response.summary);
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
 export const rewriteSentence = async (
   sentence,
   instruction,

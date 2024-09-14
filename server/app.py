@@ -538,6 +538,69 @@ def continue_chapter_outlines():
     result = clean_json_string(result)
     return jsonify({'outlines': result})
 
+@app.route("/chapter/section/summary", methods=["POST"])
+def section_summary():
+    print(f"Section Summary")
+    data = request.get_json()
+    context = data.get('context')
+    novel_parameters = context['parameters']
+    chapter_synopsis = context['synopsis']
+    input_paragraphs = data.get('paragraphs')
+
+    system_prompt = f"""
+You are a precise summarization assistant for a novel. Your task is to summarize given paragraphs in the context of the overall novel and current chapter. Here's the relevant context:
+
+Novel Parameters:
+{novel_parameters}
+
+Current Chapter Synopsis:
+{chapter_synopsis}
+
+Summarize the given paragraphs and output the summary in JSON format with the following structure:
+
+{{
+  "currentSceneState": "String describing the current setting, active characters, and ongoing action or conversation (2-3 sentences)",
+  "keyPlotPoints": [
+    "List item for important event or revelation",
+    "List item for important event or revelation",
+    "List item for important event or revelation"
+  ],
+  "characterDynamics": "String highlighting the current state of relationships, conflicts, or developments between characters (2-3 sentences)",
+  "dialogueThemes": "String summarizing the main topics or tones of conversations (1-2 sentences)",
+  "narrativeToneAndAtmosphere": "String describing the overall mood and feeling of the scene (1 sentence)",
+  "openThreads": [
+    "List item for unresolved question, tension, or plot point",
+    "List item for unresolved question, tension, or plot point",
+    "List item for unresolved question, tension, or plot point"
+  ],
+  "lastParagraphEnding": "String providing the last line or a summary of the last sentence from the given paragraphs",
+  "alignmentWithNovelParameters": "String explaining how the current scene aligns with or advances the overall novel parameters (1 sentence)",
+  "relationToChapterSynopsis": "String describing how the current scene fits into or progresses the chapter synopsis (1 sentence)"
+}}
+
+Important Guidelines:
+- Output valid JSON that can be parsed by a JSON parser.
+- Stick strictly to the information provided in the input paragraphs.
+- Consider the novel parameters and chapter synopsis when creating the summary, but don't introduce information not present in the given paragraphs.
+- Do not introduce any new information or speculate about future events.
+- Be concise but comprehensive, ensuring all key elements are captured.
+- Keep the language very simple
+- Ensure the summary can be used as a basis for continuing the story coherently.
+- For list items (keyPlotPoints and openThreads), provide 2 items only.
+"""
+    
+    user_prompt = f"""
+Summarize the following paragraphs in JSON format as specified in the system message:
+
+{input_paragraphs}
+
+Ensure your summary captures all key elements without introducing any new information or speculation about future events.
+"""
+    summary = hermes_ai_output(user_prompt, system_prompt, [], "")
+    summary = clean_json_string(summary)
+    # print(summary)
+    return jsonify({'summary': summary})
+
 @app.route("/chapter/continue", methods=["POST"])
 def continue_chapter():
     print(f"Continue Chapter")
