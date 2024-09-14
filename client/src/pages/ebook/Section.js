@@ -52,7 +52,6 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [numParagraphs, setNumParagraphs] = useState(3);
   const [draftParagraphs, setDraftParagraphs] = useState([]);
   const [instruction, setInstruction] = useState("");
-  const [summary, setSummary] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { ebookState, chapterActions } = useEbook();
@@ -98,25 +97,19 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       const chapter = ebookState.chapters.find((c) => c.id === chapterId);
       let outlinesList = chapter.sections.map((s) => s.outline);
       let next_outline = getNextOutline(outlinesList, section.outline);
-
-      let previous_paragraphs = "";
-      if (section.paragraphs.length > 0) {
-        previous_paragraphs = section.paragraphs.slice(-2).join("\n-");
-      } else {
-        if (sectionIndex > 0) {
-          const previousSection = chapter.sections[sectionIndex - 1];
-          previous_paragraphs = previousSection.paragraphs
-            .slice(-2)
-            .join("\n-");
-        } else {
-          previous_paragraphs = "";
-        }
+      let previous_summary =
+        sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
+      let current_summary = "";
+      if (chapter.sections[sectionIndex].summary) {
+        current_summary =
+          sectionIndex > 0 ? chapter.sections[sectionIndex].summary : "";
       }
 
       const context = {
         parameters: ebookState.parameters,
         synopsis: chapter.synopsis,
-        previous_paragraphs: previous_paragraphs,
+        previous_summary: previous_summary,
+        current_summary: current_summary,
         draft_paragraphs: draftParagraphs.join("\n\n"),
         outline: editedOutline,
         next_outline: next_outline,

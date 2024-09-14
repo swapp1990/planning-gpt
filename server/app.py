@@ -228,16 +228,16 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         return {"error": "An error occurred while processing the request."}
 
 def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
-    # client = OpenAI(
-    #     api_key=lambda_hermes_api_key,
-    #     base_url=openai_api_base,
-    # )        
-    # model = "hermes-3-llama-3.1-405b-fp8"
-    
     client = OpenAI(
-        api_key=openai_api_key,
-    )
-    model = "gpt-4o-2024-08-06"
+        api_key=lambda_hermes_api_key,
+        base_url=openai_api_base,
+    )        
+    model = "hermes-3-llama-3.1-405b-fp8"
+    
+    # client = OpenAI(
+    #     api_key=openai_api_key,
+    # )
+    # model = "gpt-4o-2024-08-06"
     
     if prompt is None or len(prompt) == 0:
         yield "Please provide a valid prompt."
@@ -574,8 +574,6 @@ Summarize the given paragraphs and output the summary in JSON format with the fo
     "List item for unresolved question, tension, or plot point"
   ],
   "lastParagraphEnding": "String providing the last line or a summary of the last sentence from the given paragraphs",
-  "alignmentWithNovelParameters": "String explaining how the current scene aligns with or advances the overall novel parameters (1 sentence)",
-  "relationToChapterSynopsis": "String describing how the current scene fits into or progresses the chapter synopsis (1 sentence)"
 }}
 
 Important Guidelines:
@@ -607,7 +605,7 @@ def continue_chapter():
     data = request.get_json()
     context = data.get('context')
     draft_paragraphs = context["draft_paragraphs"]
-    prev_paragraphs = context["previous_paragraphs"]
+    previous_summary = context["previous_summary"]
     next_outline = context["next_outline"]
     # print(context)
     instruction = data.get('instruction')
@@ -625,13 +623,16 @@ Please continue the story for the current chapter based on the following:
 1. Synopsis for the entire chapter: {context['synopsis']}
 2. Current outline to expand: {context['outline']}
 3. Overall story parameters: {context['parameters']}
+4. Previous Section Summary: {context['previous_summary']}
+5. Current Section Summary: {context['current_summary']}
+6. Newly generated draft paragraphs for rewriting: {draft_paragraphs}
 
 CRITICAL INSTRUCTIONS:
 1. Generate EXACTLY {numParagraphs} paragraph(s).
 2. Focus SOLELY on the current outline (point 2 above). DO NOT address any content beyond this outline.
-3. Follow these specific instructions: {instruction}
-4. Use the draft paragraphs as a starting point, but rewrite completely: {draft_paragraphs}
-5. Ensure logical continuation from previously finalized paragraphs: {prev_paragraphs}
+3. Follow these specific instructions: `{instruction}`
+4. The draft paragraphs (point 6 above) were written previously, for the same section. Please rewrite them based on the instructions from the beginning.
+5. Ensure logical continuation from the previous section summary and the current section summary.
 
 DIALOGUE EMPHASIS:
 - Include approximately 70% dialogue and conversations in your paragraphs if the scene requires it or asked in instruction.
