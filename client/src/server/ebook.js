@@ -37,39 +37,6 @@ export const streamInsertedParagraph = async (
   }
 };
 
-export const streamRewrittenParagraph = async (
-  ebookState,
-  chapterId,
-  paragraphIndex,
-  instruction,
-  onChunk,
-  onError
-) => {
-  const { chapters, parameters, systemPrompts } = ebookState;
-  console.log("streamRewrittenParagraph");
-  const chapter = chapters.find((c) => c.id === chapterId);
-  const chapterIndex = chapters.findIndex((c) => c.id === chapterId);
-  const paragraphs = chapter.content;
-  let paragraph = paragraphs[paragraphIndex];
-  try {
-    await streamedApiCall(
-      `${process.env.REACT_APP_API_URL}/chapter/rewrite`,
-      "POST",
-      {
-        paragraph: paragraph,
-        synopsis: chapter.synopsis,
-        previousParagraph: paragraphs[paragraphs.length - 1],
-        systemPrompt: systemPrompts[0],
-        instruction: instruction,
-      },
-      onChunk,
-      onError
-    );
-  } catch (error) {
-    throw new Error(error);
-  }
-};
-
 export const streamContinueParagraph = async (
   context,
   instruction,
@@ -85,6 +52,32 @@ export const streamContinueParagraph = async (
         context: context,
         instruction: instruction,
         numParagraphs: numParagraphs,
+      },
+      onChunk,
+      onError
+    );
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+export const streamRewriteParagraph = async (
+  context,
+  instruction,
+  numParagraphs,
+  paragraph,
+  onChunk,
+  onError
+) => {
+  try {
+    await streamedApiCall(
+      `${process.env.REACT_APP_API_URL}/chapter/rewrite`,
+      "POST",
+      {
+        context: context,
+        instruction: instruction,
+        numParagraphs: numParagraphs,
+        paragraph: paragraph,
       },
       onChunk,
       onError
@@ -200,6 +193,56 @@ export const getGeneratedParagraphs = async (
     await streamContinueParagraph(
       context,
       instruction,
+      numParagraphs,
+      onChunk,
+      onError
+    );
+
+    return newParagraphs;
+  } catch (error) {
+    console.error("Failed to generate paragraphs:", error);
+    throw error;
+  }
+};
+
+export const getRewrittenParagraphs = async (
+  context,
+  instruction,
+  originalParagraph,
+  numParagraphs
+) => {
+  let newParagraphs = [];
+  let currentParagraph = "";
+
+  const onChunk = (data) => {
+    if (data.chunk) {
+      if (data.chunk === "[DONE]") {
+        if (currentParagraph.trim()) {
+          newParagraphs.push(currentParagraph.trim());
+        }
+      } else {
+        if (data.chunk.includes("\\n\\n")) {
+          let splits = data.chunk.split("\\n\\n");
+          currentParagraph += splits[0] + " ";
+          newParagraphs.push(currentParagraph.trim());
+          currentParagraph = splits[1];
+        } else {
+          currentParagraph += data.chunk + " ";
+        }
+      }
+    }
+  };
+
+  const onError = (error) => {
+    // console.error("Error generating paragraphs:", error);
+    throw new Error(error.message || "Error generating paragraphs");
+  };
+
+  try {
+    await streamRewriteParagraph(
+      context,
+      instruction,
+      originalParagraph,
       numParagraphs,
       onChunk,
       onError

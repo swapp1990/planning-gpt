@@ -14,7 +14,11 @@ import {
   FaFileAlt,
 } from "react-icons/fa";
 import { useEbook } from "../../context/EbookContext";
-import { getGeneratedParagraphs, getSectionSummary } from "../../server/ebook";
+import {
+  getGeneratedParagraphs,
+  getSectionSummary,
+  getRewrittenParagraphs,
+} from "../../server/ebook";
 import Paragraph from "./Paragraph";
 import GenerationMenu from "./GenerationMenu";
 
@@ -239,6 +243,36 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     [chapterActions, chapterId, sectionIndex, section]
   );
 
+  const handleParagraphRewrite = async (
+    pIndex,
+    instruction,
+    numParagraphs = 1
+  ) => {
+    // console.log(instruction);
+    const chapter = ebookState.chapters.find((c) => c.id === chapterId);
+    const paragraphToUpdate = section.paragraphs.find(
+      (_, index) => index == pIndex
+    );
+    // console.log(paragraphToUpdate);
+    const context = {
+      parameters: ebookState.parameters,
+      synopsis: chapter.synopsis,
+      section_paragraphs: section.paragraphs.join("\n"),
+    };
+    // console.log(context);
+    const rewrittenParagraphs = await getRewrittenParagraphs(
+      context,
+      instruction,
+      paragraphToUpdate,
+      numParagraphs
+    );
+    console.log(rewrittenParagraphs);
+
+    setDraftParagraphs(rewrittenParagraphs);
+
+    return "Success";
+  };
+
   const handleParagraphDelete = useCallback(
     async (paragraphIndex) => {
       const updatedParagraphs = section.paragraphs.filter(
@@ -311,6 +345,9 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
           content={paragraph}
           index={pIndex}
           chapterId={chapterId}
+          onRewrite={(instruction) =>
+            handleParagraphRewrite(pIndex, instruction)
+          }
           onUpdate={(newContent) =>
             handleParagraphUpdate(pIndex, newContent, isDraft)
           }

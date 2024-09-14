@@ -7,6 +7,7 @@ const Paragraph = ({
   index,
   chapterId,
   onUpdate,
+  onRewrite,
   onDelete,
   onInsert,
 }) => {
@@ -67,7 +68,7 @@ const Paragraph = ({
           chapterId={chapterId}
           paragraphId={index}
           onClose={handleMenuClose}
-          onRewrite={handleRewriteOpen}
+          onRewrite={onRewrite}
           onDelete={onDelete}
           onInsert={onInsert}
           onCancel={() => setIsRewriting(false)}

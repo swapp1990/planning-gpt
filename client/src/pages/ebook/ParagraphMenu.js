@@ -27,9 +27,9 @@ const ParagraphMenu = ({
 
   const handleRewriteSubmit = async (instruction) => {
     setIsLoading(true);
-    await onRewrite(instruction);
-    // setIsLoading(false);
-    // setIsRewriteOpen(false);
+    let response = await onRewrite(instruction);
+    setIsLoading(false);
+    return response;
   };
 
   const handleRewritCancel = async () => {

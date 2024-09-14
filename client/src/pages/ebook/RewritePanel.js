@@ -108,15 +108,17 @@ const RewritePanel = ({ content, isLoading, onSubmit, onCancel }) => {
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const instructions = Object.entries(selectedSentences).map(
       ([index, { note }]) => `Sentence ${parseInt(index) + 1}: Note: ${note}`
     );
-    const finalInstruction = `${rewritePrompt}\n\nSpecific instructions:\n${instructions.join(
-      "\n"
-    )}`;
+    // const finalInstruction = `${rewritePrompt}\n\nSpecific instructions:\n${instructions.join(
+    //   "\n"
+    // )}`;
+    const finalInstruction = `${rewritePrompt}`;
     setFinalInstruction(finalInstruction);
-    onSubmit(finalInstruction);
+    let response = await onSubmit(finalInstruction);
+    console.log(response);
     setCloseInput(true);
   };
 

@@ -264,27 +264,27 @@ export function useEbookState() {
       }
       let newParagraph = "";
       try {
-        const onChunk = (data) => {
-          if (data.chunk) {
-            if (data.chunk !== "[DONE]") {
-              newParagraph += data.chunk + " ";
-            } else {
-              // console.log(newParagraph);
-            }
-          }
-        };
-        const onError = (error) => {
-          console.error("Error fetching rewritten paragraph response:", error);
-          throw new Error(error.message || "Error from server");
-        };
-        await streamRewrittenParagraph(
-          state,
-          chapterId,
-          paragraphIndex,
-          instruction,
-          onChunk,
-          onError
-        );
+        // const onChunk = (data) => {
+        //   if (data.chunk) {
+        //     if (data.chunk !== "[DONE]") {
+        //       newParagraph += data.chunk + " ";
+        //     } else {
+        //       // console.log(newParagraph);
+        //     }
+        //   }
+        // };
+        // const onError = (error) => {
+        //   console.error("Error fetching rewritten paragraph response:", error);
+        //   throw new Error(error.message || "Error from server");
+        // };
+        // await streamRewrittenParagraph(
+        //   state,
+        //   chapterId,
+        //   paragraphIndex,
+        //   instruction,
+        //   onChunk,
+        //   onError
+        // );
         return { newParagraph };
       } catch (error) {
         console.log(error);

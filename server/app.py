@@ -228,16 +228,16 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         return {"error": "An error occurred while processing the request."}
 
 def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
-    client = OpenAI(
-        api_key=lambda_hermes_api_key,
-        base_url=openai_api_base,
-    )        
-    model = "hermes-3-llama-3.1-405b-fp8"
-    
     # client = OpenAI(
-    #     api_key=openai_api_key,
-    # )
-    # model = "gpt-4o-2024-08-06"
+    #     api_key=lambda_hermes_api_key,
+    #     base_url=openai_api_base,
+    # )        
+    # model = "hermes-3-llama-3.1-405b-fp8"
+    
+    client = OpenAI(
+        api_key=openai_api_key,
+    )
+    model = "gpt-4o-2024-08-06"
     
     if prompt is None or len(prompt) == 0:
         yield "Please provide a valid prompt."
@@ -611,10 +611,6 @@ def continue_chapter():
     instruction = data.get('instruction')
     numParagraphs = data.get('numParagraphs')
     
-#     4. List of outlines (can be empty): {outlinesStr}
-# 5. Previously generated paragraph for the current chapter (can be empty): {previousParagraph}
-# 6. Previously generated chapter synopsis for the story (Can be empty): {previousChapters}
-    
     prompts = load_prompts()
     systemPrompt = prompts["writing_assistant"]["prompts"][0]
     prompt = f"""
@@ -714,21 +710,58 @@ def insert_chapter():
 @app.route("/chapter/rewrite", methods=["POST"])
 def rewrite_paragraph():
     print("Rewrite paragraph")
+    prompts = load_prompts()
+    systemPrompt = prompts["writing_assistant"]["prompts"][0]
     data = request.get_json()
-    synopsis = data.get('synopsis')
-    paragraph = data.get('paragraph')
+    context = data.get('context')
     instruction = data.get('instruction')
-    systemPrompt = data.get('systemPrompt')
-    previousParagraph = data.get('previousParagraph')
+    paragraph_to_rewrite = data.get('paragraph')
+    numParagraphs = data.get('numParagraphs')
 
-    prompt = f'\n\nPlease rewrite the following paragraph: `{paragraph}` by following instructions: `{instruction}`. \n\nSynopsis for the chapter is: `{synopsis}`, Previous paragraph is: `{previousParagraph}`. \n\n Only return the rewritten paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
+    user_prompt = f"""
+Rewrite the following paragraph within the context of its section and the overall story:
 
-    print(prompt)
+1. Chapter Synopsis: {context['synopsis']}
+2. Overall Story Parameters: {context['parameters']}
+3. Section Paragraphs: {context['section_paragraphs']}
+4. Paragraph to Rewrite: {paragraph_to_rewrite}
+
+CRITICAL INSTRUCTIONS:
+1. Follow these specific instructions to rewrite the paragraph: `{instruction}`
+2. Rewrite ONLY the given paragraph. Do not alter or address content from other paragraphs in the section.
+3. Ensure the rewritten paragraph fits seamlessly within the section, maintaining continuity with preceding and following paragraphs.
+4. Adhere to the overall story parameters and chapter synopsis.
+5. Improve upon the original in terms of prose quality, character depth, or descriptive richness as appropriate.
+
+STYLE GUIDELINES:
+- Match the tone and style of the surrounding paragraphs.
+- If the original paragraph contains dialogue, maintain a similar dialogue-to-narrative ratio.
+- Enhance character voices and personality if dialogue is present.
+- Use vivid, sensory details to bring the scene to life.
+
+CONTENT BOUNDARIES:
+- Do not introduce new plot elements or characters not present in the original paragraph.
+- Ensure the rewritten paragraphs does not contradict information in other section paragraphs.
+
+REWRITING PROCESS:
+1. Analyze the original paragraph in the context of the section and overall story.
+2. Identify key elements, plot points, and character moments to preserve.
+3. Ensure the rewritten content flows naturally with the surrounding paragraphs.
+4. Write {numParagraphs} new paragraph(s) that ONLY expand on the current section.
+
+FINAL VERIFICATION:
+- Does the rewritten paragraph fit seamlessly within the section without creating continuity issues?
+- Have you written exactly {numParagraphs} paragraph(s)?
+
+Generate only the rewritten paragraph. Do not include any explanatory text or metadata in your response.
+"""
+
+    print(user_prompt)
 
     def generate():
         partial_result = ""
         try:
-            for chunk in hermes_ai_streamed_output(prompt, systemPrompt, [], ""):
+            for chunk in hermes_ai_streamed_output(user_prompt, systemPrompt, [], ""):
                 if isinstance(chunk, dict) and 'error' in chunk:
                     return jsonify(chunk), 500
                 partial_result += chunk
