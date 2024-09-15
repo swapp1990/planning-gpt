@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   FaEdit,
   FaCheck,
@@ -76,10 +76,15 @@ const OutlineCard = ({ outline, index, onEdit, onDelete }) => {
 
 const ChapterView = ({ chapter }) => {
   const { chapterActions, ebookState } = useEbook();
+  const [generatedOutlines, setGeneratedOutlines] = useState([]);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chapter.title);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    console.log(generatedOutlines);
+  }, [generatedOutlines]);
 
   const handleTitleSave = async () => {
     setIsLoading(true);
@@ -108,6 +113,7 @@ const ChapterView = ({ chapter }) => {
     async (instruction, numOutlines) => {
       setIsLoading(true);
       setError(null);
+      setGeneratedOutlines([]);
       try {
         let prev_outlines = chapter.sections.map((s) => s.outline);
         let prev_summaries = chapter.sections
@@ -124,6 +130,7 @@ const ChapterView = ({ chapter }) => {
           instruction,
           numOutlines
         );
+        setGeneratedOutlines(outlines);
         return outlines;
       } catch (err) {
         console.error(err);
@@ -131,37 +138,39 @@ const ChapterView = ({ chapter }) => {
       }
       setIsLoading(false);
     },
-    [ebookState]
+    [ebookState, generatedOutlines]
   );
 
-  const handleNewOutlinesFinalize = useCallback(async (newOutlines) => {
-    for (let o of newOutlines) {
-      await chapterActions.addSection(chapter.id, {
+  const handleNewOutlinesFinalize = () => {
+    console.log(generatedOutlines);
+    for (let o of generatedOutlines) {
+      chapterActions.addSection(chapter.id, {
         outline: o.outline,
         paragraphs: [],
       });
     }
-  }, []);
+  };
 
-  const renderDraftOutlines = useCallback((outlines) => {
-    return outlines.map((o, index) => (
+  const renderDraftOutlines = () => {
+    return generatedOutlines.map((o, index) => (
       <OutlineCard
         key={index}
         outline={o.outline}
         onEdit={(newOutline) => {
           const updatedOutlines = [...generatedOutlines];
           updatedOutlines[index] = newOutline;
-          // setGeneratedOutlines(updatedOutlines);
+          setGeneratedOutlines(updatedOutlines);
         }}
         onDelete={() => {
           const updatedOutlines = generatedOutlines.filter(
             (_, i) => i !== index
           );
-          // setGeneratedOutlines(updatedOutlines);
+          console.log(updatedOutlines);
+          setGeneratedOutlines(updatedOutlines);
         }}
       />
     ));
-  }, []);
+  };
 
   return (
     <div className="bg-white shadow rounded-lg p-2 sm:p-6">

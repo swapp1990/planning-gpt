@@ -643,8 +643,8 @@ Please continue the story for the current chapter based on the following:
 1. Synopsis for the entire chapter: {context['synopsis']}
 2. Current outline to expand: {context['outline']}
 3. Overall story parameters: {context['parameters']}
-4. Previous Section Summary: {context['previous_summary']}
-5. Current Section Summary: {context['current_summary']}
+4. Previous Section Summary: {context.get('previous_summary', '')}
+5. Current Section Summary: {context.get('current_summary', '')}
 6. Newly generated draft paragraphs for rewriting: {draft_paragraphs}
 
 CRITICAL INSTRUCTIONS:
