@@ -355,3 +355,19 @@ export const rewriteSentence = async (
     return null;
   }
 };
+
+export const toggleNsfw = async () => {
+  try {
+    const response = await regularApiCall(
+      `${process.env.REACT_APP_API_URL}/nsfw`,
+      "POST"
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return response.flag;
+  } catch (error) {
+    throw new Error(error);
+  }
+};

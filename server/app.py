@@ -25,6 +25,8 @@ openai_api_key = os.getenv('OPENAI_API_KEY')
 clause_api_key = os.getenv('CLAUDE_API_KEY')
 openai_api_base = "https://api.lambdalabs.com/v1"
 
+nsfw_flag = False
+
 print("This is a test log message", flush=True)
 
 @app.before_request
@@ -228,16 +230,19 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         return {"error": "An error occurred while processing the request."}
 
 def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
-    # client = OpenAI(
-    #     api_key=lambda_hermes_api_key,
-    #     base_url=openai_api_base,
-    # )        
-    # model = "hermes-3-llama-3.1-405b-fp8"
-    
-    client = OpenAI(
-        api_key=openai_api_key,
-    )
-    model = "gpt-4o-2024-08-06"
+    if not nsfw_flag:
+        client = OpenAI(
+            api_key=openai_api_key,
+        )
+        model = "gpt-4o-2024-08-06"
+        print("using gpt4o")
+    else:
+        client = OpenAI(
+            api_key=lambda_hermes_api_key,
+            base_url=openai_api_base,
+        )        
+        model = "hermes-3-llama-3.1-405b-fp8"
+        print("using hermes-3")
     
     if prompt is None or len(prompt) == 0:
         yield "Please provide a valid prompt."
@@ -313,6 +318,12 @@ def generate_summary(paragraph, previous_summary=None):
     summary = hermes_ai_output(prompt, system_prompt, [], "")
     summary = summary.replace("\n\n", " ")
     return summary
+
+@app.route("/nsfw", methods=["POST"])
+def toggle_nsfw():
+    global nsfw_flag
+    nsfw_flag = not nsfw_flag
+    return jsonify({"flag": nsfw_flag})
 
 @app.route("/generate", methods=["POST"])
 def generate():
