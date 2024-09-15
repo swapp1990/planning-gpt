@@ -690,7 +690,7 @@ FINAL VERIFICATION:
 [SYSTEM NOTE: Content generation for this outline stops here. Do not proceed beyond this point in the story.]
 """
 
-    print(prompt)
+    # print(prompt)
 
     # prompt = f'Write a story with exactly 3 paragraphs and 10 words each.'
 
