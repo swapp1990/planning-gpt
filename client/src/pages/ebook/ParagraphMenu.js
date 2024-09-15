@@ -9,6 +9,7 @@ import {
 } from "react-icons/fa";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import RewritePanel from "./RewritePanel";
+import ContentGenerator from "./ContentGenerator";
 
 const ParagraphMenu = ({
   content,
@@ -17,6 +18,7 @@ const ParagraphMenu = ({
   onClose,
   onCancel,
   onRewrite,
+  onRewriteFinalize,
   onDelete,
   onInsert,
 }) => {
@@ -25,9 +27,9 @@ const ParagraphMenu = ({
   const [insertContent, setInsertContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleRewriteSubmit = async (instruction) => {
+  const handleRewriteSubmit = async (instruction, numParagraphs) => {
     setIsLoading(true);
-    let response = await onRewrite(instruction);
+    let response = await onRewrite(instruction, numParagraphs);
     setIsLoading(false);
     return response;
   };
@@ -37,12 +39,28 @@ const ParagraphMenu = ({
     onCancel();
   };
 
+  const handleRewriteFinalize = async (newParagraphs) => {
+    // Implement the logic to finalize the rewritten paragraphs
+    // This might involve updating the parent component or making an API call
+    console.log("Finalizing rewritten paragraphs:", newParagraphs);
+    setIsRewriteOpen(false);
+    await onRewriteFinalize(newParagraphs);
+  };
+
   const handleInsertSubmit = async () => {
     setIsLoading(true);
     await onInsert(insertContent);
     setIsLoading(false);
     setIsInsertOpen(false);
     setInsertContent("");
+  };
+
+  const renderParagraphs = (paragraphs) => {
+    return paragraphs.map((paragraph, index) => (
+      <p key={index} className="mb-2">
+        {paragraph}
+      </p>
+    ));
   };
 
   return (
@@ -88,11 +106,14 @@ const ParagraphMenu = ({
         </button>
       </div>
       {isRewriteOpen && (
-        <RewritePanel
-          content={content}
-          isLoading={isLoading}
-          onSubmit={handleRewriteSubmit}
-          onCancel={handleRewritCancel}
+        <ContentGenerator
+          initialContent={content}
+          onGenerate={handleRewriteSubmit}
+          onFinalize={handleRewriteFinalize}
+          onClose={() => setIsRewriteOpen(false)}
+          renderContent={renderParagraphs}
+          generationType="paragraphs"
+          title="Rewrite/Expand selected paragraph"
         />
       )}
       {isInsertOpen && (

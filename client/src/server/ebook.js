@@ -242,8 +242,8 @@ export const getRewrittenParagraphs = async (
     await streamRewriteParagraph(
       context,
       instruction,
-      originalParagraph,
       numParagraphs,
+      originalParagraph,
       onChunk,
       onError
     );

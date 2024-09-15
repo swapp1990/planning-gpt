@@ -13,6 +13,7 @@ import { useEbook } from "../../context/EbookContext";
 import Synopsis from "./Synopsis";
 import Section from "./Section";
 import GenerationMenu from "./GenerationMenu";
+import ContentGenerator from "./ContentGenerator";
 import { getSuggestedOutlines } from "../../server/ebook";
 
 const OutlineCard = ({ outline, index, onEdit, onDelete }) => {
@@ -74,99 +75,12 @@ const OutlineCard = ({ outline, index, onEdit, onDelete }) => {
   );
 };
 
-const GeneratedOutlinesSection = ({
-  generatedOutlines,
-  outlineInstruction,
-  setOutlineInstruction,
-  numOutlines,
-  setNumOutlines,
-  handleGenerateOutlines,
-  handleReloadOutlines,
-  handleAddOutlines,
-  handleCloseOutlines,
-  setGeneratedOutlines,
-  isLoading,
-}) => {
-  if (generatedOutlines.length === 0) {
-    return (
-      <GenerationMenu
-        instruction={outlineInstruction}
-        setInstruction={setOutlineInstruction}
-        count={numOutlines}
-        setCount={setNumOutlines}
-        onGenerate={handleGenerateOutlines}
-        isLoading={isLoading}
-        isRegeneration={false}
-        generationType="outlines"
-      />
-    );
-  }
-
-  return (
-    <div className="mt-8 bg-gray-50 border border-gray-200 rounded-lg shadow-md p-6 sm:p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h4 className="text-xl font-semibold text-gray-800">
-          Generated Section Outlines
-        </h4>
-        <div className="flex space-x-2">
-          <button
-            onClick={handleAddOutlines}
-            className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
-          >
-            <FaPlus className="mr-2" />
-            Add
-          </button>
-          <button
-            onClick={handleCloseOutlines}
-            className="p-2 text-gray-500 hover:text-red-500 transition-colors duration-200"
-            aria-label="Close generated outlines"
-          >
-            <FaTimes className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-      <div className="space-y-4 mb-6">
-        {generatedOutlines.map((outline, index) => (
-          <OutlineCard
-            key={index}
-            outline={outline}
-            onEdit={(newOutline) => {
-              const updatedOutlines = [...generatedOutlines];
-              updatedOutlines[index] = newOutline;
-              setGeneratedOutlines(updatedOutlines);
-            }}
-            onDelete={() => {
-              const updatedOutlines = generatedOutlines.filter(
-                (_, i) => i !== index
-              );
-              setGeneratedOutlines(updatedOutlines);
-            }}
-          />
-        ))}
-      </div>
-      <GenerationMenu
-        instruction={outlineInstruction}
-        setInstruction={setOutlineInstruction}
-        count={numOutlines}
-        setCount={setNumOutlines}
-        onGenerate={handleGenerateOutlines}
-        isLoading={isLoading}
-        isRegeneration={true}
-        generationType="outlines"
-      />
-    </div>
-  );
-};
-
 const ChapterView = ({ chapter }) => {
   const { chapterActions, ebookState } = useEbook();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chapter.title);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [outlineInstruction, setOutlineInstruction] = useState("");
-  const [numOutlines, setNumOutlines] = useState(1);
-  const [generatedOutlines, setGeneratedOutlines] = useState([]);
 
   const handleTitleSave = async () => {
     setIsLoading(true);
@@ -191,51 +105,61 @@ const ChapterView = ({ chapter }) => {
     setIsLoading(false);
   };
 
-  const handleGenerateOutlines = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      let prev_outlines = chapter.sections.map((s) => s.outline);
-      const context = {
-        parameters: ebookState.parameters,
-        chapter_synopsis: chapter.synopsis,
-        previous_outlines: prev_outlines,
-      };
-      const outlines = await getSuggestedOutlines(
-        context,
-        outlineInstruction,
-        numOutlines
-      );
-      setGeneratedOutlines(outlines.map((o) => o.outline));
-    } catch (err) {
-      console.error(err);
-      setError("Failed to generate outlines. Please try again.");
-    }
-    setIsLoading(false);
-  }, [
-    chapter.synopsis,
-    ebookState.parameters,
-    numOutlines,
-    outlineInstruction,
-  ]);
+  const handleNewOutlines = useCallback(
+    async (instruction, numOutlines) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        let prev_outlines = chapter.sections.map((s) => s.outline);
+        const context = {
+          parameters: ebookState.parameters,
+          chapter_synopsis: chapter.synopsis,
+          previous_outlines: prev_outlines,
+        };
+        const outlines = await getSuggestedOutlines(
+          context,
+          instruction,
+          numOutlines
+        );
+        return outlines;
+      } catch (err) {
+        console.error(err);
+        setError("Failed to generate outlines. Please try again.");
+      }
+      setIsLoading(false);
+    },
+    [ebookState]
+  );
 
-  const handleReloadOutlines = async () => {
-    await handleGenerateOutlines();
-  };
-
-  const handleAddOutlines = async () => {
-    for (let outline of generatedOutlines) {
+  const handleNewOutlinesFinalize = useCallback(async (newOutlines) => {
+    for (let o of newOutlines) {
       await chapterActions.addSection(chapter.id, {
-        outline: outline,
+        outline: o.outline,
         paragraphs: [],
       });
     }
-    setGeneratedOutlines([]);
-  };
+  }, []);
 
-  const handleCloseOutlines = useCallback(() => {
-    setGeneratedOutlines([]);
-    setOutlineInstruction("");
+  const renderDraftOutlines = useCallback((outlines) => {
+    console.log(outlines);
+
+    return outlines.map((o, index) => (
+      <OutlineCard
+        key={index}
+        outline={o.outline}
+        onEdit={(newOutline) => {
+          const updatedOutlines = [...generatedOutlines];
+          updatedOutlines[index] = newOutline;
+          // setGeneratedOutlines(updatedOutlines);
+        }}
+        onDelete={() => {
+          const updatedOutlines = generatedOutlines.filter(
+            (_, i) => i !== index
+          );
+          // setGeneratedOutlines(updatedOutlines);
+        }}
+      />
+    ));
   }, []);
 
   return (
@@ -296,20 +220,13 @@ const ChapterView = ({ chapter }) => {
         />
       ))}
 
-      <GeneratedOutlinesSection
-        generatedOutlines={generatedOutlines}
-        outlineInstruction={outlineInstruction}
-        setOutlineInstruction={setOutlineInstruction}
-        numOutlines={numOutlines}
-        setNumOutlines={setNumOutlines}
-        handleGenerateOutlines={handleGenerateOutlines}
-        handleReloadOutlines={handleReloadOutlines}
-        handleAddOutlines={handleAddOutlines}
-        handleCloseOutlines={handleCloseOutlines}
-        setGeneratedOutlines={setGeneratedOutlines}
-        isLoading={isLoading}
+      <ContentGenerator
+        onGenerate={handleNewOutlines}
+        onFinalize={handleNewOutlinesFinalize}
+        renderContent={renderDraftOutlines}
+        generationType="outlines"
+        title="Generate new outlines"
       />
-
       {error && <p className="mt-4 text-red-500">{error}</p>}
     </div>
   );

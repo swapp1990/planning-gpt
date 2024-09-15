@@ -21,6 +21,7 @@ import {
 } from "../../server/ebook";
 import Paragraph from "./Paragraph";
 import GenerationMenu from "./GenerationMenu";
+import ContentGenerator from "./ContentGenerator";
 
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
@@ -57,6 +58,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [draftParagraphs, setDraftParagraphs] = useState([]);
   const [instruction, setInstruction] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDraftOpen, setIsDraftOpen] = useState(false);
 
   const { ebookState, chapterActions } = useEbook();
 
@@ -87,58 +89,61 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     setIsModalOpen(true);
   }, []);
 
-  const handleGenerateParagraphs = useCallback(async () => {
-    setTimeout(() => {
-      draftRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }, 100);
-    setIsGenerating(true);
-    setError(null);
+  const handleNewParagraphs = useCallback(
+    async (instruction, numParagraphs) => {
+      // setTimeout(() => {
+      //   draftRef.current?.scrollIntoView({
+      //     behavior: "smooth",
+      //     block: "start",
+      //   });
+      // }, 100);
+      setIsGenerating(true);
+      setError(null);
 
-    try {
-      const chapter = ebookState.chapters.find((c) => c.id === chapterId);
-      let outlinesList = chapter.sections.map((s) => s.outline);
-      let next_outline = getNextOutline(outlinesList, section.outline);
-      let previous_summary =
-        sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
-      let current_summary = "";
-      if (chapter.sections[sectionIndex].summary) {
-        current_summary =
-          sectionIndex > 0 ? chapter.sections[sectionIndex].summary : "";
+      try {
+        const chapter = ebookState.chapters.find((c) => c.id === chapterId);
+        let outlinesList = chapter.sections.map((s) => s.outline);
+        let next_outline = getNextOutline(outlinesList, section.outline);
+        let previous_summary =
+          sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
+        let current_summary = "";
+        if (chapter.sections[sectionIndex].summary) {
+          current_summary =
+            sectionIndex > 0 ? chapter.sections[sectionIndex].summary : "";
+        }
+
+        const context = {
+          parameters: ebookState.parameters,
+          synopsis: chapter.synopsis,
+          previous_summary: previous_summary,
+          current_summary: current_summary,
+          draft_paragraphs: draftParagraphs.join("\n\n"),
+          outline: editedOutline,
+          next_outline: next_outline,
+        };
+        const generatedParagraphs = await getGeneratedParagraphs(
+          context,
+          instruction,
+          numParagraphs
+        );
+        return generatedParagraphs;
+      } catch (error) {
+        console.error("Error generating paragraphs:", error);
+        setError("Failed to generate paragraphs. Please try again.");
+        return [];
+      } finally {
+        setIsGenerating(false);
       }
-
-      const context = {
-        parameters: ebookState.parameters,
-        synopsis: chapter.synopsis,
-        previous_summary: previous_summary,
-        current_summary: current_summary,
-        draft_paragraphs: draftParagraphs.join("\n\n"),
-        outline: editedOutline,
-        next_outline: next_outline,
-      };
-      const generatedParagraphs = await getGeneratedParagraphs(
-        context,
-        instruction,
-        numParagraphs
-      );
-
-      setDraftParagraphs(generatedParagraphs);
-    } catch (error) {
-      console.error("Error generating paragraphs:", error);
-      setError("Failed to generate paragraphs. Please try again.");
-    } finally {
-      setIsGenerating(false);
-    }
-  }, [
-    chapterId,
-    editedOutline,
-    numParagraphs,
-    instruction, // Add instruction to dependencies
-    ebookState.parameters,
-    ebookState.chapters,
-  ]);
+    },
+    [
+      chapterId,
+      editedOutline,
+      numParagraphs,
+      instruction, // Add instruction to dependencies
+      ebookState.parameters,
+      ebookState.chapters,
+    ]
+  );
 
   const handleGenerateSummary = useCallback(async () => {
     const chapter = ebookState.chapters.find((c) => c.id === chapterId);
@@ -172,22 +177,6 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   const toggleExpand = useCallback(async () => {
     setIsExpanded(!isExpanded);
   }, [isExpanded]);
-
-  const handleFinalizeDraft = useCallback(async () => {
-    const result = await chapterActions.updateSection(chapterId, sectionIndex, {
-      ...section,
-      paragraphs: [...section.paragraphs, ...draftParagraphs],
-    });
-    if (result.error) {
-      setError(result.error);
-    } else {
-      setDraftParagraphs([]);
-    }
-  }, [chapterActions, chapterId, sectionIndex, section, draftParagraphs]);
-
-  const handleRewriteDraft = useCallback(() => {
-    handleGenerateParagraphs();
-  }, [handleGenerateParagraphs]);
 
   const handleDeleteSection = useCallback(() => {
     const result = chapterActions.deleteSection(chapterId, sectionIndex);
@@ -248,29 +237,22 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     instruction,
     numParagraphs = 1
   ) => {
-    // console.log(instruction);
     const chapter = ebookState.chapters.find((c) => c.id === chapterId);
     const paragraphToUpdate = section.paragraphs.find(
       (_, index) => index == pIndex
     );
-    // console.log(paragraphToUpdate);
     const context = {
       parameters: ebookState.parameters,
       synopsis: chapter.synopsis,
       section_paragraphs: section.paragraphs.join("\n"),
     };
-    // console.log(context);
     const rewrittenParagraphs = await getRewrittenParagraphs(
       context,
       instruction,
       paragraphToUpdate,
       numParagraphs
     );
-    console.log(rewrittenParagraphs);
-
-    setDraftParagraphs(rewrittenParagraphs);
-
-    return "Success";
+    return rewrittenParagraphs;
   };
 
   const handleParagraphDelete = useCallback(
@@ -332,10 +314,28 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     []
   );
 
-  const handleCloseDraft = useCallback(() => {
-    setDraftParagraphs([]);
-    setInstruction("");
-  }, []);
+  const handleNewParagraphsFinalize = useCallback(
+    async (newParagraphs) => {
+      await chapterActions.updateSection(chapterId, sectionIndex, {
+        ...section,
+        paragraphs: [...section.paragraphs, ...newParagraphs],
+      });
+    },
+    [chapterActions, chapterId, sectionIndex, section]
+  );
+
+  const handleRewriteParagraphFinalize = useCallback(
+    (pIndex, newParagraphs) => {
+      let updatedParagraphs = [...section.paragraphs];
+      updatedParagraphs.splice(pIndex, 1, ...newParagraphs);
+      chapterActions.updateSection(chapterId, sectionIndex, {
+        ...section,
+        paragraphs: updatedParagraphs,
+      });
+      // setIsGenerating(false);
+    },
+    [chapterId, chapterActions, section, sectionIndex]
+  );
 
   const renderParagraphs = useCallback(
     (paragraphs, isDraft = false) => {
@@ -345,8 +345,11 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
           content={paragraph}
           index={pIndex}
           chapterId={chapterId}
-          onRewrite={(instruction) =>
-            handleParagraphRewrite(pIndex, instruction)
+          onRewrite={(instruction, numParagraphs) =>
+            handleParagraphRewrite(pIndex, instruction, numParagraphs)
+          }
+          onRewriteFinalize={(newParagraphs) =>
+            handleRewriteParagraphFinalize(pIndex, newParagraphs)
           }
           onUpdate={(newContent) =>
             handleParagraphUpdate(pIndex, newContent, isDraft)
@@ -373,6 +376,14 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       draftParagraphs,
     ]
   );
+
+  const renderDraftParagraphs = (paragraphs) => {
+    return paragraphs.map((paragraph, index) => (
+      <p key={index} className="mb-2">
+        {paragraph}
+      </p>
+    ));
+  };
 
   return (
     <div className="my-4 p-1 bg-white rounded-lg shadow-md border border-gray-200">
@@ -486,7 +497,13 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
           {section.paragraphs && section.paragraphs.length > 0 && (
             <div className="mb-4">{renderParagraphs(section.paragraphs)}</div>
           )}
-          {draftParagraphs.length > 0 ? (
+          <ContentGenerator
+            onGenerate={handleNewParagraphs}
+            onFinalize={handleNewParagraphsFinalize}
+            renderContent={renderDraftParagraphs}
+            generationType="paragraphs"
+          />
+          {/* {draftParagraphs.length > 0 ? (
             <div
               ref={draftRef}
               className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200"
@@ -542,11 +559,11 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
               setInstruction={setInstruction}
               count={numParagraphs}
               setCount={setNumParagraphs}
-              onGenerate={handleGenerateParagraphs}
+              onGenerate={handleNewParagraphs}
               isLoading={isGenerating}
               generationType="paragraphs"
             />
-          )}
+          )} */}
         </div>
       )}
       {error && <p className="mt-2 text-red-500">{error}</p>}

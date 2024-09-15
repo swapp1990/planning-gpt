@@ -729,7 +729,7 @@ Rewrite the following paragraph within the context of its section and the overal
 CRITICAL INSTRUCTIONS:
 1. Follow these specific instructions to rewrite the paragraph: `{instruction}`
 2. Rewrite ONLY the given paragraph. Do not alter or address content from other paragraphs in the section.
-3. Ensure the rewritten paragraph fits seamlessly within the section, maintaining continuity with preceding and following paragraphs.
+3. Ensure the rewritten {numParagraphs} new paragraph/s fits seamlessly within the section, maintaining continuity with preceding and following paragraphs.
 4. Adhere to the overall story parameters and chapter synopsis.
 5. Improve upon the original in terms of prose quality, character depth, or descriptive richness as appropriate.
 
@@ -747,13 +747,13 @@ REWRITING PROCESS:
 1. Analyze the original paragraph in the context of the section and overall story.
 2. Identify key elements, plot points, and character moments to preserve.
 3. Ensure the rewritten content flows naturally with the surrounding paragraphs.
-4. Write {numParagraphs} new paragraph(s) that ONLY expand on the current section.
+4. Write {numParagraphs} new paragraph(s) that expand on the original paragraph based on the instruction.
 
 FINAL VERIFICATION:
 - Does the rewritten paragraph fit seamlessly within the section without creating continuity issues?
 - Have you written exactly {numParagraphs} paragraph(s)?
 
-Generate only the rewritten paragraph. Do not include any explanatory text or metadata in your response.
+Return all the rewritten paragraphs. Do not include any explanatory text or metadata in your response.
 """
 
     print(user_prompt)
