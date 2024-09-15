@@ -323,6 +323,7 @@ def generate_summary(paragraph, previous_summary=None):
 def toggle_nsfw():
     global nsfw_flag
     nsfw_flag = not nsfw_flag
+    print("nsfw_flag :", nsfw_flag)
     return jsonify({"flag": nsfw_flag})
 
 @app.route("/generate", methods=["POST"])
