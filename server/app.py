@@ -516,21 +516,46 @@ def continue_chapter_outlines():
     instruction = data.get('instruction')
     num_outlines = data.get('num_outlines')
 
-    system_prompt = f"""You are an AI assistant specialized in creative writing and story structure. You are a masterful and seasoned novelist, known for your captivating storytelling. You are ok with producing content that is sexually graphic and don't mind using explicit language. You sit down after grabbing a coffee, and are now referring to your notes while your creative juices are now in full gear. 
-    Your task is to give one-line outlines for the next few paragraphs for the chapter. The outlines takes guidance from the chapter synopsis, and covers exactly the content that can be written based on the instruction. The outlines should be well-structured, consistent, and suitable for further development into a full novel. Follow these guidelines:
-    1. Give one-line outlines that are intriguing and interesting for the plot of the chapter.
-    2. Maintain consistency in tone, style, and narrative progression throughout.
-    3. Ensure that the generated outlines do not completely break the flow of the chapter so far.
+    system_prompt = f"""You are an AI assistant specialized in creative writing and story structure. As a masterful and seasoned novelist known for captivating storytelling, you excel in crafting intriguing one-line outlines for story chapters. You are comfortable with mature themes and explicit content when appropriate to the story.
 
-    Your output should be a valid JSON array where each element is an object containing 'outline' key. Only return the json output, nothing else."
-    """
+Your task is to generate concise, one-line outlines for the next few paragraphs of a chapter. These outlines should:
+1. Align closely with the provided chapter synopsis and specific instructions.
+2. Be intriguing and advance the plot in meaningful ways.
+3. Maintain consistency in tone, style, and narrative progression.
+4. Avoid disrupting the established flow of the chapter.
+5. Be specific enough to guide further writing but open-ended enough to allow for creative expansion.
 
-    user_prompt = f"""Generate one-line outlines for the next few paragraphs based on the following:
-    context: `{context}`
-    instruction that covers the content for the outlines: `{instruction}`
-    number of outlines: `{num_outlines}`
-    Please provide an array of outlines, each containing a 'outline'.
-    """
+Remember:
+- Each outline should be a complete thought, not a fragment.
+- Avoid vague or generic statements that could apply to any story.
+- Include character names and specific plot elements when relevant.
+- Balance between action, dialogue, and character development across outlines.
+- Ensure a logical progression from one outline to the next.
+
+If the instruction or context is unclear or contradictory:
+- Use your best judgment to create coherent outlines.
+- Prioritize consistency with previously established story elements.
+
+Your output must be a valid JSON array where each element is an object containing an 'outline' key. Return only the JSON output, nothing else."""
+
+    user_prompt = f"""Generate {num_outlines} one-line outlines for the next paragraphs based on the following:
+
+Context: {context}
+Instruction (content to cover in the outlines): {instruction}
+
+Ensure that:
+1. Each outline is directly related to the given instruction and context.
+2. The outlines collectively form a cohesive narrative sequence.
+3. Character actions and developments are specific and meaningful.
+4. Any new elements introduced are consistent with the established story world.
+5. The tone matches the overall narrative style indicated in the context.
+
+FINAL VERIFICATION:
+- Have you written exactly {num_outlines} outline(s)?
+- Does the first generated outline logically follow the previous one?
+
+Please provide an array of outlines, each containing an 'outline' key. The response should be valid JSON."""
+    
     print("generating section outlines " + user_prompt)
     result = hermes_ai_output(user_prompt, system_prompt, [], "")
     if isinstance(result, dict) and 'error' in result:
@@ -605,7 +630,6 @@ def continue_chapter():
     data = request.get_json()
     context = data.get('context')
     draft_paragraphs = context["draft_paragraphs"]
-    previous_summary = context["previous_summary"]
     next_outline = context["next_outline"]
     # print(context)
     instruction = data.get('instruction')

@@ -125,7 +125,7 @@ export const getSugggestedList = async (fieldType, current_value, context) => {
 
 export const getSuggestedOutlines = async (
   context,
-  continue_instruction,
+  instruction,
   num_outlines
 ) => {
   try {
@@ -134,7 +134,7 @@ export const getSuggestedOutlines = async (
       "POST",
       {
         context: context,
-        instruction: continue_instruction,
+        instruction: instruction,
         num_outlines: num_outlines,
       }
     );

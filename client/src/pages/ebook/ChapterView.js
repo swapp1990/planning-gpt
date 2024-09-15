@@ -110,10 +110,14 @@ const ChapterView = ({ chapter }) => {
       setError(null);
       try {
         let prev_outlines = chapter.sections.map((s) => s.outline);
+        let prev_summaries = chapter.sections
+          .map((s) => s.summary)
+          .filter((summary) => summary !== undefined);
         const context = {
           parameters: ebookState.parameters,
           chapter_synopsis: chapter.synopsis,
           previous_outlines: prev_outlines,
+          previous_summaries: prev_summaries,
         };
         const outlines = await getSuggestedOutlines(
           context,
@@ -140,8 +144,6 @@ const ChapterView = ({ chapter }) => {
   }, []);
 
   const renderDraftOutlines = useCallback((outlines) => {
-    console.log(outlines);
-
     return outlines.map((o, index) => (
       <OutlineCard
         key={index}

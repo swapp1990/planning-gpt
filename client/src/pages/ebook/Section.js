@@ -58,11 +58,8 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [draftParagraphs, setDraftParagraphs] = useState([]);
   const [instruction, setInstruction] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDraftOpen, setIsDraftOpen] = useState(false);
 
   const { ebookState, chapterActions } = useEbook();
-
-  const draftRef = useRef(null);
 
   useEffect(() => {
     // console.log(ebookState);
