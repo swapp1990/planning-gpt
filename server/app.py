@@ -230,7 +230,7 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         return {"error": "An error occurred while processing the request."}
 
 def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
-    if not nsfw_flag:
+    if not get_nsfw_flag_state():
         client = OpenAI(
             api_key=openai_api_key,
         )
@@ -318,6 +318,10 @@ def generate_summary(paragraph, previous_summary=None):
     summary = hermes_ai_output(prompt, system_prompt, [], "")
     summary = summary.replace("\n\n", " ")
     return summary
+
+def get_nsfw_flag_state():
+    global nsfw_flag
+    return nsfw_flag
 
 @app.route("/nsfw", methods=["POST"])
 def toggle_nsfw():
