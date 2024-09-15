@@ -676,28 +676,56 @@ FINAL VERIFICATION:
     return Response(stream_with_context(generate()), content_type='application/x-ndjson')
 
 @app.route("/chapter/insert", methods=["POST"])
-def insert_chapter():
+def insert_paragraphs():
+    print("Insert paragraphs")
+    prompts = load_prompts()
+    systemPrompt = prompts["writing_assistant"]["prompts"][0]
     data = request.get_json()
-    synopsis = data.get('synopsis')
+    context = data.get('context')
     instruction = data.get('instruction')
-    systemPrompt = data.get('systemPrompt')
-    previousParagraph = data.get('previousParagraph')
-    # print(previousParagraph)
-    nextParagraph = data.get('nextParagraph')
-    # print(nextParagraph)
+    numParagraphs = data.get('numParagraphs')
 
-    prompt = f'\n\nYour task is to insert a new paragraph in an ongoing passage. Please write the new paragraph based on the following synopsis: `{synopsis}` and the following instruction: `{instruction}`.'
-    if previousParagraph != "":
-        prompt += f'\n\nThe new paragraph should be added after this paragraph: `{previousParagraph}`'
-    if nextParagraph != "":
-        prompt += f'\n\nThe new paragraph should be added before this paragraph: `{nextParagraph}`'
-    prompt += f'\n\nOnly return the new paragraph of the story as the response—do not include any introductory or explanatory text. The response should be exactly one paragraph in length.'
-    print(prompt)
+    user_prompt = f"""
+Insert {numParagraphs} paragraphs between previous paragraph and next paragraph:
+
+1. Specific instruction to follow (can be empty): {instruction}
+2. Previous paragraph (required): {context['prev']}
+3. Next paragraph (can be empty): {context['next']}
+4. Section summary (can be empty): {context['summary']}
+5. Chapter synopsis: {context['synopsis']}
+6. Overall Story Parameters: {context['parameters']}
+
+CRITICAL INSTRUCTIONS:
+1. Follow these specific instructions (Point 1) to insert new paragraphs
+2. Ensure the inserted {numParagraphs} new paragraph/s fits seamlessly within the section, maintaining continuity with preceding and following paragraphs.
+
+STYLE GUIDELINES:
+- Match the tone and style of the surrounding paragraphs.
+- If the other paragraphs contains dialogue, maintain a similar dialogue-to-narrative ratio.
+- Maintain character voices and personality if dialogue is present.
+
+CONTENT BOUNDARIES:
+- Ensure the inserted paragraphs does not contradict information in other section paragraphs.
+
+WRITING PROCESS:
+1. Analyze the previous and next paragraphs in the context of the section and overall story.
+2. Identify key elements, plot points, and character moments to preserve.
+3. Ensure the inserted content flows naturally with the surrounding paragraphs.
+4. Insert {numParagraphs} new paragraph(s) that expand on the section based on the instruction.
+
+FINAL VERIFICATION:
+- Does the inserted paragraph fit seamlessly within the section without creating continuity issues?
+- Have you written exactly {numParagraphs} paragraph(s)?
+
+Return all the inserted paragraphs. Do not include any explanatory text or metadata in your response.
+"""
+
+    print(user_prompt)
 
     def generate():
         partial_result = ""
         try:
-            for chunk in hermes_ai_streamed_output(prompt, systemPrompt, [], ""):
+            for chunk in hermes_ai_streamed_output(user_prompt, systemPrompt, [], ""):
                 if isinstance(chunk, dict) and 'error' in chunk:
                     return jsonify(chunk), 500
                 partial_result += chunk

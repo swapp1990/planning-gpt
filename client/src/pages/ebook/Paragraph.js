@@ -11,15 +11,11 @@ const Paragraph = ({
   onRewriteFinalize,
   onDelete,
   onInsert,
+  onInsertFinalize,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isRewriting, setIsRewriting] = useState(false);
   const [rewriteInstruction, setRewriteInstruction] = useState("");
-
-  const handleRewriteOpen = useCallback((instruction) => {
-    setRewriteInstruction(instruction);
-    setIsRewriting(true);
-  }, []);
 
   const handleRewriteComplete = () => {
     // console.log("handleRewriteComplete");
@@ -73,6 +69,7 @@ const Paragraph = ({
           onRewriteFinalize={onRewriteFinalize}
           onDelete={onDelete}
           onInsert={onInsert}
+          onInsertFinalize={onInsertFinalize}
           onCancel={() => setIsRewriting(false)}
         />
       )}

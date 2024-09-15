@@ -5,29 +5,20 @@ import {
 } from "../utils/api";
 
 export const streamInsertedParagraph = async (
-  ebookState,
-  chapterId,
-  paragraphIndex,
+  context,
   instruction,
+  numParagraphs,
   onChunk,
   onError
 ) => {
-  const { chapters, parameters, systemPrompts } = ebookState;
-  console.log("streamInsertedParagraph");
-  const chapter = chapters.find((c) => c.id === chapterId);
-  const chapterIndex = chapters.findIndex((c) => c.id === chapterId);
-  const paragraphs = chapter.content;
-  let paragraph = paragraphs[paragraphIndex];
   try {
     await streamedApiCall(
       `${process.env.REACT_APP_API_URL}/chapter/insert`,
       "POST",
       {
-        paragraph: paragraph,
-        synopsis: chapter.synopsis,
-        previousParagraph: paragraphs[paragraphs.length - 1],
-        systemPrompt: systemPrompts[0],
+        context: context,
         instruction: instruction,
+        numParagraphs: numParagraphs,
       },
       onChunk,
       onError
@@ -244,6 +235,54 @@ export const getRewrittenParagraphs = async (
       instruction,
       numParagraphs,
       originalParagraph,
+      onChunk,
+      onError
+    );
+
+    return newParagraphs;
+  } catch (error) {
+    console.error("Failed to generate paragraphs:", error);
+    throw error;
+  }
+};
+
+export const getInsertedParagraphs = async (
+  context,
+  instruction,
+  numParagraphs
+) => {
+  let newParagraphs = [];
+  let currentParagraph = "";
+
+  const onChunk = (data) => {
+    if (data.chunk) {
+      if (data.chunk === "[DONE]") {
+        if (currentParagraph.trim()) {
+          newParagraphs.push(currentParagraph.trim());
+        }
+      } else {
+        if (data.chunk.includes("\\n\\n")) {
+          let splits = data.chunk.split("\\n\\n");
+          currentParagraph += splits[0] + " ";
+          newParagraphs.push(currentParagraph.trim());
+          currentParagraph = splits[1];
+        } else {
+          currentParagraph += data.chunk + " ";
+        }
+      }
+    }
+  };
+
+  const onError = (error) => {
+    // console.error("Error generating paragraphs:", error);
+    throw new Error(error.message || "Error generating paragraphs");
+  };
+
+  try {
+    await streamInsertedParagraph(
+      context,
+      instruction,
+      numParagraphs,
       onChunk,
       onError
     );

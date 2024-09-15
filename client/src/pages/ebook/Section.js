@@ -18,9 +18,9 @@ import {
   getGeneratedParagraphs,
   getSectionSummary,
   getRewrittenParagraphs,
+  getInsertedParagraphs,
 } from "../../server/ebook";
 import Paragraph from "./Paragraph";
-import GenerationMenu from "./GenerationMenu";
 import ContentGenerator from "./ContentGenerator";
 
 const Modal = ({ isOpen, onClose, title, children }) => {
@@ -255,6 +255,30 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     return rewrittenParagraphs;
   };
 
+  const handleParagraphInsert = useCallback(
+    async (pIndex, instruction, numParagraphs = 1) => {
+      const chapter = ebookState.chapters.find((c) => c.id === chapterId);
+      let prev_para = section.paragraphs.find((_, index) => index == pIndex);
+      let next_para = section.paragraphs.find(
+        (_, index) => index == pIndex + 1
+      );
+      const context = {
+        prev: prev_para,
+        next: next_para,
+        summary: "",
+        parameters: ebookState.parameters,
+        synopsis: chapter.synopsis,
+      };
+      const insertedParagraphs = await getInsertedParagraphs(
+        context,
+        instruction,
+        numParagraphs
+      );
+      return insertedParagraphs;
+    },
+    [ebookState]
+  );
+
   const handleParagraphDelete = useCallback(
     async (paragraphIndex) => {
       const updatedParagraphs = section.paragraphs.filter(
@@ -275,44 +299,11 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     [chapterActions, chapterId, sectionIndex, section]
   );
 
-  const handleParagraphInsert = useCallback(
-    async (paragraphIndex, newContent) => {
-      const updatedParagraphs = [
-        ...section.paragraphs.slice(0, paragraphIndex + 1),
-        newContent,
-        ...section.paragraphs.slice(paragraphIndex + 1),
-      ];
-      const result = await chapterActions.updateSection(
-        chapterId,
-        sectionIndex,
-        {
-          ...section,
-          paragraphs: updatedParagraphs,
-        }
-      );
-      if (result.error) {
-        setError(result.error);
-      }
-    },
-    [chapterActions, chapterId, sectionIndex, section]
-  );
-
   const handleDraftParagraphDelete = useCallback((paragraphIndex) => {
     setDraftParagraphs((prevDrafts) =>
       prevDrafts.filter((_, index) => index !== paragraphIndex)
     );
   }, []);
-
-  const handleDraftParagraphInsert = useCallback(
-    (paragraphIndex, newContent) => {
-      setDraftParagraphs((prevDrafts) => [
-        ...prevDrafts.slice(0, paragraphIndex + 1),
-        newContent,
-        ...prevDrafts.slice(paragraphIndex + 1),
-      ]);
-    },
-    []
-  );
 
   const handleNewParagraphsFinalize = useCallback(
     async (newParagraphs) => {
@@ -337,6 +328,18 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     [chapterId, chapterActions, section, sectionIndex]
   );
 
+  const handleInsertParagraphFinalize = useCallback(
+    (pIndex, newParagraphs) => {
+      let updatedParagraphs = [...section.paragraphs];
+      updatedParagraphs.splice(pIndex + 1, 0, ...newParagraphs);
+      chapterActions.updateSection(chapterId, sectionIndex, {
+        ...section,
+        paragraphs: updatedParagraphs,
+      });
+    },
+    [chapterId, chapterActions, section, sectionIndex]
+  );
+
   const renderParagraphs = useCallback(
     (paragraphs, isDraft = false) => {
       return paragraphs.map((paragraph, pIndex) => (
@@ -346,10 +349,16 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
           index={pIndex}
           chapterId={chapterId}
           onRewrite={(instruction, numParagraphs) =>
-            handleParagraphRewrite(pIndex, instruction, numParagraphs)
+            handleParagraphRewrite(instruction, numParagraphs)
           }
           onRewriteFinalize={(newParagraphs) =>
             handleRewriteParagraphFinalize(pIndex, newParagraphs)
+          }
+          onInsert={(instruction, numParagraphs) =>
+            handleParagraphInsert(pIndex, instruction, numParagraphs)
+          }
+          onInsertFinalize={(newParagraphs) =>
+            handleInsertParagraphFinalize(pIndex, newParagraphs)
           }
           onUpdate={(newContent) =>
             handleParagraphUpdate(pIndex, newContent, isDraft)
@@ -358,11 +367,6 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
             isDraft
               ? handleDraftParagraphDelete(pIndex)
               : handleParagraphDelete(pIndex)
-          }
-          onInsert={(newContent) =>
-            isDraft
-              ? handleDraftParagraphInsert(pIndex, newContent)
-              : handleParagraphInsert(pIndex, newContent)
           }
           isDraft={isDraft}
         />
@@ -373,7 +377,6 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       handleParagraphUpdate,
       handleParagraphDelete,
       handleParagraphInsert,
-      draftParagraphs,
     ]
   );
 
@@ -503,67 +506,6 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
             renderContent={renderDraftParagraphs}
             generationType="paragraphs"
           />
-          {/* {draftParagraphs.length > 0 ? (
-            <div
-              ref={draftRef}
-              className="mb-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="text-md font-semibold text-yellow-700">
-                  Draft Paragraphs
-                </h4>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleFinalizeDraft}
-                    className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
-                  >
-                    <FaPlus className="mr-2" />
-                    Finalize
-                  </button>
-                  <button
-                    onClick={handleCloseDraft}
-                    className="p-2 text-gray-500 hover:text-red-500 transition-colors duration-200"
-                    aria-label="Close generated outlines"
-                  >
-                    <FaTimes className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              {isGenerating ? (
-                <div className="flex items-center justify-center p-4">
-                  <FaSpinner className="animate-spin text-blue-500 mr-2" />
-                  <span className="text-blue-500">
-                    Regenerating paragraphs...
-                  </span>
-                </div>
-              ) : (
-                <>
-                  {renderParagraphs(draftParagraphs, true)}
-                  <GenerationMenu
-                    instruction={instruction}
-                    setInstruction={setInstruction}
-                    count={numParagraphs}
-                    setCount={setNumParagraphs}
-                    onGenerate={handleRewriteDraft}
-                    isLoading={isGenerating}
-                    isRegeneration={true}
-                    generationType="paragraphs"
-                  />
-                </>
-              )}
-            </div>
-          ) : (
-            <GenerationMenu
-              instruction={instruction}
-              setInstruction={setInstruction}
-              count={numParagraphs}
-              setCount={setNumParagraphs}
-              onGenerate={handleNewParagraphs}
-              isLoading={isGenerating}
-              generationType="paragraphs"
-            />
-          )} */}
         </div>
       )}
       {error && <p className="mt-2 text-red-500">{error}</p>}

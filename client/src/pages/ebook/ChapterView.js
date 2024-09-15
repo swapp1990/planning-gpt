@@ -12,7 +12,6 @@ import {
 import { useEbook } from "../../context/EbookContext";
 import Synopsis from "./Synopsis";
 import Section from "./Section";
-import GenerationMenu from "./GenerationMenu";
 import ContentGenerator from "./ContentGenerator";
 import { getSuggestedOutlines } from "../../server/ebook";
 

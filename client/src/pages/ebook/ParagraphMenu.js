@@ -21,10 +21,10 @@ const ParagraphMenu = ({
   onRewriteFinalize,
   onDelete,
   onInsert,
+  onInsertFinalize,
 }) => {
   const [isRewriteOpen, setIsRewriteOpen] = useState(false);
   const [isInsertOpen, setIsInsertOpen] = useState(false);
-  const [insertContent, setInsertContent] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRewriteSubmit = async (instruction, numParagraphs) => {
@@ -34,25 +34,21 @@ const ParagraphMenu = ({
     return response;
   };
 
-  const handleRewritCancel = async () => {
-    setIsLoading(false);
-    onCancel();
-  };
-
   const handleRewriteFinalize = async (newParagraphs) => {
-    // Implement the logic to finalize the rewritten paragraphs
-    // This might involve updating the parent component or making an API call
-    console.log("Finalizing rewritten paragraphs:", newParagraphs);
     setIsRewriteOpen(false);
     await onRewriteFinalize(newParagraphs);
   };
 
-  const handleInsertSubmit = async () => {
+  const handleInsertSubmit = async (instruction, numParagraphs) => {
     setIsLoading(true);
-    await onInsert(insertContent);
+    let response = await onInsert(instruction, numParagraphs);
     setIsLoading(false);
+    return response;
+  };
+
+  const handleInsertFinalize = async (newParagraphs) => {
     setIsInsertOpen(false);
-    setInsertContent("");
+    await onInsertFinalize(newParagraphs);
   };
 
   const renderParagraphs = (paragraphs) => {
@@ -117,35 +113,15 @@ const ParagraphMenu = ({
         />
       )}
       {isInsertOpen && (
-        <div className="mt-2">
-          <textarea
-            className="w-full p-2 border rounded-md"
-            rows="3"
-            placeholder="Enter content for the new paragraph..."
-            value={insertContent}
-            onChange={(e) => setInsertContent(e.target.value)}
-          />
-          <div className="flex justify-end mt-2 space-x-2">
-            <button
-              onClick={() => setIsInsertOpen(false)}
-              className="px-3 py-1 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleInsertSubmit}
-              className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <AiOutlineLoading3Quarters className="animate-spin mr-2" />
-              ) : (
-                <FaCheck className="mr-1" />
-              )}
-              {isLoading ? "Adding..." : "Submit"}
-            </button>
-          </div>
-        </div>
+        <ContentGenerator
+          initialContent={content}
+          onGenerate={handleInsertSubmit}
+          onFinalize={handleInsertFinalize}
+          onClose={() => setIsRewriteOpen(false)}
+          renderContent={renderParagraphs}
+          generationType="paragraphs"
+          title="Insert after selected paragraph"
+        />
       )}
     </div>
   );

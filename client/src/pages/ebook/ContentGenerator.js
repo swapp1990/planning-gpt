@@ -15,6 +15,7 @@ const ContentGenerator = ({
   const [count, setCount] = useState(1);
   const [generatedContent, setGeneratedContent] = useState([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
@@ -24,6 +25,7 @@ const ContentGenerator = ({
       setGeneratedContent(newContent);
     } catch (error) {
       console.error(`Error generating ${generationType}:`, error);
+      setError("Error generating content");
     }
     setIsGenerating(false);
   }, [instruction, count, onGenerate, generationType]);
@@ -69,6 +71,12 @@ const ContentGenerator = ({
             Finalize
           </button>
         </>
+      )}
+
+      {error && (
+        <div className="mt-2">
+          <p className="text-center text-sm text-red-500">{error}</p>
+        </div>
       )}
     </div>
   );
