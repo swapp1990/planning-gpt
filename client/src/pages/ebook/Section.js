@@ -229,28 +229,27 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     [chapterActions, chapterId, sectionIndex, section]
   );
 
-  const handleParagraphRewrite = async (
-    pIndex,
-    instruction,
-    numParagraphs = 1
-  ) => {
-    const chapter = ebookState.chapters.find((c) => c.id === chapterId);
-    const paragraphToUpdate = section.paragraphs.find(
-      (_, index) => index == pIndex
-    );
-    const context = {
-      parameters: ebookState.parameters,
-      synopsis: chapter.synopsis,
-      section_paragraphs: section.paragraphs.join("\n"),
-    };
-    const rewrittenParagraphs = await getRewrittenParagraphs(
-      context,
-      instruction,
-      paragraphToUpdate,
-      numParagraphs
-    );
-    return rewrittenParagraphs;
-  };
+  const handleParagraphRewrite = useCallback(
+    async (pIndex, instruction, numParagraphs = 1) => {
+      const chapter = ebookState.chapters.find((c) => c.id === chapterId);
+      const paragraphToUpdate = section.paragraphs.find(
+        (_, index) => index == pIndex
+      );
+      const context = {
+        parameters: ebookState.parameters,
+        synopsis: chapter.synopsis,
+        section_paragraphs: section.paragraphs.join("\n"),
+      };
+      const rewrittenParagraphs = await getRewrittenParagraphs(
+        context,
+        instruction,
+        paragraphToUpdate,
+        numParagraphs
+      );
+      return rewrittenParagraphs;
+    },
+    [ebookState, section]
+  );
 
   const handleParagraphInsert = useCallback(
     async (pIndex, instruction, numParagraphs = 1) => {
@@ -346,7 +345,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
           index={pIndex}
           chapterId={chapterId}
           onRewrite={(instruction, numParagraphs) =>
-            handleParagraphRewrite(instruction, numParagraphs)
+            handleParagraphRewrite(pIndex, instruction, numParagraphs)
           }
           onRewriteFinalize={(newParagraphs) =>
             handleRewriteParagraphFinalize(pIndex, newParagraphs)

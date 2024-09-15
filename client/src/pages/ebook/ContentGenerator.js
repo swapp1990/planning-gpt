@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from "react";
-import { FaPlus, FaTimes } from "react-icons/fa";
+import { FaPlus, FaTimes, FaMinus } from "react-icons/fa";
 import GenerationMenu from "./GenerationMenu";
 
 const ContentGenerator = ({
@@ -21,6 +21,7 @@ const ContentGenerator = ({
     setIsGenerating(true);
     setGeneratedContent([]);
     try {
+      console.log(instruction, count);
       const newContent = await onGenerate(instruction, count);
       setGeneratedContent(newContent);
     } catch (error) {
@@ -33,6 +34,11 @@ const ContentGenerator = ({
   const handleFinalize = useCallback(async () => {
     await onFinalize(generatedContent);
     setInstruction("");
+    setGeneratedContent([]);
+    setCount(1);
+  }, [instruction, generatedContent]);
+
+  const handleClear = useCallback(async () => {
     setGeneratedContent([]);
     setCount(1);
   }, [instruction, generatedContent]);
@@ -63,13 +69,22 @@ const ContentGenerator = ({
       {generatedContent.length > 0 && (
         <>
           {renderContent(generatedContent)}
-          <button
-            onClick={handleFinalize}
-            className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
-          >
-            <FaPlus className="mr-2" />
-            Finalize
-          </button>
+          <div className="flex">
+            <button
+              onClick={handleFinalize}
+              className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
+            >
+              <FaPlus className="mr-2" />
+              Finalize
+            </button>
+            <button
+              onClick={handleClear}
+              className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 flex items-center"
+            >
+              <FaMinus className="mr-2" />
+              Clear
+            </button>
+          </div>
         </>
       )}
 

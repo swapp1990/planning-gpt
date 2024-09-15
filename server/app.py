@@ -786,6 +786,9 @@ def rewrite_paragraph():
     paragraph_to_rewrite = data.get('paragraph')
     numParagraphs = data.get('numParagraphs')
 
+    if paragraph_to_rewrite is None:
+         return json.dumps({'error': "An error occured"})
+
     user_prompt = f"""
 Rewrite the following paragraph within the context of its section and the overall story:
 
