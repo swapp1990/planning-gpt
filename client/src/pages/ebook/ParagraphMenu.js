@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   FaPen,
   FaTrash,
@@ -16,12 +16,10 @@ const ParagraphMenu = ({
   onClose,
   onRewriteFinalize,
   onDelete,
-  onInsert,
   onInsertFinalize,
 }) => {
   const [isRewriteOpen, setIsRewriteOpen] = useState(false);
   const [isInsertOpen, setIsInsertOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleRewriteClick = () => {
     if (isRewriteOpen) {
@@ -46,17 +44,47 @@ const ParagraphMenu = ({
     }
   };
 
-  const handleInsertSubmit = async (instruction, numParagraphs) => {
-    setIsLoading(true);
-    let response = await onInsert(instruction, numParagraphs);
-    setIsLoading(false);
-    return response;
-  };
-
   const handleInsertFinalize = async (newParagraphs) => {
     setIsInsertOpen(false);
     await onInsertFinalize(newParagraphs);
   };
+
+  const renderRewriteParagraphs = useCallback((sentences) => {
+    const renderedSentences = sentences.map((sentence, index) => {
+      switch (sentence.action) {
+        case "edit":
+          return (
+            <React.Fragment key={index}>
+              <span className="line-through text-gray-500">
+                {sentence.original_sentence}
+              </span>{" "}
+              <span className="font-semibold bg-yellow-100">
+                {sentence.rewritten_sentence}
+              </span>{" "}
+            </React.Fragment>
+          );
+        case "remove":
+          return (
+            <span key={index} className="line-through text-red-500 bg-red-100">
+              {sentence.original_sentence}{" "}
+            </span>
+          );
+        case "add":
+          return (
+            <span
+              key={index}
+              className="font-semibold text-green-700 bg-green-100"
+            >
+              {sentence.rewritten_sentence}{" "}
+            </span>
+          );
+        default:
+          return <span key={index}>{sentence.original_sentence} </span>;
+      }
+    });
+
+    return <p className="mb-4 leading-relaxed">{renderedSentences}</p>;
+  }, []);
 
   const renderParagraphs = (paragraphs) => {
     return paragraphs.map((paragraph, index) => (
@@ -113,7 +141,7 @@ const ParagraphMenu = ({
           paraInfo={paraInfo}
           onFinalize={handleRewriteFinalize}
           onClose={() => setIsRewriteOpen(false)}
-          renderContent={renderParagraphs}
+          renderContent={renderRewriteParagraphs}
           generationType="rewrite_paragraphs"
           title="Rewrite/Expand selected paragraph"
         />

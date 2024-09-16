@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { FaPlus, FaTimes, FaMinus } from "react-icons/fa";
 import GenerationMenu from "./GenerationMenu";
 import {
@@ -52,6 +52,10 @@ const ContentGenerator = ({
     );
   }, []);
 
+  useEffect(() => {
+    // console.log(generatedContent);
+  }, [generatedContent]);
+
   const handleGenerate = useCallback(async () => {
     setIsGenerating(true);
     let prev_content = generatedContent;
@@ -59,9 +63,6 @@ const ContentGenerator = ({
     setError(null);
 
     try {
-      const onProgress = (intermediateResult) => {
-        setGeneratedContent(intermediateResult);
-      };
       const chapter = ebookState.chapters.find(
         (c) => c.id === ebookState.currentChapter
       );
@@ -72,82 +73,91 @@ const ContentGenerator = ({
       };
 
       let generatedContent = [];
-
-      if (generationType == "rewrite_paragraphs") {
+      if (generationType === "rewrite_paragraphs") {
         const section = chapter.sections[paraInfo.sectionId];
         context.section_paragraphs = section.paragraphs.join("\n");
         const paragraphToUpdate = paraInfo.paragraphText;
+
+        const onRewriteProgress = (intermediateResult) => {
+          let generatedContent = [...intermediateResult];
+          setGeneratedContent(generatedContent);
+        };
+
         generatedContent = await getRewrittenParagraphs(
           context,
           instruction,
           paragraphToUpdate,
           count,
-          onProgress
+          onRewriteProgress
         );
-      } else if (generationType == "insert_paragraphs") {
-        const section = chapter.sections[paraInfo.sectionId];
-        let prev_para = paraInfo.paragraphText;
-        let next_para = section.paragraphs.find(
-          (_, index) => index == paraInfo.paragraphId + 1
-        );
-        context.section_paragraphs = section.paragraphs.join("\n");
-        context.prev = prev_para;
-        context.next = next_para;
-        generatedContent = await getInsertedParagraphs(
-          context,
-          instruction,
-          count,
-          onProgress
-        );
-      } else if (generationType == "new_paragraphs") {
-        const chapter = ebookState.chapters.find(
-          (c) => c.id === ebookState.currentChapter
-        );
-        let outlinesList = chapter.sections.map((s) => s.outline);
-        let next_outline = getNextOutline(outlinesList, paraInfo.outline);
-        let sectionIndex = paraInfo.sectionIndex;
-        let previous_summary =
-          sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
-        let current_summary = "";
-        if (chapter.sections[sectionIndex].summary) {
-          current_summary =
-            sectionIndex > 0 ? chapter.sections[sectionIndex].summary : "";
+      } else {
+        const onProgress = (intermediateResult) => {
+          setGeneratedContent(intermediateResult);
+        };
+        if (generationType == "insert_paragraphs") {
+          const section = chapter.sections[paraInfo.sectionId];
+          let prev_para = paraInfo.paragraphText;
+          let next_para = section.paragraphs.find(
+            (_, index) => index == paraInfo.paragraphId + 1
+          );
+          context.section_paragraphs = section.paragraphs.join("\n");
+          context.prev = prev_para;
+          context.next = next_para;
+          generatedContent = await getInsertedParagraphs(
+            context,
+            instruction,
+            count,
+            onProgress
+          );
+        } else if (generationType == "new_paragraphs") {
+          const chapter = ebookState.chapters.find(
+            (c) => c.id === ebookState.currentChapter
+          );
+          let outlinesList = chapter.sections.map((s) => s.outline);
+          let next_outline = getNextOutline(outlinesList, paraInfo.outline);
+          let sectionIndex = paraInfo.sectionIndex;
+          let previous_summary =
+            sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
+          let current_summary = "";
+          if (chapter.sections[sectionIndex].summary) {
+            current_summary =
+              sectionIndex > 0 ? chapter.sections[sectionIndex].summary : "";
+          }
+
+          const context = {
+            parameters: ebookState.parameters,
+            synopsis: chapter.synopsis,
+            previous_summary: previous_summary,
+            current_summary: current_summary,
+            draft_paragraphs: prev_content.join("\n\n"),
+            outline: paraInfo.outline,
+            next_outline: next_outline,
+          };
+          generatedContent = await getNewParagraphs(
+            context,
+            instruction,
+            count,
+            onProgress
+          );
+        } else if (generationType == "outlines") {
+          let prev_outlines = chapter.sections.map((s) => s.outline);
+          let prev_summaries = chapter.sections
+            .map((s) => s.summary)
+            .filter((summary) => summary !== undefined);
+          const context = {
+            parameters: ebookState.parameters,
+            chapter_synopsis: chapter.synopsis,
+            previous_outlines: prev_outlines,
+            previous_summaries: prev_summaries,
+          };
+          generatedContent = await getSuggestedOutlines(
+            context,
+            instruction,
+            count,
+            onProgress
+          );
         }
-
-        const context = {
-          parameters: ebookState.parameters,
-          synopsis: chapter.synopsis,
-          previous_summary: previous_summary,
-          current_summary: current_summary,
-          draft_paragraphs: prev_content.join("\n\n"),
-          outline: paraInfo.outline,
-          next_outline: next_outline,
-        };
-        generatedContent = await getNewParagraphs(
-          context,
-          instruction,
-          count,
-          onProgress
-        );
-      } else if (generationType == "outlines") {
-        let prev_outlines = chapter.sections.map((s) => s.outline);
-        let prev_summaries = chapter.sections
-          .map((s) => s.summary)
-          .filter((summary) => summary !== undefined);
-        const context = {
-          parameters: ebookState.parameters,
-          chapter_synopsis: chapter.synopsis,
-          previous_outlines: prev_outlines,
-          previous_summaries: prev_summaries,
-        };
-        generatedContent = await getSuggestedOutlines(
-          context,
-          instruction,
-          count,
-          onProgress
-        );
       }
-
       setGeneratedContent(generatedContent);
     } catch (error) {
       console.error(`Error generating ${generationType}:`, error);
@@ -157,11 +167,42 @@ const ContentGenerator = ({
   }, [instruction, count, generationType, ebookState]);
 
   const handleFinalize = useCallback(async () => {
-    await onFinalize(generatedContent);
+    let finalContent;
+    console.log(generatedContent);
+    const isActionBasedContent =
+      generatedContent.length > 0 &&
+      typeof generatedContent[0] === "object" &&
+      "action" in generatedContent[0];
+
+    if (isActionBasedContent) {
+      // Process content with actions
+      let newParagraph = "";
+      generatedContent.forEach((item) => {
+        switch (item.action) {
+          case "edit":
+            newParagraph += item.rewritten_sentence + " ";
+            break;
+          case "add":
+            newParagraph += item.rewritten_sentence + " ";
+            break;
+          case "remove":
+            // Skip removed sentences
+            break;
+          default:
+            newParagraph += item.original_sentence + " ";
+        }
+      });
+      finalContent = [newParagraph.trim()];
+    } else {
+      // Join existing content into a single paragraph
+      finalContent = [generatedContent.join(" ")];
+    }
+
+    await onFinalize(finalContent);
     setInstruction("");
     setGeneratedContent([]);
     setCount(1);
-  }, [instruction, generatedContent]);
+  }, [generatedContent, onFinalize, setGeneratedContent]);
 
   const handleClear = useCallback(async () => {
     setGeneratedContent([]);

@@ -211,31 +211,26 @@ export const getRewrittenParagraphs = async (
   numParagraphs,
   onProgress
 ) => {
-  let paragraphs = [];
-  let currentParagraph = "";
-
-  const sendUpdate = () => {
-    onProgress([...paragraphs, currentParagraph.trim()]);
-  };
+  let rewrittenSentences = [];
 
   const onChunk = (data) => {
     if (data.chunk) {
       if (data.chunk === "[DONE]") {
-        if (currentParagraph.trim()) {
-          paragraphs.push(currentParagraph.trim());
-          currentParagraph = "";
-          sendUpdate();
-        }
+        onProgress(rewrittenSentences);
       } else {
-        if (data.chunk.includes("\\n\\n")) {
-          let splits = data.chunk.split("\\n\\n");
-          currentParagraph += splits[0];
-          paragraphs.push(currentParagraph.trim());
-          currentParagraph = splits[1];
-          sendUpdate();
-        } else {
-          currentParagraph += data.chunk + " ";
-          sendUpdate();
+        try {
+          let parsedChunk = JSON.parse(data.chunk);
+          if (parsedChunk.action == "edit") {
+            if (
+              parsedChunk.rewritten_sentence == parsedChunk.original_sentence
+            ) {
+              parsedChunk.action = "no_change";
+            }
+          }
+          rewrittenSentences.push(parsedChunk);
+          onProgress(rewrittenSentences);
+        } catch (error) {
+          console.error("Error parsing chunk:", error);
         }
       }
     }
@@ -255,7 +250,7 @@ export const getRewrittenParagraphs = async (
       onError
     );
 
-    return paragraphs;
+    return rewrittenSentences;
   } catch (error) {
     console.error("Failed to generate paragraphs:", error);
     throw error;

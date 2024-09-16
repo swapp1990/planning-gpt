@@ -229,7 +229,45 @@ def hermes_ai_output(prompt, system_prompt, examples, parameters):
         print(f"An error occurred: {e}")
         return {"error": "An error occurred while processing the request."}
 
-def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
+def process_sentence_chunks(chunk, current_sentence, final_response):
+    msg = chunk.choices[0].delta.content or ""
+    current_sentence += msg
+    current_sentence = current_sentence.replace("\n\n", "\\n\\n")
+    
+    sentences = re.split(r'(?<=[.!?])\s+', current_sentence)
+    
+    chunks_to_yield = []
+    if len(sentences) > 1:
+        complete_sentences = sentences[:-1]
+        for sentence in complete_sentences:
+            chunks_to_yield.append(sentence.strip())
+            final_response += sentence + " "
+        
+        current_sentence = sentences[-1]
+    
+    return chunks_to_yield, current_sentence, final_response
+
+def process_json_chunks(chunk, json_buffer):
+    msg = chunk.choices[0].delta.content or ""
+    json_buffer += msg
+    
+    chunks_to_yield = []
+    while True:
+        match = re.search(r'\{[^{}]*\}', json_buffer)
+        if not match:
+            break
+        
+        json_str = match.group()
+        try:
+            json_obj = json.loads(json_str)
+            chunks_to_yield.append(json.dumps(json_obj))
+            json_buffer = json_buffer[match.end():]
+        except json.JSONDecodeError:
+            break
+    
+    return chunks_to_yield, json_buffer
+
+def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters, response_type="sentence"):
     if not get_nsfw_flag_state():
         client = OpenAI(
             api_key=openai_api_key,
@@ -272,33 +310,31 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters):
             stream=True
         )
         
-        actual_response = ""
-        final_response = ""
-        current_sentence = ""
-        for chunk in chat_completion:
-            msg = chunk.choices[0].delta.content or ""
-            actual_response += msg
-            current_sentence += msg
-            current_sentence = current_sentence.replace("\n\n", "\\n\\n")
+        if response_type == "sentence":
+            current_sentence = ""
+            final_response = ""
+            for chunk in chat_completion:
+                chunks, current_sentence, final_response = process_sentence_chunks(chunk, current_sentence, final_response)
+                for c in chunks:
+                    yield c
             
-            # print(actual_response.replace("\n\n", "\\n\\n"))
-            
-            sentences = re.split(r'(?<=[.!?])\s+', current_sentence)
-            
-            if len(sentences) > 1:
-                complete_sentences = sentences[:-1]
-                for sentence in complete_sentences:
-                    # print(sentence.strip())
-                    yield sentence.strip()
-                    final_response += sentence + " "
-                
-                current_sentence = sentences[-1]
+            if current_sentence.strip():
+                yield current_sentence.strip()
+                final_response += current_sentence
         
-        if current_sentence.strip():
-            # print(current_sentence.strip())
-            yield current_sentence.strip()
-            final_response += current_sentence
-        
+        elif response_type == "json":
+            json_buffer = ""
+            for chunk in chat_completion:
+                chunks, json_buffer = process_json_chunks(chunk, json_buffer)
+                for c in chunks:
+                    yield c
+            
+            if json_buffer.strip():
+                try:
+                    json_obj = json.loads(json_buffer)
+                    yield json.dumps(json_obj)
+                except json.JSONDecodeError:
+                    pass
         # print(actual_response.replace("\n\n", "\\n\\n"))
         yield "[DONE]"
         
@@ -777,7 +813,7 @@ Return all the inserted paragraphs. Do not include any explanatory text or metad
 def rewrite_paragraph():
     print("Rewrite paragraph")
     prompts = load_prompts()
-    systemPrompt = prompts["writing_assistant"]["prompts"][0]
+    system_prompt = prompts["writing_assistant"]["prompts"][0]
     data = request.get_json()
     context = data.get('context')
     instruction = data.get('instruction')
@@ -788,49 +824,56 @@ def rewrite_paragraph():
          return json.dumps({'error': "An error occured"})
 
     user_prompt = f"""
-Rewrite the following paragraph within the context of its section and the overall story:
+Rewrite the following paragraph(s) within the context of its section and the overall story:
 
 1. Chapter Synopsis: {context.get('synopsis', '')}
 2. Overall Story Parameters: {context.get('parameters', '')}
-3. Section Paragraphs: {context.get('section_paragraphs', '')}
-4. Paragraph to Rewrite: {paragraph_to_rewrite}
+3. Previous Paragraph: {context.get('previous_paragraph', '')}
+4. Paragraph(s) to Rewrite: {paragraph_to_rewrite}
+5. Next Paragraph: {context.get('next_paragraph', '')}
 
 CRITICAL INSTRUCTIONS:
-1. Follow these specific instructions to rewrite the paragraph: `{instruction}`
-2. Rewrite ONLY the given paragraph. Do not alter or address content from other paragraphs in the section.
-3. Ensure the rewritten {numParagraphs} new paragraph/s fits seamlessly within the section, maintaining continuity with preceding and following paragraphs.
+1. Follow these specific instructions to rewrite the paragraph(s): `{instruction}`
+2. Rewrite ONLY the given paragraph(s). Do not alter or address content from other paragraphs in the section.
+3. Write exactly {numParagraphs} paragraph(s) that fit perfectly between the previous and next paragraphs, maintaining a natural flow and seamless continuity.
 4. Adhere to the overall story parameters and chapter synopsis.
-5. Improve upon the original in terms of prose quality, character depth, or descriptive richness as appropriate.
-
-STYLE GUIDELINES:
-- Match the tone and style of the surrounding paragraphs.
-- If the original paragraph contains dialogue, maintain a similar dialogue-to-narrative ratio.
-- Enhance character voices and personality if dialogue is present.
-- Use vivid, sensory details to bring the scene to life.
-
-CONTENT BOUNDARIES:
-- Do not introduce new plot elements or characters not present in the original paragraph.
-- Ensure the rewritten paragraphs does not contradict information in other section paragraphs.
+5. Make changes ONLY when necessary to fulfill the given instruction. Do not rewrite sentences or make stylistic changes unless explicitly required by the instruction.
 
 REWRITING PROCESS:
-1. Analyze the original paragraph in the context of the section and overall story.
-2. Identify key elements, plot points, and character moments to preserve.
-3. Ensure the rewritten content flows naturally with the surrounding paragraphs.
-4. Write {numParagraphs} new paragraph(s) that expand on the original paragraph based on the instruction.
+1. Analyze the original paragraph(s) in the context of the previous paragraph, next paragraph, and overall story.
+2. Identify the specific changes needed to fulfill the given instruction.
+3. Apply ONLY the changes necessary to meet the instruction requirements. Do not alter sentences or make stylistic changes if they are not directly related to the instruction. Avoid unnecessary edits to sentences.
+4. If the instruction is empty or does not apply to a particular sentence, return that sentence as "no_change".
+5. For general instructions (e.g., "make this paragraph funnier"), apply changes selectively and only where necessary to fulfill the instruction.
+6. Ensure that any new content transitions smoothly from the previous paragraph and into the next paragraph.
+7. If writing multiple paragraphs, distribute the new content logically across the {numParagraphs} paragraphs.
+
+OUTPUT FORMAT:
+Return the rewritten paragraph(s) as a JSON list of dictionaries, where each dictionary represents a sentence and follows one of these formats:
+1. {{"action": "edit", "original_sentence": "<original>", "rewritten_sentence": "<rewritten>"}}
+2. {{"action": "add", "rewritten_sentence": "<new sentence>"}}
+3. {{"action": "remove", "original_sentence": "<removed sentence>"}}
+4. {{"action": "no_change", "original_sentence": "<unchanged sentence>"}}
+5. {{"action": "paragraph_break"}}
+
+Ensure that the list maintains the original order of sentences in the paragraph(s). Use the "paragraph_break" action to indicate the end of a paragraph and the start of a new one.
 
 FINAL VERIFICATION:
-- Does the rewritten paragraph fit seamlessly within the section without creating continuity issues?
+- Does each change in the rewritten paragraph(s) directly address the given instruction?
+- Have you avoided making unnecessary stylistic changes or rewrites that don't fulfill the instruction?
+- Is the rewritten content presented in the correct JSON format as specified above?
 - Have you written exactly {numParagraphs} paragraph(s)?
+- Does any new content fit seamlessly with the existing text and maintain the overall flow?
+- Are paragraph breaks correctly indicated using the "paragraph_break" action?
 
-Return all the rewritten paragraphs. Do not include any explanatory text or metadata in your response.
+Return only the JSON list of dictionaries representing the rewritten paragraph(s). Do not include any explanatory text or metadata in your response.
 """
-
     print(user_prompt)
 
     def generate():
         partial_result = ""
         try:
-            for chunk in hermes_ai_streamed_output(user_prompt, systemPrompt, [], ""):
+            for chunk in hermes_ai_streamed_output(user_prompt, system_prompt, [], "", "json"):
                 if isinstance(chunk, dict) and 'error' in chunk:
                     return jsonify(chunk), 500
                 partial_result += chunk
@@ -838,6 +881,9 @@ Return all the rewritten paragraphs. Do not include any explanatory text or meta
         except Exception as e:
             yield json.dumps({'error': "An error occured"})
 
+    # response = hermes_ai_output(user_prompt, system_prompt, [], "")
+    # paragraphs = response.split("\n\n")
+    # return {"paragraphs": paragraphs}
     return Response(stream_with_context(generate()), content_type='application/x-ndjson')
 
 @app.route("/chapter/rewrite/summary", methods=["POST"])
