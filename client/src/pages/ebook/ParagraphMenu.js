@@ -143,7 +143,7 @@ const ParagraphMenu = ({
           <FaPlus className="text-green-500" />
         </button>
         <button
-          onClick={() => onDelete(chapterId, paragraphId)}
+          onClick={() => onDelete(paraInfo.chapterId, paraInfo.paragraphId)}
           className="p-2 hover:bg-gray-200 rounded-full transition-colors duration-200"
           title="Delete"
         >

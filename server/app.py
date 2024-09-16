@@ -687,6 +687,9 @@ def continue_chapter():
     
     prompts = load_prompts()
     systemPrompt = prompts["writing_assistant"]["prompts"][0]
+
+#7. Newly generated draft paragraphs for rewriting: {context.get('draft_paragraphs', '')}
+
     prompt = f"""
 Please continue the story for the current chapter based on the following:
 
@@ -695,7 +698,7 @@ Please continue the story for the current chapter based on the following:
 3. Overall story parameters: {context.get('parameters', '')}
 4. Previous Section Summary: {context.get('previous_summary', '')}
 5. Current Section Summary: {context.get('current_summary', '')}
-6. Newly generated draft paragraphs for rewriting: {context.get('draft_paragraphs', '')}
+6. Previous Paragraph: {context.get('previous_paragraph', '')}
 
 CRITICAL INSTRUCTIONS:
 1. Generate EXACTLY {numParagraphs} paragraph(s).
@@ -714,16 +717,16 @@ STRICT BOUNDARIES:
 - Your writing must NOT contain or allude to any elements from the next outline.
 
 WRITING PROCESS:
-1. Analyze the current outline and specific instructions.
-2. Review the draft paragraphs for ideas, but do not copy them directly.
-3. Ensure continuity with previously finalized paragraphs.
-4. Write {numParagraphs} new paragraph(s) that ONLY expand on the current outline.
+1. Analyze the current outline, specific instructions and previous paragraph first.
+3. Ensure continuity with previous paragraph.
+4. Write {numParagraphs} new paragraph(s) that fit perfectly between the previous and next paragraphs, maintaining a natural flow and seamless continuity.
 5. Double-check that your content does not overlap with the next outline.
 
 FINAL VERIFICATION:
 - Have you written exactly {numParagraphs} paragraph(s)?
 - Does your content strictly adhere to the current outline without touching on the next outline?
 - Have you included sufficient dialogue and conversations as requested?
+- Does the new content fit seamlessly with the existing text and maintain the overall flow?
 
 [SYSTEM NOTE: Content generation for this outline stops here. Do not proceed beyond this point in the story.]
 """

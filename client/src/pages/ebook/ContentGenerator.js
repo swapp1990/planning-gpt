@@ -136,6 +136,7 @@ const ContentGenerator = ({
           );
           let outlinesList = chapter.sections.map((s) => s.outline);
           let next_outline = getNextOutline(outlinesList, paraInfo.outline);
+          let prev_para = paraInfo.paragraphText;
           let sectionIndex = paraInfo.sectionIndex;
           let previous_summary =
             sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
@@ -153,6 +154,7 @@ const ContentGenerator = ({
             draft_paragraphs: prev_content.join("\n\n"),
             outline: paraInfo.outline,
             next_outline: next_outline,
+            previous_paragraph: prev_para,
           };
           generatedContent = await getNewParagraphs(
             context,
