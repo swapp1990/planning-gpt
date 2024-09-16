@@ -228,15 +228,7 @@ const ContentGenerator = ({
 
       finalContent = paragraphs;
     } else {
-      // Handle non-action-based content (unchanged)
-      if (Array.isArray(generatedContent)) {
-        finalContent = [generatedContent.join(" ").trim()];
-      } else if (typeof generatedContent === "string") {
-        finalContent = [generatedContent.trim()];
-      } else {
-        console.error("Unexpected generatedContent format:", generatedContent);
-        finalContent = [];
-      }
+      finalContent = generatedContent;
     }
 
     await onFinalize(finalContent);
