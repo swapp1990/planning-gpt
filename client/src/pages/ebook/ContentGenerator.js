@@ -75,7 +75,28 @@ const ContentGenerator = ({
       let generatedContent = [];
       if (generationType === "rewrite_paragraphs") {
         const section = chapter.sections[paraInfo.sectionId];
-        context.section_paragraphs = section.paragraphs.join("\n");
+        let prev_para, next_para;
+
+        // Get the previous paragraph
+        if (paraInfo.paragraphId > 0) {
+          // If not the first paragraph in the section, get the previous one
+          prev_para = section.paragraphs[paraInfo.paragraphId - 1];
+        } else {
+          // If it's the first paragraph in the section, check for previous section
+          const prevSectionId = paraInfo.sectionId - 1;
+          if (prevSectionId >= 0 && chapter.sections[prevSectionId]) {
+            const prevSection = chapter.sections[prevSectionId];
+            prev_para =
+              prevSection.paragraphs[prevSection.paragraphs.length - 1];
+          } else {
+            prev_para = null; // No previous paragraph found
+          }
+        }
+        next_para = section.paragraphs.find(
+          (_, index) => index == paraInfo.paragraphId + 1
+        );
+        context.previous_paragraph = prev_para;
+        context.next_paragraph = next_para;
         const paragraphToUpdate = paraInfo.paragraphText;
 
         const onRewriteProgress = (intermediateResult) => {
@@ -100,7 +121,7 @@ const ContentGenerator = ({
           let next_para = section.paragraphs.find(
             (_, index) => index == paraInfo.paragraphId + 1
           );
-          context.section_paragraphs = section.paragraphs.join("\n");
+          // context.section_paragraphs = section.paragraphs.join("\n");
           context.prev = prev_para;
           context.next = next_para;
           generatedContent = await getInsertedParagraphs(
