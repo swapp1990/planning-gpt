@@ -1,5 +1,12 @@
 import React, { useState } from "react";
-import { FaMagic, FaRedo, FaSpinner, FaPlus, FaMinus } from "react-icons/fa";
+import {
+  FaMagic,
+  FaRedo,
+  FaSpinner,
+  FaPlus,
+  FaMinus,
+  FaTimes,
+} from "react-icons/fa";
 
 const GenerationMenu = ({
   instruction,
@@ -12,6 +19,9 @@ const GenerationMenu = ({
   generationType = "paragraphs",
 }) => {
   const [showInstruction, setShowInstruction] = useState(false);
+  const handleClearInstruction = () => {
+    setInstruction("");
+  };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 mb-6">
@@ -33,7 +43,7 @@ const GenerationMenu = ({
       </div>
 
       {showInstruction && (
-        <div className="mb-4">
+        <div className="mb-4 relative">
           <textarea
             value={instruction}
             onChange={(e) => setInstruction(e.target.value)}
@@ -41,6 +51,15 @@ const GenerationMenu = ({
             className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
             rows="3"
           />
+          {instruction && (
+            <button
+              onClick={handleClearInstruction}
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+              aria-label="Clear instruction"
+            >
+              <FaTimes />
+            </button>
+          )}
         </div>
       )}
 

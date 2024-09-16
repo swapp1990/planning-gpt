@@ -1,23 +1,24 @@
 import React, { useState, useCallback, useEffect } from "react";
-import {
-  FaEdit,
-  FaCheck,
-  FaTimes,
-  FaPlus,
-  FaSpinner,
-  FaSyncAlt,
-  FaTrash,
-  FaOutdent,
-} from "react-icons/fa";
+import { FaEdit, FaCheck, FaTimes, FaTrash, FaOutdent } from "react-icons/fa";
 import { useEbook } from "../../context/EbookContext";
 import Synopsis from "./Synopsis";
 import Section from "./Section";
 import ContentGenerator from "./ContentGenerator";
-import { getSuggestedOutlines, toggleNsfw } from "../../server/ebook";
+import { toggleNsfw } from "../../server/ebook";
 
-const OutlineCard = ({ outline, index, onEdit, onDelete }) => {
+const OutlineCard = ({ outline, onEdit, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedOutline, setEditedOutline] = useState(outline);
+
+  const handleSaveEdit = () => {
+    onEdit(editedOutline);
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setEditedOutline(outline);
+    setIsEditing(false);
+  };
 
   return (
     <li className="p-3 rounded-lg bg-yellow-50 border border-yellow-200 transition-colors duration-200 flex justify-between items-center">
@@ -38,16 +39,13 @@ const OutlineCard = ({ outline, index, onEdit, onDelete }) => {
         {isEditing ? (
           <>
             <button
-              onClick={() => {
-                onEdit(editedOutline);
-                setIsEditing(false);
-              }}
+              onClick={handleSaveEdit}
               className="text-green-600 hover:text-green-800 transition-colors duration-200"
             >
               <FaCheck />
             </button>
             <button
-              onClick={() => setIsEditing(false)}
+              onClick={handleCancelEdit}
               className="text-red-600 hover:text-red-800 transition-colors duration-200"
             >
               <FaTimes />
@@ -118,40 +116,8 @@ const ChapterView = ({ chapter }) => {
     setIsLoading(false);
   };
 
-  const handleNewOutlines = useCallback(
-    async (instruction, numOutlines) => {
-      setIsLoading(true);
-      setError(null);
-      setGeneratedOutlines([]);
-      try {
-        let prev_outlines = chapter.sections.map((s) => s.outline);
-        let prev_summaries = chapter.sections
-          .map((s) => s.summary)
-          .filter((summary) => summary !== undefined);
-        const context = {
-          parameters: ebookState.parameters,
-          chapter_synopsis: chapter.synopsis,
-          previous_outlines: prev_outlines,
-          previous_summaries: prev_summaries,
-        };
-        const outlines = await getSuggestedOutlines(
-          context,
-          instruction,
-          numOutlines
-        );
-        setGeneratedOutlines(outlines);
-        return outlines;
-      } catch (err) {
-        console.error(err);
-        setError("Failed to generate outlines. Please try again.");
-      }
-      setIsLoading(false);
-    },
-    [ebookState, generatedOutlines]
-  );
-
-  const handleNewOutlinesFinalize = () => {
-    for (let o of generatedOutlines) {
+  const handleNewOutlinesFinalize = (newOutlines) => {
+    for (let o of newOutlines) {
       chapterActions.addSection(chapter.id, {
         outline: o.outline,
         paragraphs: [],
@@ -159,23 +125,13 @@ const ChapterView = ({ chapter }) => {
     }
   };
 
-  const renderDraftOutlines = () => {
-    return generatedOutlines.map((o, index) => (
+  const renderDraftOutlines = (content, onEdit, onDelete) => {
+    return content.map((o, index) => (
       <OutlineCard
         key={index}
         outline={o.outline}
-        onEdit={(newOutline) => {
-          const updatedOutlines = [...generatedOutlines];
-          updatedOutlines[index] = newOutline;
-          setGeneratedOutlines(updatedOutlines);
-        }}
-        onDelete={() => {
-          const updatedOutlines = generatedOutlines.filter(
-            (_, i) => i !== index
-          );
-          console.log(updatedOutlines);
-          setGeneratedOutlines(updatedOutlines);
-        }}
+        onEdit={(newOutline) => onEdit(index, newOutline)}
+        onDelete={() => onDelete(index)}
       />
     ));
   };
@@ -257,7 +213,6 @@ const ChapterView = ({ chapter }) => {
       ))}
 
       <ContentGenerator
-        onGenerate={handleNewOutlines}
         onFinalize={handleNewOutlinesFinalize}
         renderContent={renderDraftOutlines}
         generationType="outlines"

@@ -69,78 +69,9 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     setEditedOutline(section.outline);
   }, [section.outline]);
 
-  function getNextOutline(outlinesList, targetOutline) {
-    const index = outlinesList.indexOf(targetOutline);
-    if (index === -1) {
-      console.warn(`Outline "${targetOutline}" not found in the list.`);
-      return "";
-    }
-    if (index === outlinesList.length - 1) {
-      // It's the last outline
-      return "";
-    }
-    return outlinesList[index + 1];
-  }
-
   const openSummaryModal = useCallback(() => {
     setIsModalOpen(true);
   }, []);
-
-  const handleNewParagraphs = useCallback(
-    async (instruction, numParagraphs) => {
-      // setTimeout(() => {
-      //   draftRef.current?.scrollIntoView({
-      //     behavior: "smooth",
-      //     block: "start",
-      //   });
-      // }, 100);
-      setIsGenerating(true);
-      setError(null);
-
-      try {
-        const chapter = ebookState.chapters.find((c) => c.id === chapterId);
-        let outlinesList = chapter.sections.map((s) => s.outline);
-        let next_outline = getNextOutline(outlinesList, section.outline);
-        let previous_summary =
-          sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
-        let current_summary = "";
-        if (chapter.sections[sectionIndex].summary) {
-          current_summary =
-            sectionIndex > 0 ? chapter.sections[sectionIndex].summary : "";
-        }
-
-        const context = {
-          parameters: ebookState.parameters,
-          synopsis: chapter.synopsis,
-          previous_summary: previous_summary,
-          current_summary: current_summary,
-          draft_paragraphs: draftParagraphs.join("\n\n"),
-          outline: editedOutline,
-          next_outline: next_outline,
-        };
-        const generatedParagraphs = await getGeneratedParagraphs(
-          context,
-          instruction,
-          numParagraphs
-        );
-        return generatedParagraphs;
-      } catch (error) {
-        console.error("Error generating paragraphs:", error);
-        setError("Failed to generate paragraphs. Please try again.");
-        return [];
-      } finally {
-        setIsGenerating(false);
-      }
-    },
-    [
-      chapterId,
-      editedOutline,
-      numParagraphs,
-      instruction, // Add instruction to dependencies
-      ebookState.parameters,
-      ebookState.chapters,
-    ]
-  );
 
   const handleGenerateSummary = useCallback(async () => {
     const chapter = ebookState.chapters.find((c) => c.id === chapterId);
@@ -229,52 +160,6 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     [chapterActions, chapterId, sectionIndex, section]
   );
 
-  const handleParagraphRewrite = useCallback(
-    async (pIndex, instruction, numParagraphs = 1) => {
-      const chapter = ebookState.chapters.find((c) => c.id === chapterId);
-      const paragraphToUpdate = section.paragraphs.find(
-        (_, index) => index == pIndex
-      );
-      const context = {
-        parameters: ebookState.parameters,
-        synopsis: chapter.synopsis,
-        section_paragraphs: section.paragraphs.join("\n"),
-      };
-      const rewrittenParagraphs = await getRewrittenParagraphs(
-        context,
-        instruction,
-        paragraphToUpdate,
-        numParagraphs
-      );
-      return rewrittenParagraphs;
-    },
-    [ebookState, section]
-  );
-
-  const handleParagraphInsert = useCallback(
-    async (pIndex, instruction, numParagraphs = 1) => {
-      const chapter = ebookState.chapters.find((c) => c.id === chapterId);
-      let prev_para = section.paragraphs.find((_, index) => index == pIndex);
-      let next_para = section.paragraphs.find(
-        (_, index) => index == pIndex + 1
-      );
-      const context = {
-        prev: prev_para,
-        next: next_para,
-        summary: "",
-        parameters: ebookState.parameters,
-        synopsis: chapter.synopsis,
-      };
-      const insertedParagraphs = await getInsertedParagraphs(
-        context,
-        instruction,
-        numParagraphs
-      );
-      return insertedParagraphs;
-    },
-    [ebookState]
-  );
-
   const handleParagraphDelete = useCallback(
     async (paragraphIndex) => {
       const updatedParagraphs = section.paragraphs.filter(
@@ -341,17 +226,14 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       return paragraphs.map((paragraph, pIndex) => (
         <Paragraph
           key={`${isDraft ? "draft-" : ""}${pIndex}`}
-          content={paragraph}
-          index={pIndex}
-          chapterId={chapterId}
-          onRewrite={(instruction, numParagraphs) =>
-            handleParagraphRewrite(pIndex, instruction, numParagraphs)
-          }
+          paraInfo={{
+            chapterId: chapterId,
+            sectionId: sectionIndex,
+            paragraphId: pIndex,
+            paragraphText: paragraph,
+          }}
           onRewriteFinalize={(newParagraphs) =>
             handleRewriteParagraphFinalize(pIndex, newParagraphs)
-          }
-          onInsert={(instruction, numParagraphs) =>
-            handleParagraphInsert(pIndex, instruction, numParagraphs)
           }
           onInsertFinalize={(newParagraphs) =>
             handleInsertParagraphFinalize(pIndex, newParagraphs)
@@ -368,12 +250,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
         />
       ));
     },
-    [
-      chapterId,
-      handleParagraphUpdate,
-      handleParagraphDelete,
-      handleParagraphInsert,
-    ]
+    [chapterId, handleParagraphUpdate, handleParagraphDelete]
   );
 
   const renderDraftParagraphs = (paragraphs) => {
@@ -497,10 +374,15 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
             <div className="mb-4">{renderParagraphs(section.paragraphs)}</div>
           )}
           <ContentGenerator
-            onGenerate={handleNewParagraphs}
+            paraInfo={{
+              chapterId: chapterId,
+              sectionIndex: sectionIndex,
+              outline: editedOutline,
+            }}
             onFinalize={handleNewParagraphsFinalize}
             renderContent={renderDraftParagraphs}
-            generationType="paragraphs"
+            generationType="new_paragraphs"
+            title="Generate new paragraphs"
           />
         </div>
       )}

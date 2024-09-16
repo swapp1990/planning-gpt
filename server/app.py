@@ -645,8 +645,6 @@ def continue_chapter():
     print(f"Continue Chapter")
     data = request.get_json()
     context = data.get('context')
-    draft_paragraphs = context["draft_paragraphs"]
-    next_outline = context["next_outline"]
     # print(context)
     instruction = data.get('instruction')
     numParagraphs = data.get('numParagraphs')
@@ -656,12 +654,12 @@ def continue_chapter():
     prompt = f"""
 Please continue the story for the current chapter based on the following:
 
-1. Synopsis for the entire chapter: {context['synopsis']}
-2. Current outline to expand: {context['outline']}
-3. Overall story parameters: {context['parameters']}
+1. Synopsis for the entire chapter: {context.get('synopsis', '')}
+2. Current outline to expand: {context.get('outline', '')}
+3. Overall story parameters: {context.get('parameters', '')}
 4. Previous Section Summary: {context.get('previous_summary', '')}
 5. Current Section Summary: {context.get('current_summary', '')}
-6. Newly generated draft paragraphs for rewriting: {draft_paragraphs}
+6. Newly generated draft paragraphs for rewriting: {context.get('draft_paragraphs', '')}
 
 CRITICAL INSTRUCTIONS:
 1. Generate EXACTLY {numParagraphs} paragraph(s).
@@ -676,7 +674,7 @@ DIALOGUE EMPHASIS:
 - Ensure conversations feel natural and fit the characters' voices and the story's tone.
 
 STRICT BOUNDARIES:
-- Next outline which is for the following section (DO NOT INCLUDE ANY OF THIS CONTENT): {next_outline}
+- Next outline which is for the following section (DO NOT INCLUDE ANY OF THIS CONTENT): {context.get('next_outline', '')}
 - Your writing must NOT contain or allude to any elements from the next outline.
 
 WRITING PROCESS:
@@ -694,7 +692,7 @@ FINAL VERIFICATION:
 [SYSTEM NOTE: Content generation for this outline stops here. Do not proceed beyond this point in the story.]
 """
 
-    # print(prompt)
+    print(prompt)
 
     # prompt = f'Write a story with exactly 3 paragraphs and 10 words each.'
 
@@ -729,11 +727,11 @@ def insert_paragraphs():
 Insert {numParagraphs} paragraphs between previous paragraph and next paragraph:
 
 1. Specific instruction to follow (can be empty): {instruction}
-2. Previous paragraph (required): {context['prev']}
-3. Next paragraph (can be empty): {context['next']}
-4. Section summary (can be empty): {context['summary']}
-5. Chapter synopsis: {context['synopsis']}
-6. Overall Story Parameters: {context['parameters']}
+2. Previous paragraph (required): {context.get('prev', '')}
+3. Next paragraph (can be empty): {context.get('next', '')}
+4. Section summary (can be empty): {context.get('summary', '')}
+5. Chapter synopsis: {context.get('synopsis', '')}
+6. Overall Story Parameters: {context.get('parameters', '')}
 
 CRITICAL INSTRUCTIONS:
 1. Follow these specific instructions (Point 1) to insert new paragraphs
@@ -792,9 +790,9 @@ def rewrite_paragraph():
     user_prompt = f"""
 Rewrite the following paragraph within the context of its section and the overall story:
 
-1. Chapter Synopsis: {context['synopsis']}
-2. Overall Story Parameters: {context['parameters']}
-3. Section Paragraphs: {context['section_paragraphs']}
+1. Chapter Synopsis: {context.get('synopsis', '')}
+2. Overall Story Parameters: {context.get('parameters', '')}
+3. Section Paragraphs: {context.get('section_paragraphs', '')}
 4. Paragraph to Rewrite: {paragraph_to_rewrite}
 
 CRITICAL INSTRUCTIONS:

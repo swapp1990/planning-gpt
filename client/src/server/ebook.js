@@ -148,13 +148,18 @@ export const getSuggestedOutlines = async (
   }
 };
 
-export const getGeneratedParagraphs = async (
+export const getNewParagraphs = async (
   context,
   instruction,
-  numParagraphs
+  numParagraphs,
+  onProgress
 ) => {
   let newParagraphs = [];
   let currentParagraph = "";
+
+  const sendUpdate = () => {
+    onProgress([...newParagraphs, currentParagraph.trim()]);
+  };
 
   const onChunk = (data) => {
     if (data.chunk) {
@@ -162,14 +167,17 @@ export const getGeneratedParagraphs = async (
         if (currentParagraph.trim()) {
           newParagraphs.push(currentParagraph.trim());
         }
+        sendUpdate();
       } else {
         if (data.chunk.includes("\\n\\n")) {
           let splits = data.chunk.split("\\n\\n");
           currentParagraph += splits[0] + " ";
           newParagraphs.push(currentParagraph.trim());
           currentParagraph = splits[1];
+          sendUpdate();
         } else {
           currentParagraph += data.chunk + " ";
+          sendUpdate();
         }
       }
     }
@@ -200,32 +208,40 @@ export const getRewrittenParagraphs = async (
   context,
   instruction,
   originalParagraph,
-  numParagraphs
+  numParagraphs,
+  onProgress
 ) => {
-  let newParagraphs = [];
+  let paragraphs = [];
   let currentParagraph = "";
+
+  const sendUpdate = () => {
+    onProgress([...paragraphs, currentParagraph.trim()]);
+  };
 
   const onChunk = (data) => {
     if (data.chunk) {
       if (data.chunk === "[DONE]") {
         if (currentParagraph.trim()) {
-          newParagraphs.push(currentParagraph.trim());
+          paragraphs.push(currentParagraph.trim());
+          currentParagraph = "";
+          sendUpdate();
         }
       } else {
         if (data.chunk.includes("\\n\\n")) {
           let splits = data.chunk.split("\\n\\n");
-          currentParagraph += splits[0] + " ";
-          newParagraphs.push(currentParagraph.trim());
+          currentParagraph += splits[0];
+          paragraphs.push(currentParagraph.trim());
           currentParagraph = splits[1];
+          sendUpdate();
         } else {
           currentParagraph += data.chunk + " ";
+          sendUpdate();
         }
       }
     }
   };
 
   const onError = (error) => {
-    // console.error("Error generating paragraphs:", error);
     throw new Error(error.message || "Error generating paragraphs");
   };
 
@@ -239,7 +255,7 @@ export const getRewrittenParagraphs = async (
       onError
     );
 
-    return newParagraphs;
+    return paragraphs;
   } catch (error) {
     console.error("Failed to generate paragraphs:", error);
     throw error;
@@ -249,10 +265,15 @@ export const getRewrittenParagraphs = async (
 export const getInsertedParagraphs = async (
   context,
   instruction,
-  numParagraphs
+  numParagraphs,
+  onProgress
 ) => {
   let newParagraphs = [];
   let currentParagraph = "";
+
+  const sendUpdate = () => {
+    onProgress([...newParagraphs, currentParagraph.trim()]);
+  };
 
   const onChunk = (data) => {
     if (data.chunk) {
@@ -260,14 +281,17 @@ export const getInsertedParagraphs = async (
         if (currentParagraph.trim()) {
           newParagraphs.push(currentParagraph.trim());
         }
+        sendUpdate();
       } else {
         if (data.chunk.includes("\\n\\n")) {
           let splits = data.chunk.split("\\n\\n");
           currentParagraph += splits[0] + " ";
           newParagraphs.push(currentParagraph.trim());
           currentParagraph = splits[1];
+          sendUpdate();
         } else {
           currentParagraph += data.chunk + " ";
+          sendUpdate();
         }
       }
     }

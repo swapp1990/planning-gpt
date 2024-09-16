@@ -223,7 +223,6 @@ const ChapterList = () => {
               setInstruction={setChaptersInstruction}
               count={numChapters}
               setCount={setNumChapters}
-              onGenerate={handleSuggestChapters}
               isLoading={isLoading}
               isRegeneration={true}
               generationType="chapters"

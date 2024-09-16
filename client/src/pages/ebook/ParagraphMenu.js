@@ -12,12 +12,8 @@ import RewritePanel from "./RewritePanel";
 import ContentGenerator from "./ContentGenerator";
 
 const ParagraphMenu = ({
-  content,
-  chapterId,
-  paragraphId,
+  paraInfo,
   onClose,
-  onCancel,
-  onRewrite,
   onRewriteFinalize,
   onDelete,
   onInsert,
@@ -27,16 +23,27 @@ const ParagraphMenu = ({
   const [isInsertOpen, setIsInsertOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleRewriteSubmit = async (instruction, numParagraphs) => {
-    setIsLoading(true);
-    let response = await onRewrite(instruction, numParagraphs);
-    setIsLoading(false);
-    return response;
+  const handleRewriteClick = () => {
+    if (isRewriteOpen) {
+      setIsRewriteOpen(false);
+    } else {
+      setIsRewriteOpen(true);
+      setIsInsertOpen(false);
+    }
   };
 
   const handleRewriteFinalize = async (newParagraphs) => {
     setIsRewriteOpen(false);
     await onRewriteFinalize(newParagraphs);
+  };
+
+  const handleInsertClick = () => {
+    if (isInsertOpen) {
+      setIsInsertOpen(false);
+    } else {
+      setIsInsertOpen(true);
+      setIsRewriteOpen(false);
+    }
   };
 
   const handleInsertSubmit = async (instruction, numParagraphs) => {
@@ -63,7 +70,7 @@ const ParagraphMenu = ({
     <div className="bg-gray-100 p-2 rounded-b-lg border-t border-gray-200">
       <div className="flex space-x-2 mb-2">
         <button
-          onClick={() => setIsRewriteOpen(!isRewriteOpen)}
+          onClick={handleRewriteClick}
           className={`p-2 hover:bg-gray-200 rounded-full transition-colors duration-200 ${
             isRewriteOpen ? "bg-blue-200" : ""
           }`}
@@ -72,7 +79,7 @@ const ParagraphMenu = ({
           <FaPen className="text-blue-500" />
         </button>
         <button
-          onClick={() => setIsInsertOpen(!isInsertOpen)}
+          onClick={handleInsertClick}
           className={`p-2 hover:bg-gray-200 rounded-full transition-colors duration-200 ${
             isInsertOpen ? "bg-green-200" : ""
           }`}
@@ -103,23 +110,21 @@ const ParagraphMenu = ({
       </div>
       {isRewriteOpen && (
         <ContentGenerator
-          initialContent={content}
-          onGenerate={handleRewriteSubmit}
+          paraInfo={paraInfo}
           onFinalize={handleRewriteFinalize}
           onClose={() => setIsRewriteOpen(false)}
           renderContent={renderParagraphs}
-          generationType="paragraphs"
+          generationType="rewrite_paragraphs"
           title="Rewrite/Expand selected paragraph"
         />
       )}
       {isInsertOpen && (
         <ContentGenerator
-          initialContent={content}
-          onGenerate={handleInsertSubmit}
+          paraInfo={paraInfo}
           onFinalize={handleInsertFinalize}
           onClose={() => setIsRewriteOpen(false)}
           renderContent={renderParagraphs}
-          generationType="paragraphs"
+          generationType="insert_paragraphs"
           title="Insert after selected paragraph"
         />
       )}
