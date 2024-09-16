@@ -14,14 +14,10 @@ import {
   FaFileAlt,
 } from "react-icons/fa";
 import { useEbook } from "../../context/EbookContext";
-import {
-  getGeneratedParagraphs,
-  getSectionSummary,
-  getRewrittenParagraphs,
-  getInsertedParagraphs,
-} from "../../server/ebook";
+import { getSectionSummary } from "../../server/ebook";
 import Paragraph from "./Paragraph";
 import ContentGenerator from "./ContentGenerator";
+import ClearableTextarea from "../../components/ClearableTextarea";
 
 const Modal = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
@@ -50,14 +46,12 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 
 const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedOutline, setEditedOutline] = useState(section.outline);
   const [error, setError] = useState(null);
-  const [numParagraphs, setNumParagraphs] = useState(3);
   const [draftParagraphs, setDraftParagraphs] = useState([]);
-  const [instruction, setInstruction] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
 
   const { ebookState, chapterActions } = useEbook();
 
@@ -74,6 +68,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   }, []);
 
   const handleGenerateSummary = useCallback(async () => {
+    setIsSummaryLoading(true);
     const chapter = ebookState.chapters.find((c) => c.id === chapterId);
     let context = {
       parameters: ebookState.parameters,
@@ -94,6 +89,8 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     } catch (error) {
       console.error("Error generating summary:", error);
       setError("Failed to generate summary. Please try again.");
+    } finally {
+      setIsSummaryLoading(false);
     }
   }, [
     ebookState.chapters,
@@ -113,11 +110,17 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     }
   }, [chapterActions, chapterId, sectionIndex]);
 
-  const handleEditSection = useCallback(() => {
+  const handleEditSectionOutline = useCallback(() => {
+    setError(null);
     setIsEditing(true);
   }, []);
 
-  const handleSaveEdit = useCallback(() => {
+  const handleSaveEditedOutline = useCallback(() => {
+    setError(null);
+    if (!editedOutline || editedOutline == "") {
+      setError("Error");
+      return;
+    }
     const result = chapterActions.updateSection(chapterId, sectionIndex, {
       ...section,
       outline: editedOutline,
@@ -129,8 +132,9 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     }
   }, [chapterActions, chapterId, sectionIndex, section, editedOutline]);
 
-  const handleCancelEdit = useCallback(() => {
+  const handleCancelEditing = useCallback(() => {
     setEditedOutline(section.outline);
+    setError(null);
     setIsEditing(false);
   }, [section.outline]);
 
@@ -261,6 +265,10 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     ));
   };
 
+  const handleClear = () => {
+    setEditedOutline("");
+  };
+
   return (
     <div className="my-4 p-1 bg-white rounded-lg shadow-md border border-gray-200">
       <div
@@ -272,15 +280,21 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
         <div className="flex items-center justify-between">
           <div className="flex-grow mr-4 w-[50px]">
             {isEditing ? (
-              <textarea
-                rows="2"
+              <ClearableTextarea
                 value={editedOutline}
-                onChange={(e) => setEditedOutline(e.target.value)}
-                className="w-full p-2 text-lg font-semibold text-gray-800 border rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                onClick={(e) => e.stopPropagation()}
+                onChange={setEditedOutline}
+                onClear={handleClear}
+                placeholder={`Add outline`}
+                rows={3}
               />
             ) : (
-              <h3 className="text-lg font-semibold text-gray-800 break-words sm:break-normal sm:whitespace-normal truncate sm:overflow-visible sm:text-ellipsis">
+              <h3
+                className={`text-xs sm:text-lg font-semibold text-gray-800 break-words transition-all duration-200 ${
+                  isExpanded
+                    ? "line-clamp-none"
+                    : "line-clamp-1 sm:line-clamp-none"
+                }`}
+              >
                 {section.outline}
               </h3>
             )}
@@ -294,7 +308,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleSaveEdit();
+                    handleSaveEditedOutline();
                   }}
                   className="p-1 text-green-600 hover:text-green-800"
                   title="Save changes"
@@ -304,7 +318,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleCancelEdit();
+                    handleCancelEditing();
                   }}
                   className="p-1 text-red-600 hover:text-red-800"
                   title="Cancel editing"
@@ -317,10 +331,10 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleEditSection();
+                    handleEditSectionOutline();
                   }}
                   className="p-1 text-blue-600 hover:text-blue-800"
-                  title="Edit section"
+                  title="Edit section outline"
                 >
                   <FaEdit />
                 </button>
@@ -334,16 +348,6 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
                 >
                   <FaTrash />
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleGenerateSummary();
-                  }}
-                  className="p-1 text-green-600 hover:text-green-800"
-                  title="Generate summary"
-                >
-                  <FaFileAlt />
-                </button>
               </>
             )}
             <div className="text-gray-400">
@@ -355,21 +359,40 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
 
       {isExpanded && (
         <div className="p-1 border-t border-gray-200">
-          {section.summary && section.summary != "" ? (
-            <div className="mt-2 p-2 bg-gray-100 rounded-md">
+          <div className="mt-2 p-2 bg-gray-100 rounded-md flex items-center justify-between">
+            <div>
               <h4 className="text-sm font-semibold text-gray-700 mb-1">
                 Summary:
               </h4>
-              <p
-                className="text-sm text-blue-600 cursor-pointer hover:underline"
-                onClick={openSummaryModal}
-              >
-                Click to view summary
-              </p>
+              {section.summary && section.summary !== "" ? (
+                <p
+                  className="text-sm text-blue-600 cursor-pointer hover:underline"
+                  onClick={openSummaryModal}
+                >
+                  Click to view summary
+                </p>
+              ) : (
+                <p className="text-sm text-gray-600">No Summary Found</p>
+              )}
             </div>
-          ) : (
-            <p className="text-sm text-gray-600">No Summary Found</p>
-          )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleGenerateSummary();
+              }}
+              className="p-1 text-green-600 hover:text-green-800"
+              title={
+                isSummaryLoading ? "Generating summary..." : "Generate summary"
+              }
+              disabled={isSummaryLoading}
+            >
+              {isSummaryLoading ? (
+                <FaSpinner className="animate-spin" />
+              ) : (
+                <FaFileAlt />
+              )}
+            </button>
+          </div>
           {section.paragraphs && section.paragraphs.length > 0 && (
             <div className="mb-4">{renderParagraphs(section.paragraphs)}</div>
           )}

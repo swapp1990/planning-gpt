@@ -636,15 +636,24 @@ Current Chapter Synopsis:
 Summarize the given paragraphs and output the summary in JSON format with the following structure:
 
 {{
-  "currentSceneState": "String describing the current setting, active characters, and ongoing action or conversation (2-3 sentences)",
+  "currentScene": {{
+    "location": "Describe the location (hierarchical) eg. (India, Mumbai, Apartment room, Bedroom),
+    "characters": [
+        {{
+            "name": "Name of character",
+            "clothes": "Clothes worn by character (Only if scene described it)",
+            "appearance": "Appearance of character such as age, race, gender etc. (Only if scene described it)",
+        }}
+    ],
+    "ongoing_action": "Describe the main ongoing action(s) in the scene (1 sentence)",
+  }}
   "keyPlotPoints": [
     "List item for important event or revelation",
     "List item for important event or revelation",
     "List item for important event or revelation"
   ],
-  "characterDynamics": "String highlighting the current state of relationships, conflicts, or developments between characters (2-3 sentences)",
-  "dialogueThemes": "String summarizing the main topics or tones of conversations (1-2 sentences)",
-  "narrativeToneAndAtmosphere": "String describing the overall mood and feeling of the scene (1 sentence)",
+  "characterDynamics": "String highlighting the current state of relationships, conflicts, or developments between characters (2-3 sentences, 1 sentence for one major dynamic)",
+  "dialogueThemes": "String summarizing the main topics or tones of conversations (1 sentence)",
   "openThreads": [
     "List item for unresolved question, tension, or plot point",
     "List item for unresolved question, tension, or plot point",

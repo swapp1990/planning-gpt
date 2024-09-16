@@ -7,6 +7,7 @@ import {
   FaMinus,
   FaTimes,
 } from "react-icons/fa";
+import ClearableTextarea from "../../components/ClearableTextarea";
 
 const GenerationMenu = ({
   instruction,
@@ -25,13 +26,6 @@ const GenerationMenu = ({
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-      {/* <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">
-          Generate {isRegeneration ? "New " : ""}
-          {generationType.charAt(0).toUpperCase() + generationType.slice(1)}
-        </h3>
-      </div> */}
-
       <div className="mb-4">
         <button
           onClick={() => setShowInstruction(!showInstruction)}
@@ -43,24 +37,13 @@ const GenerationMenu = ({
       </div>
 
       {showInstruction && (
-        <div className="mb-4 relative">
-          <textarea
-            value={instruction}
-            onChange={(e) => setInstruction(e.target.value)}
-            placeholder={`Enter specific instructions for ${generationType} generation (e.g., style, tone, focus)`}
-            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none"
-            rows="3"
-          />
-          {instruction && (
-            <button
-              onClick={handleClearInstruction}
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors duration-200"
-              aria-label="Clear instruction"
-            >
-              <FaTimes />
-            </button>
-          )}
-        </div>
+        <ClearableTextarea
+          value={instruction}
+          onChange={setInstruction}
+          onClear={handleClearInstruction}
+          placeholder={`Enter specific instructions for ${generationType} generation (e.g., style, tone, focus)`}
+          rows={3}
+        />
       )}
 
       <div className="space-y-4">
