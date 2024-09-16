@@ -50,10 +50,13 @@ const ParagraphMenu = ({
   };
 
   const renderRewriteParagraphs = useCallback((sentences) => {
-    const renderedSentences = sentences.map((sentence, index) => {
+    let currentParagraph = [];
+    const paragraphs = [];
+
+    sentences.forEach((sentence, index) => {
       switch (sentence.action) {
         case "edit":
-          return (
+          currentParagraph.push(
             <React.Fragment key={index}>
               <span className="line-through text-gray-500">
                 {sentence.original_sentence}
@@ -63,14 +66,16 @@ const ParagraphMenu = ({
               </span>{" "}
             </React.Fragment>
           );
+          break;
         case "remove":
-          return (
+          currentParagraph.push(
             <span key={index} className="line-through text-red-500 bg-red-100">
               {sentence.original_sentence}{" "}
             </span>
           );
+          break;
         case "add":
-          return (
+          currentParagraph.push(
             <span
               key={index}
               className="font-semibold text-green-700 bg-green-100"
@@ -78,12 +83,34 @@ const ParagraphMenu = ({
               {sentence.rewritten_sentence}{" "}
             </span>
           );
+          break;
+        case "paragraph_break":
+          if (currentParagraph.length > 0) {
+            paragraphs.push(currentParagraph);
+            currentParagraph = [];
+          }
+          break;
         default:
-          return <span key={index}>{sentence.original_sentence} </span>;
+          currentParagraph.push(
+            <span key={index}>{sentence.original_sentence} </span>
+          );
       }
     });
 
-    return <p className="mb-4 leading-relaxed">{renderedSentences}</p>;
+    // Add the last paragraph if it's not empty
+    if (currentParagraph.length > 0) {
+      paragraphs.push(currentParagraph);
+    }
+
+    return (
+      <div className="space-y-4">
+        {paragraphs.map((paragraph, index) => (
+          <p key={index} className="leading-relaxed">
+            {paragraph}
+          </p>
+        ))}
+      </div>
+    );
   }, []);
 
   const renderParagraphs = (paragraphs) => {

@@ -168,7 +168,6 @@ const ContentGenerator = ({
 
   const handleFinalize = useCallback(async () => {
     let finalContent;
-    console.log(generatedContent);
     const isActionBasedContent =
       generatedContent.length > 0 &&
       typeof generatedContent[0] === "object" &&
@@ -176,26 +175,45 @@ const ContentGenerator = ({
 
     if (isActionBasedContent) {
       // Process content with actions
-      let newParagraph = "";
+      let paragraphs = [];
+      let currentParagraph = "";
+
       generatedContent.forEach((item) => {
         switch (item.action) {
           case "edit":
-            newParagraph += item.rewritten_sentence + " ";
-            break;
           case "add":
-            newParagraph += item.rewritten_sentence + " ";
+            currentParagraph += item.rewritten_sentence + " ";
             break;
           case "remove":
             // Skip removed sentences
             break;
+          case "paragraph_break":
+            if (currentParagraph.trim()) {
+              paragraphs.push(currentParagraph.trim());
+              currentParagraph = "";
+            }
+            break;
           default:
-            newParagraph += item.original_sentence + " ";
+            currentParagraph += (item.original_sentence || "") + " ";
         }
       });
-      finalContent = [newParagraph.trim()];
+
+      // Add the last paragraph if it's not empty
+      if (currentParagraph.trim()) {
+        paragraphs.push(currentParagraph.trim());
+      }
+
+      finalContent = paragraphs;
     } else {
-      // Join existing content into a single paragraph
-      finalContent = [generatedContent.join(" ")];
+      // Handle non-action-based content (unchanged)
+      if (Array.isArray(generatedContent)) {
+        finalContent = [generatedContent.join(" ").trim()];
+      } else if (typeof generatedContent === "string") {
+        finalContent = [generatedContent.trim()];
+      } else {
+        console.error("Unexpected generatedContent format:", generatedContent);
+        finalContent = [];
+      }
     }
 
     await onFinalize(finalContent);
