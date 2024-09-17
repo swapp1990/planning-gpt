@@ -74,7 +74,6 @@ const OutlineCard = ({ outline, onEdit, onDelete }) => {
 
 const ChapterView = ({ chapter }) => {
   const { chapterActions, ebookState } = useEbook();
-  const [generatedOutlines, setGeneratedOutlines] = useState([]);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(chapter.title);
   const [isLoading, setIsLoading] = useState(false);
@@ -174,7 +173,7 @@ const ChapterView = ({ chapter }) => {
             >
               <FaEdit className="w-5 h-5" />
             </button>
-            <div className="flex items-center ml-4">
+            {/* <div className="flex items-center ml-4">
               <span className="mr-2 text-sm font-medium text-gray-700">
                 {isNSFW ? "NSFW" : "SFW"}
               </span>
@@ -191,7 +190,7 @@ const ChapterView = ({ chapter }) => {
                   } inline-block w-4 h-4 transform bg-white rounded-full transition-transform`}
                 />
               </button>
-            </div>
+            </div> */}
           </div>
         )}
       </div>

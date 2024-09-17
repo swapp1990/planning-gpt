@@ -25,7 +25,7 @@ const GenerationMenu = ({
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-4 mb-6">
+    <div className="bg-white rounded-lg shadow-md p-4">
       <div className="mb-4">
         <button
           onClick={() => setShowInstruction(!showInstruction)}

@@ -52,6 +52,9 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [draftParagraphs, setDraftParagraphs] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [recentlyUpdatedParagraphs, setRecentlyUpdatedParagraphs] = useState(
+    []
+  );
 
   const { ebookState, chapterActions } = useEbook();
 
@@ -62,6 +65,16 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   useEffect(() => {
     setEditedOutline(section.outline);
   }, [section.outline]);
+
+  useEffect(() => {
+    if (recentlyUpdatedParagraphs.length > 0) {
+      const timer = setTimeout(() => {
+        setRecentlyUpdatedParagraphs([]);
+        console.log("clear recently updated");
+      }, 5000); // 5 seconds timeout
+      return () => clearTimeout(timer);
+    }
+  }, [recentlyUpdatedParagraphs]);
 
   const openSummaryModal = useCallback(() => {
     setIsModalOpen(true);
@@ -208,7 +221,12 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
         ...section,
         paragraphs: updatedParagraphs,
       });
-      // setIsGenerating(false);
+
+      const newParagraphIndices = Array.from(
+        { length: newParagraphs.length },
+        (_, i) => pIndex + i
+      );
+      setRecentlyUpdatedParagraphs((prev) => [...prev, ...newParagraphIndices]);
     },
     [chapterId, chapterActions, section, sectionIndex]
   );
@@ -221,6 +239,12 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
         ...section,
         paragraphs: updatedParagraphs,
       });
+
+      const newParagraphIndices = Array.from(
+        { length: newParagraphs.length },
+        (_, i) => pIndex + 1 + i
+      );
+      setRecentlyUpdatedParagraphs((prev) => [...prev, ...newParagraphIndices]);
     },
     [chapterId, chapterActions, section, sectionIndex]
   );
@@ -235,6 +259,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
             sectionId: sectionIndex,
             paragraphId: pIndex,
             paragraphText: paragraph,
+            isRecentlyUpdated: recentlyUpdatedParagraphs.includes(pIndex),
           }}
           onRewriteFinalize={(newParagraphs) =>
             handleRewriteParagraphFinalize(pIndex, newParagraphs)
@@ -254,7 +279,12 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
         />
       ));
     },
-    [chapterId, handleParagraphUpdate, handleParagraphDelete]
+    [
+      chapterId,
+      handleParagraphUpdate,
+      handleParagraphDelete,
+      recentlyUpdatedParagraphs,
+    ]
   );
 
   const renderDraftParagraphs = (paragraphs) => {
@@ -396,17 +426,23 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
           {section.paragraphs && section.paragraphs.length > 0 && (
             <div className="mb-4">{renderParagraphs(section.paragraphs)}</div>
           )}
-          <ContentGenerator
-            paraInfo={{
-              chapterId: chapterId,
-              sectionIndex: sectionIndex,
-              outline: editedOutline,
-            }}
-            onFinalize={handleNewParagraphsFinalize}
-            renderContent={renderDraftParagraphs}
-            generationType="new_paragraphs"
-            title="Generate new paragraphs"
-          />
+          <div className="my-8 border-t border-gray-200 pt-6">
+            <h4 className="text-lg font-semibold text-gray-700 mb-4">
+              Add New Content
+            </h4>
+
+            <ContentGenerator
+              paraInfo={{
+                chapterId: chapterId,
+                sectionIndex: sectionIndex,
+                outline: editedOutline,
+              }}
+              onFinalize={handleNewParagraphsFinalize}
+              renderContent={renderDraftParagraphs}
+              generationType="new_paragraphs"
+              title="Generate new paragraphs"
+            />
+          </div>
         </div>
       )}
       {error && <p className="mt-2 text-red-500">{error}</p>}

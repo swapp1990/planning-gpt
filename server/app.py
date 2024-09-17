@@ -272,7 +272,8 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters, respo
         client = OpenAI(
             api_key=openai_api_key,
         )
-        model = "gpt-4o-2024-08-06"
+        # model = "gpt-4o-2024-08-06"
+        model = "gpt-4o-mini"
         print("using gpt4o")
     else:
         client = OpenAI(

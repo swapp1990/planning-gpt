@@ -267,23 +267,25 @@ const ContentGenerator = ({
 
       {generatedContent.length > 0 && (
         <>
+          {!isGenerating && (
+            <div className="flex mb-2">
+              <button
+                onClick={handleFinalize}
+                className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
+              >
+                <FaPlus className="mr-2" />
+                Finalize
+              </button>
+              <button
+                onClick={handleClear}
+                className="ml-2 mt-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 flex items-center"
+              >
+                <FaMinus className="mr-2" />
+                Clear
+              </button>
+            </div>
+          )}
           {renderContent(generatedContent, handleEditEntry, handleDeleteEntry)}
-          <div className="flex">
-            <button
-              onClick={handleFinalize}
-              className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"
-            >
-              <FaPlus className="mr-2" />
-              Finalize
-            </button>
-            <button
-              onClick={handleClear}
-              className="mt-4 px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200 flex items-center"
-            >
-              <FaMinus className="mr-2" />
-              Clear
-            </button>
-          </div>
         </>
       )}
 

@@ -1,55 +1,53 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import ParagraphMenu from "./ParagraphMenu";
 
 const Paragraph = ({
   paraInfo,
-  onUpdate,
   onRewriteFinalize,
   onDelete,
   onInsertFinalize,
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleUpdateParagraph = useCallback(
-    (newContent) => {
-      onUpdate(newContent);
-      setIsMenuOpen(false);
-    },
-    [onUpdate]
-  );
-
   const handleMenuClose = useCallback(() => {
     setIsMenuOpen(false);
   }, []);
 
+  const handleRewriteFinalize = useCallback(
+    (...args) => {
+      onRewriteFinalize(...args);
+      handleMenuClose();
+    },
+    [onRewriteFinalize, handleMenuClose]
+  );
+
+  const handleInsertFinalize = useCallback(
+    (...args) => {
+      onInsertFinalize(...args);
+      handleMenuClose();
+    },
+    [onInsertFinalize, handleMenuClose]
+  );
+
+  const highlightClass = paraInfo.isRecentlyUpdated
+    ? "bg-green-100 transition-colors duration-500"
+    : "";
+
   return (
     <div className={`mb-4 ${isMenuOpen ? "bg-blue-50 rounded-lg" : ""}`}>
       <p
-        className="p-1 rounded-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer"
+        className={`p-1 rounded-lg transition-colors duration-200 hover:bg-gray-100 cursor-pointer ${highlightClass}`}
         onClick={() => setIsMenuOpen(!isMenuOpen)}
       >
         {paraInfo.paragraphText}
       </p>
-      {/* {isRewriting ? (
-        <RewriteParagraph
-          content={content}
-          index={index}
-          instruction={rewriteInstruction}
-          onRewriteComplete={handleRewriteComplete}
-          isRewriting={isRewriting}
-          onUpdateParagraph={handleUpdateParagraph}
-          isCancelled={false}
-        />
-      ) : (
-        
-      )} */}
       {isMenuOpen && (
         <ParagraphMenu
           paraInfo={paraInfo}
           onClose={handleMenuClose}
-          onRewriteFinalize={onRewriteFinalize}
+          onRewriteFinalize={handleRewriteFinalize}
           onDelete={onDelete}
-          onInsertFinalize={onInsertFinalize}
+          onInsertFinalize={handleInsertFinalize}
         />
       )}
     </div>
