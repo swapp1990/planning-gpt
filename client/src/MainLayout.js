@@ -26,9 +26,9 @@ export default function MainLayout({ children }) {
         </span>
         <div class="flex-grow overflow-auto">{children}</div>
         {/*  */}
-        <footer className="bg-gray-200 shadow-md flex-shrink-0">
+        {/* <footer className="bg-gray-200 shadow-md flex-shrink-0">
           <BottomNavigation />
-        </footer>
+        </footer> */}
       </div>
     </>
   );
