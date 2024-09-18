@@ -268,7 +268,7 @@ const ContentGenerator = ({
       {generatedContent.length > 0 && (
         <>
           {!isGenerating && (
-            <div className="flex mb-2">
+            <div className="flex mb-4">
               <button
                 onClick={handleFinalize}
                 className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200 flex items-center"

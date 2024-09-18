@@ -50,6 +50,97 @@ const ParagraphMenu = ({
   };
 
   const renderRewriteParagraphs = useCallback((sentences) => {
+    const compareWords = (original, rewritten) => {
+      const originalWords = original.split(/\s+/);
+      const rewrittenWords = rewritten.split(/\s+/);
+      const result = [];
+      let i = 0,
+        j = 0;
+      let currentEdit = null;
+
+      const pushCurrentEdit = () => {
+        if (currentEdit) {
+          result.push(currentEdit);
+          currentEdit = null;
+        }
+      };
+
+      while (i < originalWords.length || j < rewrittenWords.length) {
+        if (i >= originalWords.length) {
+          pushCurrentEdit();
+          result.push({
+            type: "add",
+            words: rewrittenWords.slice(j).join(" "),
+          });
+          break;
+        } else if (j >= rewrittenWords.length) {
+          pushCurrentEdit();
+          result.push({
+            type: "remove",
+            words: originalWords.slice(i).join(" "),
+          });
+          break;
+        } else if (originalWords[i] === rewrittenWords[j]) {
+          pushCurrentEdit();
+          result.push({ type: "keep", words: originalWords[i] });
+          i++;
+          j++;
+        } else {
+          if (!currentEdit) {
+            currentEdit = { type: "edit", original: [], rewritten: [] };
+          }
+          currentEdit.original.push(originalWords[i]);
+          currentEdit.rewritten.push(rewrittenWords[j]);
+          i++;
+          j++;
+        }
+      }
+
+      pushCurrentEdit();
+      return result;
+    };
+
+    const renderWordChanges = (original, rewritten) => {
+      const changes = compareWords(original, rewritten);
+      return changes.map((change, index) => {
+        switch (change.type) {
+          case "keep":
+            return <span key={index}>{change.words} </span>;
+          case "remove":
+            return (
+              <span
+                key={index}
+                className="line-through text-red-500 bg-red-100"
+              >
+                {change.words}{" "}
+              </span>
+            );
+          case "add":
+            return (
+              <span
+                key={index}
+                className="font-semibold text-green-700 bg-green-100"
+              >
+                {change.words}{" "}
+              </span>
+            );
+          case "edit":
+            return (
+              <React.Fragment key={index}>
+                <span className="line-through text-gray-500">
+                  {change.original.join(" ")}{" "}
+                </span>
+                <span className="font-semibold bg-yellow-100">
+                  {change.rewritten.join(" ")}{" "}
+                </span>
+              </React.Fragment>
+            );
+          default:
+            return null;
+        }
+      });
+    };
+
     let currentParagraph = [];
     const paragraphs = [];
 
@@ -58,12 +149,10 @@ const ParagraphMenu = ({
         case "edit":
           currentParagraph.push(
             <React.Fragment key={index}>
-              <span className="line-through text-gray-500">
-                {sentence.original_sentence}
-              </span>{" "}
-              <span className="font-semibold bg-yellow-100">
-                {sentence.rewritten_sentence}
-              </span>{" "}
+              {renderWordChanges(
+                sentence.original_sentence,
+                sentence.rewritten_sentence
+              )}
             </React.Fragment>
           );
           break;

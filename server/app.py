@@ -272,8 +272,8 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters, respo
         client = OpenAI(
             api_key=openai_api_key,
         )
-        # model = "gpt-4o-2024-08-06"
-        model = "gpt-4o-mini"
+        model = "gpt-4o-2024-08-06"
+        # model = "gpt-4o-mini"
         print("using gpt4o")
     else:
         client = OpenAI(
@@ -701,26 +701,25 @@ def continue_chapter():
 #7. Newly generated draft paragraphs for rewriting: {context.get('draft_paragraphs', '')}
 
     prompt = f"""
-Please continue the story for the current chapter based on the following:
+Please add {numParagraphs} for the current chapter based on the specific instruction `{instruction}` and additional context (in priority order):
 
-1. Synopsis for the entire chapter: {context.get('synopsis', '')}
-2. Current outline to expand: {context.get('outline', '')}
-3. Overall story parameters: {context.get('parameters', '')}
-4. Previous Section Summary: {context.get('previous_summary', '')}
-5. Current Section Summary: {context.get('current_summary', '')}
-6. Previous Paragraph: {context.get('previous_paragraph', '')}
+1. Previous Paragraph: {context.get('previous_paragraph', '')}
+2. Current Section Summary: {context.get('current_summary', '')}
+3. Current outline to expand: {context.get('outline', '')}
+4. Synopsis for the entire chapter: {context.get('synopsis', '')}
+5. Overall story parameters: {context.get('parameters', '')}
 
 CRITICAL INSTRUCTIONS:
 1. Generate EXACTLY {numParagraphs} paragraph(s).
-2. Focus SOLELY on the current outline (point 2 above). DO NOT address any content beyond this outline.
-3. Follow these specific instructions: `{instruction}`
-4. The draft paragraphs (point 6 above) were written previously, for the same section. Please rewrite them based on the instructions from the beginning.
-5. Ensure logical continuation from the previous section summary and the current section summary.
+2. Add plot points, character developments or dialogues to fulfill the given instruction.
+3. Focus SOLELY on the current outline (point 2 above). DO NOT address any content or write content which goes beyond the outline.
+4. Ensure logical continuation from the previous paragraph and the section summary (which is the summary of what happened in the story so far in the current section).
 
 DIALOGUE EMPHASIS:
 - Include approximately 70% dialogue and conversations in your paragraphs if the scene requires it or asked in instruction.
 - Use dialogue to reveal character personalities, advance the plot, and show rather than tell.
 - Ensure conversations feel natural and fit the characters' voices and the story's tone.
+- Make sure conversations are longer and more natural, raw and effective.
 
 STRICT BOUNDARIES:
 - Next outline which is for the following section (DO NOT INCLUDE ANY OF THIS CONTENT): {context.get('next_outline', '')}
@@ -737,8 +736,6 @@ FINAL VERIFICATION:
 - Does your content strictly adhere to the current outline without touching on the next outline?
 - Have you included sufficient dialogue and conversations as requested?
 - Does the new content fit seamlessly with the existing text and maintain the overall flow?
-
-[SYSTEM NOTE: Content generation for this outline stops here. Do not proceed beyond this point in the story.]
 """
 
     print(prompt)
@@ -849,8 +846,9 @@ CRITICAL INSTRUCTIONS:
 1. Follow these specific instructions to rewrite the paragraph(s): `{instruction}`
 2. Rewrite ONLY the given paragraph(s). Do not alter or address content from other paragraphs in the section.
 3. Write exactly {numParagraphs} paragraph(s) that fit perfectly between the previous and next paragraphs, maintaining a natural flow and seamless continuity.
-4. Adhere to the overall story parameters and chapter synopsis.
-5. Make changes ONLY when necessary to fulfill the given instruction. Do not rewrite sentences or make stylistic changes unless explicitly required by the instruction.
+4. Do not repeat any part of next paragraph in the newly generated paragraphs.
+5. Adhere to the overall story parameters and chapter synopsis.
+6. Make changes ONLY when necessary to fulfill the given instruction. Do not rewrite sentences or make stylistic changes unless explicitly required by the instruction.
 
 REWRITING PROCESS:
 1. Analyze the original paragraph(s) in the context of the previous paragraph, next paragraph, and overall story.
