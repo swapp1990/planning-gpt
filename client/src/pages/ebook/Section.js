@@ -325,14 +325,14 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
                     : "line-clamp-1 sm:line-clamp-none"
                 }`}
               >
+                <span className="inline-flex items-center justify-center bg-blue-100 text-blue-800 rounded-full mr-2 min-w-[1.5em] h-[1.5em] text-xs sm:text-sm font-bold">
+                  {section.paragraphs ? section.paragraphs.length : 0}
+                </span>
                 {section.outline}
               </h3>
             )}
           </div>
           <div className="flex items-center space-x-2 flex-shrink-0">
-            <span className="text-sm text-gray-500 hidden sm:inline">
-              {section.paragraphs ? section.paragraphs.length : 0} paragraph(s)
-            </span>
             {isEditing ? (
               <>
                 <button

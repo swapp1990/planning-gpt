@@ -142,13 +142,12 @@ const ChapterList = () => {
                 <div className="flex items-center">
                   <FaBook className="mr-3 text-gray-500" />
                   <span className="font-medium">
-                    Chapter {index + 1}: {chapter.title}
+                    {index + 1}: {chapter.title}
                   </span>
                 </div>
                 <div className="flex items-center">
-                  <span className="mr-3 text-sm text-gray-500">
-                    {chapter.sections.length} section
-                    {chapter.sections.length !== 1 ? "s" : ""}
+                  <span className="inline-flex items-center justify-center bg-blue-100 text-blue-800 rounded-full mr-2 min-w-[1.5em] h-[1.5em] text-xs sm:text-sm font-bold">
+                    {chapter.sections.length}
                   </span>
                   {deleteConfirmId === chapter.id ? (
                     <div className="flex items-center space-x-2">
