@@ -16,7 +16,8 @@ const BookView = () => {
   const [isNewBookWizardOpen, setIsNewBookWizardOpen] = useState(false);
 
   useEffect(() => {
-    if (ebookState.ebookId == null) {
+    console.log(ebookState.ebookId);
+    if (!ebookState.ebookId || ebookState.ebookId == null) {
       setIsNewBookWizardOpen(true);
     } else {
       setIsNewBookWizardOpen(false);
