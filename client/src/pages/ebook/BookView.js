@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaCog, FaListUl } from "react-icons/fa";
 
 import TabSystem from "../../components/TabSystem";
@@ -14,6 +14,14 @@ const BookView = () => {
   const { ebookState, ebookActions } = useEbook();
   const [isEbookListOpen, setIsEbookListOpen] = useState(false);
   const [isNewBookWizardOpen, setIsNewBookWizardOpen] = useState(false);
+
+  useEffect(() => {
+    if (ebookState.ebookId == null) {
+      setIsNewBookWizardOpen(true);
+    } else {
+      setIsNewBookWizardOpen(false);
+    }
+  }, [ebookState.ebookId]);
 
   const handleEbookSelect = (ebookId) => {
     setIsEbookListOpen(false);
