@@ -36,6 +36,7 @@ export function useEbookState() {
         ebookTitle: parameters.title || state.ebookTitle,
       }),
     createNewEbook: (parameters) => {
+      console.log(parameters);
       const newEbook = {
         id: uuidv4(),
         title: parameters.title,
@@ -224,15 +225,15 @@ export function useEbookState() {
     const savedEbooks = JSON.parse(localStorage.getItem("ebooks")) || [];
 
     if (savedEbooks.length === 0 && !savedCurrentEbook) {
-      const newEbook = ebookActions.createNewEbook();
-      localStorage.setItem("currentEbook", JSON.stringify(newEbook));
-      localStorage.setItem("ebooks", JSON.stringify([newEbook]));
-      setState({
-        ...initialState,
-        ebookId: newEbook.id,
-        ebookTitle: newEbook.title,
-        ebooks: [newEbook],
-      });
+      // const newEbook = ebookActions.createNewEbook();
+      // localStorage.setItem("currentEbook", JSON.stringify(newEbook));
+      // localStorage.setItem("ebooks", JSON.stringify([newEbook]));
+      // setState({
+      //   ...initialState,
+      //   ebookId: newEbook.id,
+      //   ebookTitle: newEbook.title,
+      //   ebooks: [newEbook],
+      // });
     } else {
       const currentEbook =
         savedCurrentEbook || savedEbooks[0] || ebookActions.createNewEbook();

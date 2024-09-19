@@ -42,6 +42,7 @@ const NewBookWizard = ({ onComplete }) => {
       setDirection("next");
       setCurrentStep(currentStep + 1);
     } else {
+      console.log("here");
       ebookActions.createNewEbook(bookData);
       onComplete();
     }
