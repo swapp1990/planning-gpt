@@ -108,18 +108,24 @@ const ChapterList = () => {
           className="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200"
         >
           {isLoading ? (
-            <FaSpinner className="w-5 h-5 animate-spin" />
+            <>
+              <FaSpinner className="w-5 h-5 animate-spin mr-2" />
+              <span>Suggesting ...</span>
+            </>
           ) : (
-            <FaLightbulb className="w-5 h-5" />
+            <>
+              <FaLightbulb className="w-5 h-5 mr-2" />
+              <span>Suggest Chapters</span>
+            </>
           )}
         </button>
-        <button
+        {/* <button
           onClick={handleAddChapter}
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200"
         >
           <FaPlus className="mr-2" />
           Add Chapter
-        </button>
+        </button> */}
       </div>
 
       <div className="space-y-4">
@@ -222,6 +228,7 @@ const ChapterList = () => {
               setInstruction={setChaptersInstruction}
               count={numChapters}
               setCount={setNumChapters}
+              onGenerate={handleSuggestChapters}
               isLoading={isLoading}
               isRegeneration={true}
               generationType="chapters"
