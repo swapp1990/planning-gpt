@@ -6,7 +6,6 @@ import { getSugggestedText } from "../server/ebook";
 // Mock API function for character suggestions (replace with actual API call later)
 const getCharacterSuggestions = async (context) => {
   let text = await getSugggestedText("character", "", context);
-  console.log(text);
   return {
     name: text.name || "",
     age: text.age || "",

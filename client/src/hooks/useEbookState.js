@@ -22,21 +22,27 @@ export function useEbookState() {
     setState((prevState) => ({ ...prevState, ...updates, isSaved: false }));
   };
 
+  const resetState = (updates) => {
+    console.log("initial state");
+    setState((prevState) => ({ ...prevState, ...updates }));
+  };
+
   const ebookActions = {
+    resetState: () => resetState({ ebookTitle: null, ebookId: null }),
     setEbookTitle: (title) => updateState({ ebookTitle: title }),
     setParameters: (parameters) =>
       updateState({
         parameters,
         ebookTitle: parameters.title || state.ebookTitle,
       }),
-    createNewEbook: () => {
+    createNewEbook: (parameters) => {
       const newEbook = {
         id: uuidv4(),
-        title: "New Ebook",
+        title: parameters.title,
         chapters: [],
         currentChapter: null,
         systemPrompts: [],
-        parameters: {},
+        parameters: parameters,
       };
       updateState({
         ebookId: newEbook.id,

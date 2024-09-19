@@ -478,25 +478,25 @@ def rewrite_sentence():
 
 def get_user_prompt(field_type, current_value, context):
     base_prompt = f"Based on the current value '{current_value}' and the following context: {context}, "
-
-    if field_type == 'title':
+    print("get_user_prompt: " + field_type)
+    if field_type == 'Title':
         return base_prompt + "suggest a creative and engaging title for the story."
-    elif field_type == 'genre':
+    elif field_type == 'Genre':
         return base_prompt + "recommend a suitable genre or subgenre for the story."
-    elif field_type == 'premise':
+    elif field_type == 'Premise':
         return base_prompt + "provide a compelling premise for the story."
     elif field_type == 'synopsis':
         return base_prompt + "provide a concise synopsis for the given chapter based on the context in one sentence."
-    elif field_type == 'setting.time':
-        return base_prompt + "suggest an interesting time period for the story to take place."
-    elif field_type == 'setting.place':
-        return base_prompt + "recommend a unique and fitting location for the story."
+    elif field_type == 'Time':
+        return base_prompt + "suggest an interesting time period for the story to take place. (in 2-3 words)"
+    elif field_type == 'Place':
+        return base_prompt + "recommend a unique and fitting location for the story. (in 4-5 words)"
     elif field_type == 'character':
         return base_prompt + """generate a character profile with the following details:
         - name
         - age
         - occupation
-        Ensure the character fits well within the story's context."""
+        Ensure the character fits well within the story's context. An example of output is: {\"name\": \"Elara Windrider\", "age\": 28, \"occupation\": \"Sky Cartographer\"}"""
     elif field_type == 'chapters':
         return base_prompt + """generate a list of 3 chapters based on the context. Each chapter should have the following keys:
         - title
@@ -524,7 +524,7 @@ def parameters_suggestions():
     """
 
     user_prompt = get_user_prompt(field_type, current_value, context)
-    print(user_prompt)
+    # print(user_prompt)
 
     result = hermes_ai_output(user_prompt, system_prompt, [], "")
     print(result)

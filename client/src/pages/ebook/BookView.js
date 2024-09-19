@@ -7,16 +7,29 @@ import ParametersPanel from "./ParametersPanel";
 import ChapterList from "./ChapterList";
 import ChapterView from "./ChapterView";
 import Sidebar from "./Sidebar";
+import NewBookWizard from "./NewBookWizard";
 import { useEbook } from "../../context/EbookContext";
 
 const BookView = () => {
   const { ebookState, ebookActions } = useEbook();
   const [isEbookListOpen, setIsEbookListOpen] = useState(false);
+  const [isNewBookWizardOpen, setIsNewBookWizardOpen] = useState(false);
 
   const handleEbookSelect = (ebookId) => {
     setIsEbookListOpen(false);
     console.log("select ebook " + ebookId);
     ebookActions.loadEbook(ebookId);
+  };
+
+  const handleNewBookClick = () => {
+    setIsEbookListOpen(false);
+    setIsNewBookWizardOpen(true);
+    ebookActions.resetState();
+  };
+
+  const handleWizardComplete = () => {
+    setIsNewBookWizardOpen(false);
+    // Additional logic to handle the new book creation
   };
 
   const tabs = [
@@ -43,20 +56,26 @@ const BookView = () => {
           isOpen={isEbookListOpen}
           onClose={() => setIsEbookListOpen(false)}
           title="Ebooks"
-          onNewItem={ebookActions.createNewEbook}
+          onNewItem={handleNewBookClick}
           onDeleteItem={ebookActions.deleteEbook}
         />
         <main className="h-full overflow-auto p-4">
           <div className="max-w-5xl mx-auto">
-            <TabSystem tabs={tabs} />
-            {ebookState.currentChapter && (
-              <ChapterView
-                chapter={
-                  ebookState.chapters.filter(
-                    (chapter) => chapter.id === ebookState.currentChapter
-                  )[0]
-                }
-              />
+            {isNewBookWizardOpen ? (
+              <NewBookWizard onComplete={handleWizardComplete} />
+            ) : (
+              <>
+                <TabSystem tabs={tabs} />
+                {ebookState.currentChapter && (
+                  <ChapterView
+                    chapter={
+                      ebookState.chapters.filter(
+                        (chapter) => chapter.id === ebookState.currentChapter
+                      )[0]
+                    }
+                  />
+                )}
+              </>
             )}
           </div>
         </main>

@@ -61,9 +61,12 @@ export const getSugggestedText = async (fieldType, current_value, context) => {
       throw new Error(response.error);
     }
     // console.log(response);
-    let text = JSON.parse(response.suggestions).text;
-    // console.log(text);
-    return text;
+    let suggestions = JSON.parse(response.suggestions);
+    if (suggestions.text) {
+      return suggestions.text;
+    } else {
+      return suggestions;
+    }
   } catch (error) {
     throw new Error(error);
   }
