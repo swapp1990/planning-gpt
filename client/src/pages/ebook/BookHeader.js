@@ -32,7 +32,7 @@ const BookHeader = ({ setIsEbookListOpen }) => {
   return (
     <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 shadow-lg z-30 relative">
       <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-start items-center">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setIsEbookListOpen(true)}
@@ -55,30 +55,20 @@ const BookHeader = ({ setIsEbookListOpen }) => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-4">
-            {showSaveStatus && (
-              <div className="items-center space-x-2 sm:flex">
-                <FaSave
-                  className={`${
-                    ebookState.isSaved
-                      ? "text-green-300"
-                      : "text-yellow-300 animate-pulse"
-                  }`}
-                />
-                <span className="text-sm hidden sm:block">
-                  {ebookState.isSaved ? "Saved" : "Saving..."}
-                </span>
-              </div>
-            )}
-
-            <button
-              onClick={uiActions.toggleSidebar}
-              className="bg-white bg-opacity-20 p-2 rounded-full hover:bg-opacity-30 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-white"
-              aria-label="Open chapters"
-            >
-              <FaBars className="text-xl" />
-            </button>
-          </div>
+          {showSaveStatus && (
+            <div className="items-center space-x-2 sm:flex ml-4">
+              <FaSave
+                className={`${
+                  ebookState.isSaved
+                    ? "text-green-300"
+                    : "text-yellow-300 animate-pulse"
+                }`}
+              />
+              <span className="text-sm hidden sm:block">
+                {ebookState.isSaved ? "Saved" : "Saving..."}
+              </span>
+            </div>
+          )}
         </div>
 
         {ebookState.currentChapter && (

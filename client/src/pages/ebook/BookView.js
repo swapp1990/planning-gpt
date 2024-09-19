@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { FaCog, FaListUl } from "react-icons/fa";
 
 import TabSystem from "../../components/TabSystem";
-import BookHeader from "../../components/ebook/BookHeader";
+import BookHeader from "./BookHeader";
 import ParametersPanel from "./ParametersPanel";
 import ChapterList from "./ChapterList";
 import ChapterView from "./ChapterView";

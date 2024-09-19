@@ -201,7 +201,7 @@ const ChapterView = ({ chapter }) => {
         onEdit={handleSynopsisEdit}
       />
 
-      <h3 className="text-xl font-semibold my-4">Sections</h3>
+      <h3 className="text-xl font-semibold my-4">Scenes</h3>
       {chapter.sections.map((section, index) => (
         <Section
           key={section.id || index}
