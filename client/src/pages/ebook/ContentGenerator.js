@@ -25,18 +25,93 @@ const ContentGenerator = ({
 
   const { ebookState } = useEbook();
 
-  function getNextOutline(outlinesList, targetOutline) {
-    const index = outlinesList.indexOf(targetOutline);
-    if (index === -1) {
-      console.warn(`Outline "${targetOutline}" not found in the list.`);
-      return "";
+  const prepareRewriteContext = (chapter, paraInfo, baseContext) => {
+    const section = chapter.sections[paraInfo.sectionId];
+    let prev_para, next_para;
+
+    if (paraInfo.paragraphId > 0) {
+      prev_para = section.paragraphs[paraInfo.paragraphId - 1];
+    } else {
+      const prevSectionId = paraInfo.sectionId - 1;
+      if (prevSectionId >= 0 && chapter.sections[prevSectionId]) {
+        const prevSection = chapter.sections[prevSectionId];
+        prev_para = prevSection.paragraphs[prevSection.paragraphs.length - 1];
+      } else {
+        prev_para = null;
+      }
     }
-    if (index === outlinesList.length - 1) {
-      // It's the last outline
+
+    next_para = section.paragraphs.find(
+      (_, index) => index === paraInfo.paragraphId + 1
+    );
+
+    return {
+      ...baseContext,
+      previous_paragraph: prev_para,
+      next_paragraph: next_para,
+      paragraph_to_update: paraInfo.paragraphText,
+    };
+  };
+
+  const prepareInsertContext = (chapter, paraInfo, baseContext) => {
+    const section = chapter.sections[paraInfo.sectionId];
+    const prev_para = paraInfo.paragraphText;
+    const next_para = section.paragraphs.find(
+      (_, index) => index === paraInfo.paragraphId + 1
+    );
+
+    return {
+      ...baseContext,
+      prev: prev_para,
+      next: next_para,
+    };
+  };
+
+  const prepareNewParagraphsContext = (chapter, paraInfo, baseContext) => {
+    const outlinesList = chapter.sections.map((s) => s.outline);
+    const next_outline = getNextOutline(outlinesList, paraInfo.outline);
+    const sectionIndex = paraInfo.sectionIndex;
+    const previous_summary =
+      sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
+    const current_summary = chapter.sections[sectionIndex].summary || "";
+
+    let previous_paragraph =
+      chapter.sections[sectionIndex].paragraphs?.slice(-1)[0] ||
+      chapter.sections[sectionIndex - 1]?.paragraphs?.slice(-1)[0] ||
+      "";
+
+    return {
+      ...baseContext,
+      previous_summary,
+      current_summary,
+      outline: paraInfo.outline,
+      next_outline,
+      previous_paragraph: previous_paragraph,
+    };
+  };
+
+  const prepareOutlinesContext = (chapter, baseContext) => {
+    const prev_outlines = chapter.sections.map((s) => s.outline);
+    const prev_summaries = chapter.sections
+      .map((s) => s.summary)
+      .filter((summary) => summary !== undefined);
+
+    return {
+      ...baseContext,
+      chapter_synopsis: chapter.synopsis,
+      previous_outlines: prev_outlines,
+      previous_summaries: prev_summaries,
+    };
+  };
+
+  // Helper function to get the next outline
+  const getNextOutline = (outlinesList, targetOutline) => {
+    const index = outlinesList.indexOf(targetOutline);
+    if (index === -1 || index === outlinesList.length - 1) {
       return "";
     }
     return outlinesList[index + 1];
-  }
+  };
 
   const handleEditEntry = useCallback((index, newText) => {
     setGeneratedContent((prevContent) =>
@@ -56,138 +131,98 @@ const ContentGenerator = ({
     // console.log(generatedContent);
   }, [generatedContent]);
 
-  const handleGenerate = useCallback(async () => {
-    setIsGenerating(true);
-    let prev_content = generatedContent;
-    setGeneratedContent([]);
-    setError(null);
+  const handleGeneration = useCallback(
+    async (isRetry = false) => {
+      setIsGenerating(true);
+      setGeneratedContent([]);
+      setError(null);
 
-    try {
-      const chapter = ebookState.chapters.find(
-        (c) => c.id === ebookState.currentChapter
-      );
+      try {
+        const chapter = ebookState.chapters.find(
+          (c) => c.id === ebookState.currentChapter
+        );
 
-      const context = {
-        parameters: ebookState.parameters,
-        synopsis: chapter.synopsis,
-      };
+        const baseContext = {
+          parameters: ebookState.parameters,
+          synopsis: chapter.synopsis,
+        };
 
-      let generatedContent = [];
-      if (generationType === "rewrite_paragraphs") {
-        const section = chapter.sections[paraInfo.sectionId];
-        let prev_para, next_para;
+        const contextPreparation = {
+          rewrite_paragraphs: () =>
+            prepareRewriteContext(chapter, paraInfo, baseContext),
+          insert_paragraphs: () =>
+            prepareInsertContext(chapter, paraInfo, baseContext),
+          new_paragraphs: () =>
+            prepareNewParagraphsContext(chapter, paraInfo, baseContext),
+          outlines: () => prepareOutlinesContext(chapter, baseContext),
+        };
 
-        // Get the previous paragraph
-        if (paraInfo.paragraphId > 0) {
-          // If not the first paragraph in the section, get the previous one
-          prev_para = section.paragraphs[paraInfo.paragraphId - 1];
+        const context = contextPreparation[generationType]();
+
+        let generatedContent = [];
+        if (generationType === "rewrite_paragraphs") {
+          const paragraphToUpdate = paraInfo.paragraphText;
+
+          const onRewriteProgress = (intermediateResult) => {
+            let generatedContent = [...intermediateResult];
+            setGeneratedContent(generatedContent);
+          };
+
+          generatedContent = await getRewrittenParagraphs(
+            context,
+            instruction,
+            paragraphToUpdate,
+            count,
+            onRewriteProgress,
+            isRetry
+          );
         } else {
-          // If it's the first paragraph in the section, check for previous section
-          const prevSectionId = paraInfo.sectionId - 1;
-          if (prevSectionId >= 0 && chapter.sections[prevSectionId]) {
-            const prevSection = chapter.sections[prevSectionId];
-            prev_para =
-              prevSection.paragraphs[prevSection.paragraphs.length - 1];
-          } else {
-            prev_para = null; // No previous paragraph found
+          const onProgress = (intermediateResult) => {
+            setGeneratedContent(intermediateResult);
+          };
+          if (generationType == "insert_paragraphs") {
+            generatedContent = await getInsertedParagraphs(
+              context,
+              instruction,
+              count,
+              onProgress,
+              isRetry
+            );
+          } else if (generationType == "new_paragraphs") {
+            generatedContent = await getNewParagraphs(
+              context,
+              instruction,
+              count,
+              onProgress,
+              isRetry
+            );
+          } else if (generationType == "outlines") {
+            generatedContent = await getSuggestedOutlines(
+              context,
+              instruction,
+              count,
+              onProgress
+            );
           }
         }
-        next_para = section.paragraphs.find(
-          (_, index) => index == paraInfo.paragraphId + 1
-        );
-        context.previous_paragraph = prev_para;
-        context.next_paragraph = next_para;
-        const paragraphToUpdate = paraInfo.paragraphText;
-
-        const onRewriteProgress = (intermediateResult) => {
-          let generatedContent = [...intermediateResult];
-          setGeneratedContent(generatedContent);
-        };
-
-        generatedContent = await getRewrittenParagraphs(
-          context,
-          instruction,
-          paragraphToUpdate,
-          count,
-          onRewriteProgress
-        );
-      } else {
-        const onProgress = (intermediateResult) => {
-          setGeneratedContent(intermediateResult);
-        };
-        if (generationType == "insert_paragraphs") {
-          const section = chapter.sections[paraInfo.sectionId];
-          let prev_para = paraInfo.paragraphText;
-          let next_para = section.paragraphs.find(
-            (_, index) => index == paraInfo.paragraphId + 1
-          );
-          // context.section_paragraphs = section.paragraphs.join("\n");
-          context.prev = prev_para;
-          context.next = next_para;
-          generatedContent = await getInsertedParagraphs(
-            context,
-            instruction,
-            count,
-            onProgress
-          );
-        } else if (generationType == "new_paragraphs") {
-          const chapter = ebookState.chapters.find(
-            (c) => c.id === ebookState.currentChapter
-          );
-          let outlinesList = chapter.sections.map((s) => s.outline);
-          let next_outline = getNextOutline(outlinesList, paraInfo.outline);
-          let prev_para = paraInfo.paragraphText;
-          let sectionIndex = paraInfo.sectionIndex;
-          let previous_summary =
-            sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
-          let current_summary = "";
-          if (chapter.sections[sectionIndex].summary) {
-            current_summary =
-              sectionIndex > 0 ? chapter.sections[sectionIndex].summary : "";
-          }
-
-          const context = {
-            parameters: ebookState.parameters,
-            synopsis: chapter.synopsis,
-            previous_summary: previous_summary,
-            current_summary: current_summary,
-            draft_paragraphs: prev_content.join("\n\n"),
-            outline: paraInfo.outline,
-            next_outline: next_outline,
-            previous_paragraph: prev_para,
-          };
-          generatedContent = await getNewParagraphs(
-            context,
-            instruction,
-            count,
-            onProgress
-          );
-        } else if (generationType == "outlines") {
-          let prev_outlines = chapter.sections.map((s) => s.outline);
-          let prev_summaries = chapter.sections
-            .map((s) => s.summary)
-            .filter((summary) => summary !== undefined);
-          const context = {
-            parameters: ebookState.parameters,
-            chapter_synopsis: chapter.synopsis,
-            previous_outlines: prev_outlines,
-            previous_summaries: prev_summaries,
-          };
-          generatedContent = await getSuggestedOutlines(
-            context,
-            instruction,
-            count,
-            onProgress
-          );
-        }
+        setGeneratedContent(generatedContent);
+      } catch (error) {
+        console.error(`Error generating ${generationType}:`, error);
+        setError("Error generating content");
       }
-      setGeneratedContent(generatedContent);
-    } catch (error) {
-      console.error(`Error generating ${generationType}:`, error);
-      setError("Error generating content");
-    }
-    setIsGenerating(false);
-  }, [instruction, count, generationType, ebookState]);
+      setIsGenerating(false);
+    },
+    [instruction, count, generationType, ebookState]
+  );
+
+  const handleGenerate = useCallback(
+    () => handleGeneration(false),
+    [handleGeneration]
+  );
+  const handleRetry = useCallback(
+    () => handleGeneration(true),
+    [handleGeneration]
+  );
 
   const handleFinalize = useCallback(async () => {
     let finalContent;
@@ -290,8 +325,14 @@ const ContentGenerator = ({
       )}
 
       {error && (
-        <div className="mt-2">
+        <div className="mt-2 flex justify-center">
           <p className="text-center text-sm text-red-500">{error}</p>
+          <button
+            onClick={handleRetry}
+            className="p-2 text-gray-500 hover:text-red-500 transition-colors duration-200"
+          >
+            Retry
+          </button>
         </div>
       )}
     </div>

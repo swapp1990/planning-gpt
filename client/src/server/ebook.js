@@ -4,78 +4,45 @@ import {
   regularApiCall,
 } from "../utils/api";
 
-export const streamInsertedParagraph = async (
+const API_ENDPOINTS = {
+  INSERT: "chapter/insert",
+  CONTINUE: "chapter/continue",
+  REWRITE: "chapter/rewrite",
+};
+
+const streamChapterApiCall = async (
+  endpoint,
   context,
   instruction,
   numParagraphs,
   onChunk,
-  onError
+  onError,
+  isNsfw = false,
+  additionalParams = {}
 ) => {
   try {
     await streamedApiCall(
-      `${process.env.REACT_APP_API_URL}/chapter/insert`,
+      `${process.env.REACT_APP_API_URL}/${endpoint}`,
       "POST",
       {
         context: context,
-        instruction: instruction,
-        numParagraphs: numParagraphs,
+        instruction,
+        numParagraphs,
+        isNsfw,
+        ...additionalParams,
       },
       onChunk,
       onError
     );
   } catch (error) {
+    console.log(error);
     throw new Error(error);
   }
 };
 
-export const streamContinueParagraph = async (
-  context,
-  instruction,
-  numParagraphs,
-  onChunk,
-  onError
-) => {
-  try {
-    await streamedApiCall(
-      `${process.env.REACT_APP_API_URL}/chapter/continue`,
-      "POST",
-      {
-        context: context,
-        instruction: instruction,
-        numParagraphs: numParagraphs,
-      },
-      onChunk,
-      onError
-    );
-  } catch (error) {
-    throw new Error(error);
-  }
-};
-
-export const streamRewriteParagraph = async (
-  context,
-  instruction,
-  numParagraphs,
-  paragraph,
-  onChunk,
-  onError
-) => {
-  try {
-    await streamedApiCall(
-      `${process.env.REACT_APP_API_URL}/chapter/rewrite`,
-      "POST",
-      {
-        context: context,
-        instruction: instruction,
-        numParagraphs: numParagraphs,
-        paragraph: paragraph,
-      },
-      onChunk,
-      onError
-    );
-  } catch (error) {
-    throw new Error(error);
-  }
+const handleError = (error) => {
+  console.log(error);
+  throw new Error(error.message || "Error generating content");
 };
 
 export const getSugggestedText = async (fieldType, current_value, context) => {
@@ -152,7 +119,8 @@ export const getNewParagraphs = async (
   context,
   instruction,
   numParagraphs,
-  onProgress
+  onProgress,
+  isNsfw = false
 ) => {
   let newParagraphs = [];
   let currentParagraph = "";
@@ -183,18 +151,15 @@ export const getNewParagraphs = async (
     }
   };
 
-  const onError = (error) => {
-    // console.error("Error generating paragraphs:", error);
-    throw new Error(error.message || "Error generating paragraphs");
-  };
-
   try {
-    await streamContinueParagraph(
+    await streamChapterApiCall(
+      API_ENDPOINTS.CONTINUE,
       context,
       instruction,
       numParagraphs,
       onChunk,
-      onError
+      handleError,
+      isNsfw
     );
 
     return newParagraphs;
@@ -209,7 +174,8 @@ export const getRewrittenParagraphs = async (
   instruction,
   originalParagraph,
   numParagraphs,
-  onProgress
+  onProgress,
+  isNsfw = false
 ) => {
   let rewrittenSentences = [];
 
@@ -236,18 +202,16 @@ export const getRewrittenParagraphs = async (
     }
   };
 
-  const onError = (error) => {
-    throw new Error(error.message || "Error generating paragraphs");
-  };
-
   try {
-    await streamRewriteParagraph(
+    await streamChapterApiCall(
+      API_ENDPOINTS.REWRITE,
       context,
       instruction,
       numParagraphs,
-      originalParagraph,
       onChunk,
-      onError
+      handleError,
+      isNsfw,
+      { paragraph: originalParagraph }
     );
 
     return rewrittenSentences;
@@ -261,7 +225,8 @@ export const getInsertedParagraphs = async (
   context,
   instruction,
   numParagraphs,
-  onProgress
+  onProgress,
+  isNsfw = false
 ) => {
   let newParagraphs = [];
   let currentParagraph = "";
@@ -292,18 +257,15 @@ export const getInsertedParagraphs = async (
     }
   };
 
-  const onError = (error) => {
-    // console.error("Error generating paragraphs:", error);
-    throw new Error(error.message || "Error generating paragraphs");
-  };
-
   try {
-    await streamInsertedParagraph(
+    await streamChapterApiCall(
+      API_ENDPOINTS.INSERT,
       context,
       instruction,
       numParagraphs,
       onChunk,
-      onError
+      handleError,
+      isNsfw
     );
 
     return newParagraphs;

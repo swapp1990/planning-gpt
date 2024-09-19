@@ -250,6 +250,10 @@ def process_sentence_chunks(chunk, current_sentence, final_response):
 def process_json_chunks(chunk, json_buffer):
     msg = chunk.choices[0].delta.content or ""
     json_buffer += msg
+
+    # Check for the "I'm sorry" phrase and raise an exception
+    if json_buffer.startswith("I'm sorry"):
+        raise ValueError("I'm sorry phrase detected")
     
     chunks_to_yield = []
     while True:
@@ -267,13 +271,13 @@ def process_json_chunks(chunk, json_buffer):
     
     return chunks_to_yield, json_buffer
 
-def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters, response_type="sentence"):
-    if not get_nsfw_flag_state():
+def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters, response_type="sentence", isNsfw=False):
+    if not isNsfw:
         client = OpenAI(
             api_key=openai_api_key,
         )
-        model = "gpt-4o-2024-08-06"
-        # model = "gpt-4o-mini"
+        # model = "gpt-4o-2024-08-06"
+        model = "gpt-4o-mini"
         print("using gpt4o")
     else:
         client = OpenAI(
@@ -340,8 +344,9 @@ def hermes_ai_streamed_output(prompt, system_prompt, examples, parameters, respo
         yield "[DONE]"
         
     except Exception as e:
-        print(f"An error occurred: {e}")
-        yield {"error": "An error occurred"}
+        print(f"An error occurred in hermes_ai_streamed_output: {e}")
+        error_message = json.dumps({"error": f"An error occurred: {str(e)}"})
+        yield "I'm sorry"
 
 def generate_summary(paragraph, previous_summary=None):
     system_prompt = f"""
@@ -383,7 +388,7 @@ def generate_hermes():
 
     def generate():
         try:
-            for chunk in hermes_ai_streamed_output(prompt, system_prompt, [], ""):
+            for chunk in hermes_ai_streamed_output(prompt, system_prompt, [], "",):
                 yield f"data: {chunk}\n\n"
         except Exception as e:
             yield f"data: An error occurred: {e}\n\n"
@@ -694,6 +699,8 @@ def continue_chapter():
     # print(context)
     instruction = data.get('instruction')
     numParagraphs = data.get('numParagraphs')
+    isNsfw = data.get('isNsfw', False)
+    print("isNsfw ", isNsfw)
     
     prompts = load_prompts()
     systemPrompt = prompts["writing_assistant"]["prompts"][0]
@@ -738,14 +745,14 @@ FINAL VERIFICATION:
 - Does the new content fit seamlessly with the existing text and maintain the overall flow?
 """
 
-    print(prompt)
+    # print(prompt)
 
     # prompt = f'Write a story with exactly 3 paragraphs and 10 words each.'
 
     def generate():
         partial_result = ""
         try:
-            for chunk in hermes_ai_streamed_output(prompt, systemPrompt, [], ""):
+            for chunk in hermes_ai_streamed_output(prompt, systemPrompt, [], "",  isNsfw=isNsfw):
                 if isinstance(chunk, dict) and 'error' in chunk:
                     return jsonify(chunk), 500
                 partial_result += chunk
@@ -768,6 +775,8 @@ def insert_paragraphs():
     context = data.get('context')
     instruction = data.get('instruction')
     numParagraphs = data.get('numParagraphs')
+    isNsfw = data.get('isNsfw', False)
+    print("isNsfw ", isNsfw)
 
     user_prompt = f"""
 Insert {numParagraphs} paragraphs between previous paragraph and next paragraph:
@@ -809,7 +818,7 @@ Return all the inserted paragraphs. Do not include any explanatory text or metad
     def generate():
         partial_result = ""
         try:
-            for chunk in hermes_ai_streamed_output(user_prompt, systemPrompt, [], ""):
+            for chunk in hermes_ai_streamed_output(user_prompt, systemPrompt, [], "", isNsfw=isNsfw):
                 if isinstance(chunk, dict) and 'error' in chunk:
                     return jsonify(chunk), 500
                 partial_result += chunk
@@ -827,11 +836,16 @@ def rewrite_paragraph():
     data = request.get_json()
     context = data.get('context')
     instruction = data.get('instruction')
-    paragraph_to_rewrite = data.get('paragraph')
+    paragraph_to_rewrite = data.get('paragraph', '')
+    if paragraph_to_rewrite == '':
+         return json.dumps({'error': "No paragraph to rewrite"})
     numParagraphs = data.get('numParagraphs')
 
     if paragraph_to_rewrite is None:
          return json.dumps({'error': "An error occured"})
+    
+    isNsfw = data.get('isNsfw', False)
+    print("isNsfw ", isNsfw)
 
     user_prompt = f"""
 Rewrite the following paragraph(s) within the context of its section and the overall story:
@@ -884,7 +898,7 @@ Return only the JSON list of dictionaries representing the rewritten paragraph(s
     def generate():
         partial_result = ""
         try:
-            for chunk in hermes_ai_streamed_output(user_prompt, system_prompt, [], "", "json"):
+            for chunk in hermes_ai_streamed_output(user_prompt, system_prompt, [], "", "json", isNsfw=isNsfw):
                 if isinstance(chunk, dict) and 'error' in chunk:
                     return jsonify(chunk), 500
                 partial_result += chunk

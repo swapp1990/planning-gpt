@@ -55,7 +55,6 @@ export const streamedApiCall = async (url, method, body, onChunk, onError) => {
       const { done, value } = await reader.read();
 
       if (done) break;
-
       const chunk = decoder.decode(value);
       const lines = chunk.split("\n");
 
