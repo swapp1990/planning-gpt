@@ -7,8 +7,8 @@ import {
   FaEdit,
   FaCheck,
   FaTimes,
-  FaRedo,
-  FaPlus,
+  FaParagraph,
+  FaFilm,
   FaMagic,
   FaTimesCircle,
   FaFileAlt,
@@ -16,7 +16,9 @@ import {
 import { useEbook } from "../../context/EbookContext";
 import { getSectionSummary } from "../../server/ebook";
 import Paragraph from "./Paragraph";
-import ContentGenerator from "./ContentGenerator";
+import TabSystem from "../../components/TabSystem";
+import SceneView from "./SceneView";
+import ParagraphView from "./ParagraphView";
 import ClearableTextarea from "../../components/ClearableTextarea";
 
 const Modal = ({ isOpen, onClose, title, children }) => {
@@ -49,12 +51,8 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedOutline, setEditedOutline] = useState(section.outline);
   const [error, setError] = useState(null);
-  const [draftParagraphs, setDraftParagraphs] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  const [recentlyUpdatedParagraphs, setRecentlyUpdatedParagraphs] = useState(
-    []
-  );
 
   const { ebookState, chapterActions } = useEbook();
 
@@ -65,16 +63,6 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
   useEffect(() => {
     setEditedOutline(section.outline);
   }, [section.outline]);
-
-  useEffect(() => {
-    if (recentlyUpdatedParagraphs.length > 0) {
-      const timer = setTimeout(() => {
-        setRecentlyUpdatedParagraphs([]);
-        console.log("clear recently updated");
-      }, 5000); // 5 seconds timeout
-      return () => clearTimeout(timer);
-    }
-  }, [recentlyUpdatedParagraphs]);
 
   const openSummaryModal = useCallback(() => {
     setIsModalOpen(true);
@@ -88,8 +76,13 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       synopsis: chapter.synopsis,
     };
     let paragraphs = section.paragraphs.join("\n");
+    let previous_summary = chapter.sections[sectionIndex - 1].summary;
     try {
-      const generatedSummary = await getSectionSummary(context, paragraphs);
+      const generatedSummary = await getSectionSummary(
+        context,
+        paragraphs,
+        previous_summary
+      );
       // setSummary(generatedSummary);
       const result = await chapterActions.updateSection(
         chapterId,
@@ -151,33 +144,48 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     setIsEditing(false);
   }, [section.outline]);
 
-  const handleParagraphUpdate = useCallback(
-    async (paragraphIndex, newContent, isDraft) => {
-      if (isDraft) {
-        const updatedDrafts = draftParagraphs;
-        updatedDrafts[paragraphIndex] = newContent;
-        setDraftParagraphs(updatedDrafts);
-      } else {
-        // Update finalized paragraphs
-        const updatedParagraphs = [...section.paragraphs];
-        updatedParagraphs[paragraphIndex] = newContent;
-        const result = await chapterActions.updateSection(
-          chapterId,
-          sectionIndex,
-          {
-            ...section,
-            paragraphs: updatedParagraphs,
-          }
-        );
-        if (result.error) {
-          setError(result.error);
+  const handleAddParagraphs = useCallback(
+    async (newParagraphs) => {
+      const result = await chapterActions.updateSection(
+        chapterId,
+        sectionIndex,
+        {
+          ...section,
+          paragraphs: [...section.paragraphs, ...newParagraphs],
         }
+      );
+      if (result.error) {
+        throw new Error(result.error);
       }
     },
     [chapterActions, chapterId, sectionIndex, section]
   );
 
-  const handleParagraphDelete = useCallback(
+  const handleInsertParagraph = useCallback(
+    async (paragraphIndex, newParagraphs) => {
+      let updatedParagraphs = [...section.paragraphs];
+      updatedParagraphs.splice(paragraphIndex + 1, 0, ...newParagraphs);
+      await chapterActions.updateSection(chapterId, sectionIndex, {
+        ...section,
+        paragraphs: updatedParagraphs,
+      });
+    },
+    [chapterActions, chapterId, sectionIndex, section]
+  );
+
+  const handleRewriteParagraph = useCallback(
+    async (paragraphIndex, newParagraphs) => {
+      let updatedParagraphs = [...section.paragraphs];
+      updatedParagraphs.splice(paragraphIndex, 1, ...newParagraphs);
+      await chapterActions.updateSection(chapterId, sectionIndex, {
+        ...section,
+        paragraphs: updatedParagraphs,
+      });
+    },
+    [chapterActions, chapterId, sectionIndex, section]
+  );
+
+  const handleDeleteParagraph = useCallback(
     async (paragraphIndex) => {
       const updatedParagraphs = section.paragraphs.filter(
         (_, index) => index !== paragraphIndex
@@ -191,113 +199,80 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
         }
       );
       if (result.error) {
-        setError(result.error);
+        throw new Error(result.error);
       }
     },
     [chapterActions, chapterId, sectionIndex, section]
   );
 
-  const handleDraftParagraphDelete = useCallback((paragraphIndex) => {
-    setDraftParagraphs((prevDrafts) =>
-      prevDrafts.filter((_, index) => index !== paragraphIndex)
-    );
-  }, []);
-
-  const handleNewParagraphsFinalize = useCallback(
-    async (newParagraphs) => {
-      await chapterActions.updateSection(chapterId, sectionIndex, {
+  const handleAddScene = useCallback(
+    (newScene) => {
+      chapterActions.updateSection(chapterId, sectionIndex, {
         ...section,
-        paragraphs: [...section.paragraphs, ...newParagraphs],
+        scenes: Array.isArray(section.scenes)
+          ? [...section.scenes, newScene]
+          : [newScene],
       });
     },
     [chapterActions, chapterId, sectionIndex, section]
   );
 
-  const handleRewriteParagraphFinalize = useCallback(
-    (pIndex, newParagraphs) => {
-      let updatedParagraphs = [...section.paragraphs];
-      updatedParagraphs.splice(pIndex, 1, ...newParagraphs);
-      chapterActions.updateSection(chapterId, sectionIndex, {
-        ...section,
-        paragraphs: updatedParagraphs,
-      });
-
-      const newParagraphIndices = Array.from(
-        { length: newParagraphs.length },
-        (_, i) => pIndex + i
+  const handleDeleteScene = useCallback(
+    async (sceneIndex) => {
+      const updatedScenes = section.scenes.filter(
+        (_, index) => index !== sceneIndex
       );
-      setRecentlyUpdatedParagraphs((prev) => [...prev, ...newParagraphIndices]);
-    },
-    [chapterId, chapterActions, section, sectionIndex]
-  );
-
-  const handleInsertParagraphFinalize = useCallback(
-    (pIndex, newParagraphs) => {
-      let updatedParagraphs = [...section.paragraphs];
-      updatedParagraphs.splice(pIndex + 1, 0, ...newParagraphs);
-      chapterActions.updateSection(chapterId, sectionIndex, {
-        ...section,
-        paragraphs: updatedParagraphs,
-      });
-
-      const newParagraphIndices = Array.from(
-        { length: newParagraphs.length },
-        (_, i) => pIndex + 1 + i
+      const result = await chapterActions.updateSection(
+        chapterId,
+        sectionIndex,
+        {
+          ...section,
+          scenes: updatedScenes,
+        }
       );
-      setRecentlyUpdatedParagraphs((prev) => [...prev, ...newParagraphIndices]);
+      if (result.error) {
+        throw new Error(result.error);
+      }
     },
-    [chapterId, chapterActions, section, sectionIndex]
+    [chapterActions, chapterId, sectionIndex, section]
   );
-
-  const renderParagraphs = useCallback(
-    (paragraphs, isDraft = false) => {
-      return paragraphs.map((paragraph, pIndex) => (
-        <Paragraph
-          key={`${isDraft ? "draft-" : ""}${pIndex}`}
-          paraInfo={{
-            chapterId: chapterId,
-            sectionId: sectionIndex,
-            paragraphId: pIndex,
-            paragraphText: paragraph,
-            isRecentlyUpdated: recentlyUpdatedParagraphs.includes(pIndex),
-          }}
-          onRewriteFinalize={(newParagraphs) =>
-            handleRewriteParagraphFinalize(pIndex, newParagraphs)
-          }
-          onInsertFinalize={(newParagraphs) =>
-            handleInsertParagraphFinalize(pIndex, newParagraphs)
-          }
-          onUpdate={(newContent) =>
-            handleParagraphUpdate(pIndex, newContent, isDraft)
-          }
-          onDelete={() =>
-            isDraft
-              ? handleDraftParagraphDelete(pIndex)
-              : handleParagraphDelete(pIndex)
-          }
-          isDraft={isDraft}
-        />
-      ));
-    },
-    [
-      chapterId,
-      handleParagraphUpdate,
-      handleParagraphDelete,
-      recentlyUpdatedParagraphs,
-    ]
-  );
-
-  const renderDraftParagraphs = (paragraphs) => {
-    return paragraphs.map((paragraph, index) => (
-      <p key={index} className="mb-2">
-        {paragraph}
-      </p>
-    ));
-  };
 
   const handleClear = () => {
     setEditedOutline("");
   };
+
+  const tabs = [
+    {
+      title: "Scenes",
+      icon: FaFilm,
+      content: (
+        <SceneView
+          scenes={section.scenes || []}
+          chapterId={chapterId}
+          sectionIndex={sectionIndex}
+          outline={section.outline}
+          onAddScene={handleAddScene}
+          onDeleteScene={handleDeleteScene}
+        />
+      ),
+    },
+    {
+      title: "Paragraphs",
+      icon: FaParagraph,
+      content: (
+        <ParagraphView
+          paragraphs={section.paragraphs}
+          chapterId={chapterId}
+          sectionIndex={sectionIndex}
+          outline={section.outline}
+          onRewriteParagraph={handleRewriteParagraph}
+          onInsertParagraph={handleInsertParagraph}
+          onDeleteParagraph={handleDeleteParagraph}
+          onAddParagraphs={handleAddParagraphs}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="my-4 p-1 bg-white rounded-lg shadow-md border border-gray-200">
@@ -423,26 +398,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
               )}
             </button>
           </div>
-          {section.paragraphs && section.paragraphs.length > 0 && (
-            <div className="mb-4">{renderParagraphs(section.paragraphs)}</div>
-          )}
-          <div className="my-8 border-t border-gray-200 pt-6">
-            <h4 className="text-lg font-semibold text-gray-700 mb-4">
-              Add New Content
-            </h4>
-
-            <ContentGenerator
-              paraInfo={{
-                chapterId: chapterId,
-                sectionIndex: sectionIndex,
-                outline: editedOutline,
-              }}
-              onFinalize={handleNewParagraphsFinalize}
-              renderContent={renderDraftParagraphs}
-              generationType="new_paragraphs"
-              title="Generate new paragraphs"
-            />
-          </div>
+          <TabSystem tabs={tabs} />
         </div>
       )}
       {error && <p className="mt-2 text-red-500">{error}</p>}

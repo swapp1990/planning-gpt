@@ -629,21 +629,16 @@ def section_summary():
     novel_parameters = context['parameters']
     chapter_synopsis = context['synopsis']
     input_paragraphs = data.get('paragraphs')
+    previous_summary = data.get('previous_summary')
 
     system_prompt = f"""
-You are a precise summarization assistant for a novel. Your task is to summarize given paragraphs in the context of the overall novel and current chapter. Here's the relevant context:
-
-Novel Parameters:
-{novel_parameters}
-
-Current Chapter Synopsis:
-{chapter_synopsis}
-
+You are a precise summarization assistant for a novel. Your task is to summarize given paragraphs in the context of the overall novel and current chapter.
 Summarize the given paragraphs and output the summary in JSON format with the following structure:
 
 {{
   "currentScene": {{
     "location": "Describe the location (hierarchical) eg. (India, Mumbai, Apartment room, Bedroom),
+    "previous_location": "Get location from previous symmary or N/A",
     "characters": [
         {{
             "name": "Name of character",
@@ -653,39 +648,41 @@ Summarize the given paragraphs and output the summary in JSON format with the fo
     ],
     "ongoing_action": "Describe the main ongoing action(s) in the scene (1 sentence)",
   }}
-  "keyPlotPoints": [
-    "List item for important event or revelation",
-    "List item for important event or revelation",
-    "List item for important event or revelation"
+  "sequence": [
+    "List item for sequence of important events or revelation",
+    "List item for sequence of important events or revelation",
+    "List item for sequence of important events or revelation",
   ],
-  "characterDynamics": "String highlighting the current state of relationships, conflicts, or developments between characters (2-3 sentences, 1 sentence for one major dynamic)",
-  "dialogueThemes": "String summarizing the main topics or tones of conversations (1 sentence)",
-  "openThreads": [
-    "List item for unresolved question, tension, or plot point",
-    "List item for unresolved question, tension, or plot point",
-    "List item for unresolved question, tension, or plot point"
-  ],
-  "lastParagraphEnding": "String providing the last line or a summary of the last sentence from the given paragraphs",
 }}
 
 Important Guidelines:
 - Output valid JSON that can be parsed by a JSON parser.
-- Stick strictly to the information provided in the input paragraphs.
+- Stick strictly to the information provided in the input paragraphs for currentScene.
 - Consider the novel parameters and chapter synopsis when creating the summary, but don't introduce information not present in the given paragraphs.
 - Do not introduce any new information or speculate about future events.
 - Be concise but comprehensive, ensuring all key elements are captured.
 - Keep the language very simple
 - Ensure the summary can be used as a basis for continuing the story coherently.
-- For list items (keyPlotPoints and openThreads), provide 2 items only.
+- For sequence, take important events/revelations from previous summary and add new events/revelations from the current scene. (Keep max 5 entries, by compressing information from previous summary without losing important information)
 """
-    
     user_prompt = f"""
 Summarize the following paragraphs in JSON format as specified in the system message:
-
 {input_paragraphs}
 
+Here's the relevant context:
+
+Novel Parameters: `{novel_parameters}`
+
+Current Chapter Synopsis: `{chapter_synopsis}`
+
+Previous Section Summary: `{previous_summary}`
+
 Ensure your summary captures all key elements without introducing any new information or speculation about future events.
+
+CRITICAL INSTRUCTIONS:
+1. For "sequence" list, make sure the new events/revelations are added after all the events/revelations are already compressed and give a proper sequence of the story so far. Keep the list to maximum 5 entries.
 """
+    print(user_prompt)
     summary = hermes_ai_output(user_prompt, system_prompt, [], "")
     summary = clean_json_string(summary)
     # print(summary)
@@ -710,17 +707,18 @@ def continue_chapter():
     prompt = f"""
 Please add {numParagraphs} for the current chapter based on the specific instruction `{instruction}` and additional context (in priority order):
 
-1. Previous Paragraph: {context.get('previous_paragraph', '')}
-2. Current Section Summary: {context.get('current_summary', '')}
-3. Current outline to expand: {context.get('outline', '')}
+1. Current outline to expand: {context.get('outline', '')}
+2. Screenplay: {context.get('screenplays', '')}
+3. Previous Paragraph: {context.get('previous_paragraph', '')}
 4. Synopsis for the entire chapter: {context.get('synopsis', '')}
 5. Overall story parameters: {context.get('parameters', '')}
 
 CRITICAL INSTRUCTIONS:
 1. Generate EXACTLY {numParagraphs} paragraph(s).
-2. Add plot points, character developments or dialogues to fulfill the given instruction.
-3. Focus SOLELY on the current outline (point 2 above). DO NOT address any content or write content which goes beyond the outline.
-4. Ensure logical continuation from the previous paragraph and the section summary (which is the summary of what happened in the story so far in the current section).
+2. Add plot points, character developments or dialogues to fulfill the given instruction and 
+3. Follow the narrative from the Screenplay if available to generate the paragraphs.
+4. Focus on the current outline (point 1 above). DO NOT address any content or write content which goes beyond the outline.
+5. Ensure logical continuation from the previous paragraph and the section summary (which is the summary of what happened in the story so far in the current section).
 
 DIALOGUE EMPHASIS:
 - Include approximately 70% dialogue and conversations in your paragraphs if the scene requires it or asked in instruction.
@@ -734,18 +732,20 @@ STRICT BOUNDARIES:
 
 WRITING PROCESS:
 1. Analyze the current outline, specific instructions and previous paragraph first.
+2. Analyze the current Screenplay. Make sure to write paragraphs based on the Screenplay if available.
 3. Ensure continuity with previous paragraph.
 4. Write {numParagraphs} new paragraph(s) that fit perfectly between the previous and next paragraphs, maintaining a natural flow and seamless continuity.
 5. Double-check that your content does not overlap with the next outline.
 
 FINAL VERIFICATION:
 - Have you written exactly {numParagraphs} paragraph(s)?
+- Does your content follow the Screenplay accurately?
 - Does your content strictly adhere to the current outline without touching on the next outline?
 - Have you included sufficient dialogue and conversations as requested?
 - Does the new content fit seamlessly with the existing text and maintain the overall flow?
 """
 
-    # print(prompt)
+    print(prompt)
 
     # prompt = f'Write a story with exactly 3 paragraphs and 10 words each.'
 
@@ -928,6 +928,75 @@ def update_summary_rewrite():
     summary = summary.replace("\n\n", " ")
     return jsonify({'newSummary': summary})
 
+@app.route('/chapter/scene/new', methods=['POST'])
+def generate_new_scene():
+    data = request.get_json()
+    context = data.get('context')
+    instruction = data.get('instruction')
+    
+    system_prompt = f"""
+    You are an expert screenplay writer with a talent for creating vivid, detailed scenes in JSON format. Your task is to create rich, engaging screenplay scenes that are both cinematically compelling and perfectly formatted for easy parsing. When writing, adhere to these guidelines:
+
+1. Structure your entire output as a valid JSON object.
+2. Include a "title" field for the scene or screenplay, which is a small title which represents the scene.
+3. Create a "setting" object with "location", "time", and a detailed "description" field.
+4. Provide a "characters" array, where each character is an object with "name" and a comprehensive "description" field.
+5. The main content of your screenplay should be in an "elements" array. Each element should be an object with a "type" field (e.g., "action", "dialogue", "transition", "internal_monologue") and appropriate additional fields based on the type.
+6. For "dialogue" elements, include "character", "line", and when appropriate, a "parenthetical" field for acting directions.
+7. For all other fields, include a "description" field.
+7. Use vivid, specific language in your descriptions and dialogue. Paint a clear picture of the scene, characters' emotions, and subtle details of their interactions.
+8. Create a minimum of 5 elements in your scene, balancing action and dialogue to create a rich, immersive experience.
+9. Develop the scene with a clear beginning, middle, and end, showcasing character development and advancing the plot.
+10. Include internal monologues, detailed environmental descriptions, and character reactions to add depth to the scene.
+
+Remember to maintain proper screenplay conventions within the JSON structure, such as capitalizing character names when first introduced and using present tense for action descriptions."""
+    
+    user_prompt = f"""Create a screenplay scene in JSON format based on the instruction `{instruction}` and additional context (in priority order):
+1. Current Section Outline: `{context.get('overall_outline', "")}`
+2. Current Screenplays: `{context.get('current_screenplay', "")}`
+3. Previous Section Summary: `{context.get('previous_summary', "")}`
+4. Synopsis for the entire chapter: `{context.get('synopsis', '')}`
+5. Overall story parameters: `{context.get('parameters', '')}`
+
+Instructions:
+- Generate an extensive, richly detailed screenplay scene that expands on the events described in the Current Section Outline.
+- If current screenplay is available, write the next scene which flows logically and tonally with the previous screenplays.
+- Ensure the scene follows logically and tonally from the Previous Section Summary.
+- Maintain consistency with the overall theme and character development described in the Chapter Synopsis and Context.
+- The scene should include:
+  1. A vividly described setting with sensory details
+  2. In-depth character descriptions and development
+  3. Extensive dialogue that reveals character personalities and advances the plot
+  4. Detailed actions and reactions, including subtle gestures and expressions
+  5. Internal monologues to provide insight into characters' thoughts and emotions
+  6. An appropriate tone that matches the story's context
+- Aim for a minimum of 5 elements in the scene, balancing action, dialogues and internal monologues.
+- Explore the character's emotional journey throughout the scene, showing their internal conflict and decision-making process.
+- End the scene at a point that creates anticipation for the next part of the story, but do not add anything that is not mentioned in the outline or instructions.
+
+Remember to structure your output as a JSON object according to the format specified in the system prompt, including title, setting, characters, and scene elements.
+    """
+    print(user_prompt)
+
+    def generate():
+        partial_result = ""
+        try:
+            for chunk in hermes_ai_streamed_output(user_prompt, system_prompt, [], "", "json"):
+                if isinstance(chunk, dict) and 'error' in chunk:
+                    return jsonify(chunk), 500
+                partial_result += chunk
+                yield json.dumps({'chunk': chunk}) + '\n'
+        except Exception as e:
+            yield json.dumps({'error': "An error occured"})
+
+    return Response(stream_with_context(generate()), content_type='application/x-ndjson')
+
+    # result = hermes_ai_output(user_prompt, system_prompt, [], "")
+    # if isinstance(result, dict) and 'error' in result:
+    #     return jsonify(result), 500
+    # result = clean_json_string(result)
+    # return jsonify({'scene': result})
+    
 CHAT_HISTORY_FILE = 'chat_history.json'
 @app.route('/history/save', methods=['POST'])
 def save_chat_history():

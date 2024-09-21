@@ -8,13 +8,14 @@ const API_ENDPOINTS = {
   INSERT: "chapter/insert",
   CONTINUE: "chapter/continue",
   REWRITE: "chapter/rewrite",
+  NEWSCENE: "chapter/scene/new",
 };
 
 const streamChapterApiCall = async (
   endpoint,
   context,
   instruction,
-  numParagraphs,
+  numParagraphs = 0,
   onChunk,
   onError,
   isNsfw = false,
@@ -43,6 +44,49 @@ const streamChapterApiCall = async (
 const handleError = (error) => {
   console.log(error);
   throw new Error(error.message || "Error generating content");
+};
+
+export const getGeneratedScene = async (context, instruction, onProgress) => {
+  let scene = {
+    elements: [],
+    setting: {},
+  };
+
+  const onChunk = (data) => {
+    if (data.chunk) {
+      if (data.chunk === "[DONE]") {
+        // onProgress(scene);
+      } else {
+        try {
+          let parsedChunk = JSON.parse(data.chunk);
+          if (parsedChunk.location) {
+            scene.setting = parsedChunk;
+          }
+          scene.elements.push(parsedChunk);
+          onProgress(scene);
+        } catch (error) {
+          console.error("Error parsing chunk:", error);
+        }
+      }
+    }
+  };
+
+  try {
+    onProgress(null);
+    await streamChapterApiCall(
+      API_ENDPOINTS.NEWSCENE,
+      context,
+      instruction,
+      0,
+      onChunk,
+      handleError
+    );
+
+    return scene;
+  } catch (error) {
+    console.error("Failed to generate paragraphs:", error);
+    throw error;
+  }
 };
 
 export const getSugggestedText = async (fieldType, current_value, context) => {
@@ -278,7 +322,11 @@ export const getInsertedParagraphs = async (
   }
 };
 
-export const getSectionSummary = async (context, paragraphs) => {
+export const getSectionSummary = async (
+  context,
+  paragraphs,
+  previous_summary
+) => {
   try {
     const response = await regularApiCall(
       `${process.env.REACT_APP_API_URL}/chapter/section/summary`,
@@ -286,6 +334,7 @@ export const getSectionSummary = async (context, paragraphs) => {
       {
         context: context,
         paragraphs: paragraphs,
+        previous_summary: previous_summary,
       }
     );
 

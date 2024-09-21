@@ -6,6 +6,7 @@ import {
   getInsertedParagraphs,
   getRewrittenParagraphs,
   getSuggestedOutlines,
+  getGeneratedScene,
 } from "../../server/ebook";
 import { useEbook } from "../../context/EbookContext";
 
@@ -13,6 +14,9 @@ const ContentGenerator = ({
   paraInfo,
   onFinalize,
   onClose,
+  onStarted,
+  onProgress,
+  onFinished,
   renderContent,
   generationType = "paragraphs",
   title = "Generate new paragraphs",
@@ -67,6 +71,61 @@ const ContentGenerator = ({
     };
   };
 
+  const convertScenesToScreenplayText = (scenes) => {
+    if (!Array.isArray(scenes)) {
+      console.error("Scenes is not an array:", scenes);
+      return [];
+    }
+
+    return scenes.map((scene, index) => {
+      let sceneText = [];
+
+      // Scene heading
+      sceneText.push(
+        `INT. ${scene.setting.location.toUpperCase()} - ${scene.setting.time.toUpperCase()}`
+      );
+      sceneText.push("");
+
+      // Scene description
+      sceneText.push(scene.setting.description);
+      sceneText.push("");
+
+      // Scene elements
+      scene.elements.forEach((element) => {
+        switch (element.type) {
+          case "action":
+            sceneText.push(element.description);
+            sceneText.push("");
+            break;
+          case "dialogue":
+            if (element.character) {
+              sceneText.push(element.character.toUpperCase());
+            }
+
+            if (element.parenthetical) {
+              sceneText.push(`(${element.parenthetical})`);
+            }
+            sceneText.push(element.line);
+            sceneText.push("");
+            break;
+          case "internal_monologue":
+            sceneText.push(element.description);
+            sceneText.push("");
+            break;
+          case "transition":
+            sceneText.push(element.description.toUpperCase());
+            sceneText.push("");
+            break;
+          default:
+            console.warn(`Unknown element type: ${element.type}`);
+        }
+      });
+
+      // Join all lines with newline characters
+      return sceneText.join("\n");
+    });
+  };
+
   const prepareNewParagraphsContext = (chapter, paraInfo, baseContext) => {
     const outlinesList = chapter.sections.map((s) => s.outline);
     const next_outline = getNextOutline(outlinesList, paraInfo.outline);
@@ -74,6 +133,10 @@ const ContentGenerator = ({
     const previous_summary =
       sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
     const current_summary = chapter.sections[sectionIndex].summary || "";
+    const current_scenes = chapter.sections[sectionIndex].scenes || "";
+
+    const screenplayTextArray = convertScenesToScreenplayText(current_scenes);
+    // console.log(screenplayTextArray);
 
     let previous_paragraph =
       chapter.sections[sectionIndex].paragraphs?.slice(-1)[0] ||
@@ -87,6 +150,7 @@ const ContentGenerator = ({
       outline: paraInfo.outline,
       next_outline,
       previous_paragraph: previous_paragraph,
+      screenplays: screenplayTextArray,
     };
   };
 
@@ -101,6 +165,24 @@ const ContentGenerator = ({
       chapter_synopsis: chapter.synopsis,
       previous_outlines: prev_outlines,
       previous_summaries: prev_summaries,
+    };
+  };
+
+  const prepareNewSceneContext = (chapter, paraInfo, baseContext) => {
+    let previous_summary = "";
+    if (paraInfo.sectionIndex != 0) {
+      previous_summary = chapter.sections[paraInfo.sectionIndex - 1].summary;
+    }
+    const current_scenes = chapter.sections[paraInfo.sectionIndex].scenes || "";
+
+    const screenplayTextArray = convertScenesToScreenplayText(current_scenes);
+    console.log(screenplayTextArray);
+    // console.log({ previous_summary });
+    return {
+      ...baseContext,
+      overall_outline: paraInfo.outline,
+      previous_summary: previous_summary,
+      current_screenplay: screenplayTextArray,
     };
   };
 
@@ -154,6 +236,8 @@ const ContentGenerator = ({
             prepareInsertContext(chapter, paraInfo, baseContext),
           new_paragraphs: () =>
             prepareNewParagraphsContext(chapter, paraInfo, baseContext),
+          new_scene: () =>
+            prepareNewSceneContext(chapter, paraInfo, baseContext),
           outlines: () => prepareOutlinesContext(chapter, baseContext),
         };
 
@@ -177,7 +261,7 @@ const ContentGenerator = ({
             isRetry
           );
         } else {
-          const onProgress = (intermediateResult) => {
+          const handleProgress = (intermediateResult) => {
             setGeneratedContent(intermediateResult);
           };
           if (generationType == "insert_paragraphs") {
@@ -185,7 +269,7 @@ const ContentGenerator = ({
               context,
               instruction,
               count,
-              onProgress,
+              handleProgress,
               isRetry
             );
           } else if (generationType == "new_paragraphs") {
@@ -193,7 +277,7 @@ const ContentGenerator = ({
               context,
               instruction,
               count,
-              onProgress,
+              handleProgress,
               isRetry
             );
           } else if (generationType == "outlines") {
@@ -201,8 +285,17 @@ const ContentGenerator = ({
               context,
               instruction,
               count,
+              handleProgress
+            );
+          } else if (generationType == "new_scene") {
+            onStarted();
+            setGeneratedContent([]);
+            generatedContent = await getGeneratedScene(
+              context,
+              instruction,
               onProgress
             );
+            onFinished(generatedContent);
           }
         }
         setGeneratedContent(generatedContent);
@@ -320,7 +413,7 @@ const ContentGenerator = ({
               </button>
             </div>
           )}
-          {renderContent(generatedContent, handleEditEntry, handleDeleteEntry)}
+          {renderContent(generatedContent)}
         </>
       )}
 
