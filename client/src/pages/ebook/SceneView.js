@@ -148,11 +148,14 @@ const SceneView = ({
   const handleSceneContinueStarted = () => {};
   const handleSceneContinueFinished = () => {};
 
-  const handleContentFinished = () => {
+  const handleContentFinished = useCallback((scene) => {
+    if (scene) {
+      setDraftScene(scene);
+    }
     setIsGenerating(false);
     setShowContinueGenerator(false);
     setShowRewriteGenerator(false);
-  };
+  }, []);
 
   const sceneView = (scene) => {
     const handleElementSelect = (index) => {

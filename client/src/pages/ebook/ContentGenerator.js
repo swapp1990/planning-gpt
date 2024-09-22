@@ -303,8 +303,11 @@ const ContentGenerator = ({
             generatedContent = await getGeneratedScene(
               context,
               instruction,
-              onProgress
+              count,
+              onProgress,
+              true
             );
+            console.log(generatedContent);
             onFinished(generatedContent);
           } else if (generationType == "rewrite_scene") {
             onStarted();
@@ -312,6 +315,7 @@ const ContentGenerator = ({
             generatedContent = await getRewrittenScene(
               context,
               instruction,
+              count,
               onProgress
             );
             onFinished(generatedContent);
@@ -321,6 +325,7 @@ const ContentGenerator = ({
             generatedContent = await getContinuedScene(
               context,
               instruction,
+              count,
               onProgress
             );
             onFinished(generatedContent);

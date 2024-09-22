@@ -1,0 +1,93 @@
+{
+  "title": "The Big Pitch",
+  "setting": {
+    "location": "SLEEK CONFERENCE ROOM",
+    "time": "DAY",
+    "description": "A modern, glass-walled conference room with a spectacular city view. A large screen dominates one wall."
+  },
+  "characters": [
+    { "name": "EMMA", "description": "30s, confident startup CEO" },
+    { "name": "JACK", "description": "40s, skeptical investor" },
+    { "name": "ZOE", "description": "20s, nervous but brilliant engineer" },
+    { "name": "DEREK", "description": "50s, interested potential partner" }
+  ],
+  "elements": [
+    {
+      "type": "action",
+      "content": "EMMA stands at the head of the table, clicker in hand. ZOE fidgets with her laptop. JACK and DEREK sit, watching expectantly."
+    },
+    {
+      "type": "dialogue",
+      "character": "EMMA",
+      "line": "Gentlemen, thank you for coming. We're about to change the future of transportation."
+    },
+    {
+      "type": "action",
+      "content": "Emma clicks. The screen lights up with sleek designs of futuristic vehicles."
+    },
+    {
+      "type": "dialogue",
+      "character": "JACK",
+      "parenthetical": "leaning back, skeptical",
+      "line": "We've heard that before, Ms. Chen. What makes your... hover-cars different?"
+    },
+    {
+      "type": "dialogue",
+      "character": "EMMA",
+      "line": "I'm glad you asked. Zoe?"
+    },
+    {
+      "type": "action",
+      "content": "ZOE startles, then stands, moving to the screen."
+    },
+    {
+      "type": "dialogue",
+      "character": "ZOE",
+      "parenthetical": "nervous at first, then gaining confidence",
+      "line": "Our propulsion system uses a revolutionary quantum levitation technology. It's not just more efficient; it's completely sustainable."
+    },
+    { "type": "action", "content": "DEREK leans forward, intrigued." },
+    { "type": "dialogue", "character": "DEREK", "line": "Sustainable how?" },
+    {
+      "type": "dialogue",
+      "character": "ZOE",
+      "line": "It generates its own energy during flight. Essentially, the more you use it, the more efficient it becomes."
+    },
+    { "type": "action", "content": "JACK's skepticism visibly wavers." },
+    {
+      "type": "dialogue",
+      "character": "JACK",
+      "line": "That's... impossible."
+    },
+    {
+      "type": "dialogue",
+      "character": "EMMA",
+      "parenthetical": "smiling confidently",
+      "line": "That's what they said about the light bulb, the telephone, the internet. Zoe, show them the prototype."
+    },
+    {
+      "type": "action",
+      "content": "ZOE taps on her laptop. A low hum fills the room. Outside the window, a sleek, car-sized object rises into view, hovering silently."
+    },
+    {
+      "type": "action",
+      "content": "JACK and DEREK rush to the window, amazed."
+    },
+    {
+      "type": "dialogue",
+      "character": "DEREK",
+      "parenthetical": "awestruck",
+      "line": "My God... it's real."
+    },
+    {
+      "type": "dialogue",
+      "character": "EMMA",
+      "line": "Gentlemen, welcome to the future. Shall we discuss numbers?"
+    },
+    {
+      "type": "action",
+      "content": "JACK and DEREK exchange a look, then turn back to EMMA, nodding eagerly."
+    },
+    { "type": "transition", "content": "FADE OUT." }
+  ]
+}

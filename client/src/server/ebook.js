@@ -4,24 +4,26 @@ import {
   regularApiCall,
 } from "../utils/api";
 
+const API_VER = "api/v1/";
 const API_ENDPOINTS = {
-  INSERT: "chapter/insert",
-  CONTINUE: "chapter/continue",
-  REWRITE: "chapter/rewrite",
-  NEWSCENE: "chapter/scene/new",
-  REWRITESCENE: "chapter/scene/rewrite",
-  CONTINUESCENE: "chapter/scene/continue",
-  NEWSCENEPARAGRAPHS: "chapter/scene/paragraph/new",
+  INSERT: API_VER + "chapters/insert",
+  CONTINUE: API_VER + "chapters/continue",
+  REWRITE: API_VER + "chapters/rewrite",
+  NEWSCENE: API_VER + "chapters/scene/new",
+  REWRITESCENE: API_VER + "chapters/scene/rewrite",
+  CONTINUESCENE: API_VER + "chapters/scene/continue",
+  NEWSCENEPARAGRAPHS: API_VER + "chapters/scene/paragraph/new",
 };
 
 const streamChapterApiCall = async (
   endpoint,
   context,
   instruction,
-  numParagraphs = 0,
+  count = 0,
   onChunk,
   onError,
   isNsfw = false,
+  stream = false,
   additionalParams = {}
 ) => {
   try {
@@ -31,12 +33,37 @@ const streamChapterApiCall = async (
       {
         context: context,
         instruction,
-        numParagraphs,
+        count,
         isNsfw,
+        stream,
         ...additionalParams,
       },
       onChunk,
       onError
+    );
+  } catch (error) {
+    console.log(error);
+    throw new Error(error);
+  }
+};
+
+const regularChapterApiCall = async (
+  endpoint,
+  context,
+  instruction,
+  count = 0,
+  isNsfw = false
+) => {
+  try {
+    return await regularApiCall(
+      `${process.env.REACT_APP_API_URL}/${endpoint}`,
+      "POST",
+      {
+        context: context,
+        instruction,
+        count,
+        isNsfw,
+      }
     );
   } catch (error) {
     console.log(error);
@@ -49,7 +76,13 @@ const handleError = (error) => {
   throw new Error(error.message || "Error generating content");
 };
 
-export const getGeneratedScene = async (context, instruction, onProgress) => {
+export const getGeneratedScene = async (
+  context,
+  instruction,
+  count,
+  onProgress,
+  stream = false
+) => {
   let scene = {
     title: null,
     elements: [],
@@ -81,14 +114,25 @@ export const getGeneratedScene = async (context, instruction, onProgress) => {
 
   try {
     onProgress(null);
-    await streamChapterApiCall(
-      API_ENDPOINTS.NEWSCENE,
-      context,
-      instruction,
-      0,
-      onChunk,
-      handleError
-    );
+    if (stream) {
+      await streamChapterApiCall(
+        API_ENDPOINTS.NEWSCENE,
+        context,
+        instruction,
+        count,
+        onChunk,
+        handleError,
+        false,
+        true
+      );
+    } else {
+      scene = await regularChapterApiCall(
+        API_ENDPOINTS.NEWSCENE,
+        context,
+        instruction,
+        count
+      );
+    }
 
     return scene;
   } catch (error) {
@@ -97,7 +141,12 @@ export const getGeneratedScene = async (context, instruction, onProgress) => {
   }
 };
 
-export const getRewrittenScene = async (context, instruction, onProgress) => {
+export const getRewrittenScene = async (
+  context,
+  instruction,
+  count,
+  onProgress
+) => {
   let scene = {
     title: null,
     elements: [],
@@ -133,7 +182,7 @@ export const getRewrittenScene = async (context, instruction, onProgress) => {
       API_ENDPOINTS.REWRITESCENE,
       context,
       instruction,
-      0,
+      count,
       onChunk,
       handleError
     );
@@ -145,7 +194,12 @@ export const getRewrittenScene = async (context, instruction, onProgress) => {
   }
 };
 
-export const getContinuedScene = async (context, instruction, onProgress) => {
+export const getContinuedScene = async (
+  context,
+  instruction,
+  count,
+  onProgress
+) => {
   let scene = {
     title: null,
     elements: [],
@@ -181,7 +235,7 @@ export const getContinuedScene = async (context, instruction, onProgress) => {
       API_ENDPOINTS.CONTINUESCENE,
       context,
       instruction,
-      0,
+      count,
       onChunk,
       handleError
     );

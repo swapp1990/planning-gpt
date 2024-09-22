@@ -74,8 +74,13 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       parameters: ebookState.parameters,
       synopsis: chapter.synopsis,
     };
-    let paragraphs = section.paragraphs.join("\n");
-    let previous_summary = chapter.sections[sectionIndex - 1].summary;
+    // let paragraphs = section.paragraphs.join("\n");
+    let paragraphs = section.scenes.flatMap((s) => s.paragraphs || []);
+    let previous_summary =
+      sectionIndex > 0 && chapter.sections[sectionIndex - 1]
+        ? chapter.sections[sectionIndex - 1].summary
+        : null;
+
     try {
       const generatedSummary = await getSectionSummary(
         context,

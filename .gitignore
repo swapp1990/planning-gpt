@@ -19,3 +19,6 @@ analysis/
 client/node_modules/
 server/__pycache__/
 server/models/__pycache__/
+server/core/__pycache__/
+server/services/__pycache__/
+server/tests/__pycache__/
