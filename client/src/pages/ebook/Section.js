@@ -15,7 +15,6 @@ import {
 } from "react-icons/fa";
 import { useEbook } from "../../context/EbookContext";
 import { getSectionSummary } from "../../server/ebook";
-import Paragraph from "./Paragraph";
 import TabSystem from "../../components/TabSystem";
 import SceneView from "./SceneView";
 import ParagraphView from "./ParagraphView";
@@ -205,13 +204,11 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
     [chapterActions, chapterId, sectionIndex, section]
   );
 
-  const handleAddScene = useCallback(
-    (newScene) => {
+  const handleUpdateScene = useCallback(
+    (updatedScenes) => {
       chapterActions.updateSection(chapterId, sectionIndex, {
         ...section,
-        scenes: Array.isArray(section.scenes)
-          ? [...section.scenes, newScene]
-          : [newScene],
+        scenes: updatedScenes,
       });
     },
     [chapterActions, chapterId, sectionIndex, section]
@@ -251,7 +248,7 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
           chapterId={chapterId}
           sectionIndex={sectionIndex}
           outline={section.outline}
-          onAddScene={handleAddScene}
+          onUpdateScene={handleUpdateScene}
           onDeleteScene={handleDeleteScene}
         />
       ),
@@ -261,15 +258,21 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       icon: FaParagraph,
       content: (
         <ParagraphView
-          paragraphs={section.paragraphs}
+          scenes={section.scenes || []}
           chapterId={chapterId}
           sectionIndex={sectionIndex}
-          outline={section.outline}
-          onRewriteParagraph={handleRewriteParagraph}
-          onInsertParagraph={handleInsertParagraph}
-          onDeleteParagraph={handleDeleteParagraph}
-          onAddParagraphs={handleAddParagraphs}
+          onUpdateScene={handleUpdateScene}
         />
+        // <ParagraphView
+        //   paragraphs={section.paragraphs}
+        //   chapterId={chapterId}
+        //   sectionIndex={sectionIndex}
+        //   outline={section.outline}
+        //   onRewriteParagraph={handleRewriteParagraph}
+        //   onInsertParagraph={handleInsertParagraph}
+        //   onDeleteParagraph={handleDeleteParagraph}
+        //   onAddParagraphs={handleAddParagraphs}
+        // />
       ),
     },
   ];

@@ -9,6 +9,9 @@ const API_ENDPOINTS = {
   CONTINUE: "chapter/continue",
   REWRITE: "chapter/rewrite",
   NEWSCENE: "chapter/scene/new",
+  REWRITESCENE: "chapter/scene/rewrite",
+  CONTINUESCENE: "chapter/scene/continue",
+  NEWSCENEPARAGRAPHS: "chapter/scene/paragraph/new",
 };
 
 const streamChapterApiCall = async (
@@ -48,6 +51,7 @@ const handleError = (error) => {
 
 export const getGeneratedScene = async (context, instruction, onProgress) => {
   let scene = {
+    title: null,
     elements: [],
     setting: {},
   };
@@ -59,6 +63,10 @@ export const getGeneratedScene = async (context, instruction, onProgress) => {
       } else {
         try {
           let parsedChunk = JSON.parse(data.chunk);
+          // console.log(parsedChunk);
+          if (parsedChunk.type == "title") {
+            scene.title = parsedChunk.text;
+          }
           if (parsedChunk.location) {
             scene.setting = parsedChunk;
           }
@@ -75,6 +83,102 @@ export const getGeneratedScene = async (context, instruction, onProgress) => {
     onProgress(null);
     await streamChapterApiCall(
       API_ENDPOINTS.NEWSCENE,
+      context,
+      instruction,
+      0,
+      onChunk,
+      handleError
+    );
+
+    return scene;
+  } catch (error) {
+    console.error("Failed to generate paragraphs:", error);
+    throw error;
+  }
+};
+
+export const getRewrittenScene = async (context, instruction, onProgress) => {
+  let scene = {
+    title: null,
+    elements: [],
+    setting: {},
+  };
+
+  const onChunk = (data) => {
+    if (data.chunk) {
+      if (data.chunk === "[DONE]") {
+        // onProgress(scene);
+      } else {
+        try {
+          let parsedChunk = JSON.parse(data.chunk);
+          // console.log(parsedChunk);
+          if (parsedChunk.type == "title") {
+            scene.title = parsedChunk.text;
+          }
+          if (parsedChunk.location) {
+            scene.setting = parsedChunk;
+          }
+          scene.elements.push(parsedChunk);
+          onProgress(scene);
+        } catch (error) {
+          console.error("Error parsing chunk:", error);
+        }
+      }
+    }
+  };
+
+  try {
+    onProgress(null);
+    await streamChapterApiCall(
+      API_ENDPOINTS.REWRITESCENE,
+      context,
+      instruction,
+      0,
+      onChunk,
+      handleError
+    );
+
+    return scene;
+  } catch (error) {
+    console.error("Failed to generate paragraphs:", error);
+    throw error;
+  }
+};
+
+export const getContinuedScene = async (context, instruction, onProgress) => {
+  let scene = {
+    title: null,
+    elements: [],
+    setting: {},
+  };
+
+  const onChunk = (data) => {
+    if (data.chunk) {
+      if (data.chunk === "[DONE]") {
+        // onProgress(scene);
+      } else {
+        try {
+          let parsedChunk = JSON.parse(data.chunk);
+          // console.log(parsedChunk);
+          if (parsedChunk.type == "title") {
+            scene.title = parsedChunk.text;
+          }
+          if (parsedChunk.location) {
+            scene.setting = parsedChunk;
+          }
+          scene.elements.push(parsedChunk);
+          onProgress(scene);
+        } catch (error) {
+          console.error("Error parsing chunk:", error);
+        }
+      }
+    }
+  };
+
+  try {
+    onProgress(null);
+    await streamChapterApiCall(
+      API_ENDPOINTS.CONTINUESCENE,
       context,
       instruction,
       0,
@@ -201,6 +305,60 @@ export const getNewParagraphs = async (
   try {
     await streamChapterApiCall(
       API_ENDPOINTS.CONTINUE,
+      context,
+      instruction,
+      numParagraphs,
+      onChunk,
+      handleError,
+      isNsfw
+    );
+
+    return newParagraphs;
+  } catch (error) {
+    console.error("Failed to generate paragraphs:", error);
+    throw error;
+  }
+};
+
+export const getNewSceneParagraphs = async (
+  context,
+  instruction,
+  numParagraphs,
+  onProgress,
+  isNsfw = false
+) => {
+  let newParagraphs = [];
+  let currentParagraph = "";
+
+  const sendUpdate = () => {
+    onProgress([...newParagraphs, currentParagraph.trim()]);
+  };
+
+  const onChunk = (data) => {
+    if (data.chunk) {
+      if (data.chunk === "[DONE]") {
+        if (currentParagraph.trim()) {
+          newParagraphs.push(currentParagraph.trim());
+        }
+        sendUpdate();
+      } else {
+        if (data.chunk.includes("\\n\\n")) {
+          let splits = data.chunk.split("\\n\\n");
+          currentParagraph += splits[0] + " ";
+          newParagraphs.push(currentParagraph.trim());
+          currentParagraph = splits[1];
+          sendUpdate();
+        } else {
+          currentParagraph += data.chunk + " ";
+          sendUpdate();
+        }
+      }
+    }
+  };
+
+  try {
+    await streamChapterApiCall(
+      API_ENDPOINTS.NEWSCENEPARAGRAPHS,
       context,
       instruction,
       numParagraphs,

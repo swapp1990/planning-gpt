@@ -3,10 +3,13 @@ import { FaPlus, FaTimes, FaMinus } from "react-icons/fa";
 import GenerationMenu from "./GenerationMenu";
 import {
   getNewParagraphs,
+  getNewSceneParagraphs,
   getInsertedParagraphs,
   getRewrittenParagraphs,
   getSuggestedOutlines,
   getGeneratedScene,
+  getRewrittenScene,
+  getContinuedScene,
 } from "../../server/ebook";
 import { useEbook } from "../../context/EbookContext";
 
@@ -79,7 +82,7 @@ const ContentGenerator = ({
 
     return scenes.map((scene, index) => {
       let sceneText = [];
-
+      sceneText.push(`TITLE: ${scene.title}`);
       // Scene heading
       sceneText.push(
         `INT. ${scene.setting.location.toUpperCase()} - ${scene.setting.time.toUpperCase()}`
@@ -127,30 +130,18 @@ const ContentGenerator = ({
   };
 
   const prepareNewParagraphsContext = (chapter, paraInfo, baseContext) => {
-    const outlinesList = chapter.sections.map((s) => s.outline);
-    const next_outline = getNextOutline(outlinesList, paraInfo.outline);
     const sectionIndex = paraInfo.sectionIndex;
-    const previous_summary =
-      sectionIndex > 0 ? chapter.sections[sectionIndex - 1].summary : "";
-    const current_summary = chapter.sections[sectionIndex].summary || "";
-    const current_scenes = chapter.sections[sectionIndex].scenes || "";
+    const current_scene =
+      chapter.sections[sectionIndex].scenes[paraInfo.sceneIndex] || "";
 
-    const screenplayTextArray = convertScenesToScreenplayText(current_scenes);
+    const screenplayTextArray = convertScenesToScreenplayText([current_scene]);
     // console.log(screenplayTextArray);
-
-    let previous_paragraph =
-      chapter.sections[sectionIndex].paragraphs?.slice(-1)[0] ||
-      chapter.sections[sectionIndex - 1]?.paragraphs?.slice(-1)[0] ||
-      "";
+    let screenplayText = screenplayTextArray.join("\n\n");
+    console.log(screenplayText);
 
     return {
       ...baseContext,
-      previous_summary,
-      current_summary,
-      outline: paraInfo.outline,
-      next_outline,
-      previous_paragraph: previous_paragraph,
-      screenplays: screenplayTextArray,
+      current_screenplay: screenplayText,
     };
   };
 
@@ -176,13 +167,28 @@ const ContentGenerator = ({
     const current_scenes = chapter.sections[paraInfo.sectionIndex].scenes || "";
 
     const screenplayTextArray = convertScenesToScreenplayText(current_scenes);
-    console.log(screenplayTextArray);
+    // console.log(screenplayTextArray);
     // console.log({ previous_summary });
     return {
       ...baseContext,
       overall_outline: paraInfo.outline,
       previous_summary: previous_summary,
       current_screenplay: screenplayTextArray,
+    };
+  };
+
+  const prepareRewriteSceneContext = (chapter, paraInfo, baseContext) => {
+    let previous_summary = "";
+    if (paraInfo.sectionIndex != 0) {
+      previous_summary = chapter.sections[paraInfo.sectionIndex - 1].summary;
+    }
+    const screenplayTextArray = convertScenesToScreenplayText([paraInfo.scene]);
+    console.log(screenplayTextArray);
+    // console.log({ previous_summary });
+    return {
+      ...baseContext,
+      current_screenplay: screenplayTextArray,
+      previous_summary: previous_summary,
     };
   };
 
@@ -238,6 +244,10 @@ const ContentGenerator = ({
             prepareNewParagraphsContext(chapter, paraInfo, baseContext),
           new_scene: () =>
             prepareNewSceneContext(chapter, paraInfo, baseContext),
+          rewrite_scene: () =>
+            prepareRewriteSceneContext(chapter, paraInfo, baseContext),
+          continue_scene: () =>
+            prepareRewriteSceneContext(chapter, paraInfo, baseContext),
           outlines: () => prepareOutlinesContext(chapter, baseContext),
         };
 
@@ -273,7 +283,7 @@ const ContentGenerator = ({
               isRetry
             );
           } else if (generationType == "new_paragraphs") {
-            generatedContent = await getNewParagraphs(
+            generatedContent = await getNewSceneParagraphs(
               context,
               instruction,
               count,
@@ -291,6 +301,24 @@ const ContentGenerator = ({
             onStarted();
             setGeneratedContent([]);
             generatedContent = await getGeneratedScene(
+              context,
+              instruction,
+              onProgress
+            );
+            onFinished(generatedContent);
+          } else if (generationType == "rewrite_scene") {
+            onStarted();
+            setGeneratedContent([]);
+            generatedContent = await getRewrittenScene(
+              context,
+              instruction,
+              onProgress
+            );
+            onFinished(generatedContent);
+          } else if (generationType == "continue_scene") {
+            onStarted();
+            setGeneratedContent([]);
+            generatedContent = await getContinuedScene(
               context,
               instruction,
               onProgress

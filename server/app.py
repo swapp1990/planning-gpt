@@ -262,6 +262,7 @@ def process_json_chunks(chunk, json_buffer):
             break
         
         json_str = match.group()
+        # print(json_str)
         try:
             json_obj = json.loads(json_str)
             chunks_to_yield.append(json.dumps(json_obj))
@@ -707,16 +708,20 @@ def continue_chapter():
     prompt = f"""
 Please add {numParagraphs} for the current chapter based on the specific instruction `{instruction}` and additional context (in priority order):
 
-1. Current outline to expand: {context.get('outline', '')}
-2. Screenplay: {context.get('screenplays', '')}
-3. Previous Paragraph: {context.get('previous_paragraph', '')}
+1. Screenplay (In Sequence): `{context.get('screenplays', '')}`
+
+2. Current outline to expand: {context.get('outline', '')}
+
+3. Previous Paragraph: `{context.get('previous_paragraph', '')}`
+
 4. Synopsis for the entire chapter: {context.get('synopsis', '')}
+
 5. Overall story parameters: {context.get('parameters', '')}
 
 CRITICAL INSTRUCTIONS:
 1. Generate EXACTLY {numParagraphs} paragraph(s).
-2. Add plot points, character developments or dialogues to fulfill the given instruction and 
-3. Follow the narrative from the Screenplay if available to generate the paragraphs.
+2. Follow the narrative, dialogues and actions from the Screenplay if available to generate the paragraphs.
+3. Add plot points, character developments or dialogues to fulfill the given instruction 
 4. Focus on the current outline (point 1 above). DO NOT address any content or write content which goes beyond the outline.
 5. Ensure logical continuation from the previous paragraph and the section summary (which is the summary of what happened in the story so far in the current section).
 
@@ -732,7 +737,7 @@ STRICT BOUNDARIES:
 
 WRITING PROCESS:
 1. Analyze the current outline, specific instructions and previous paragraph first.
-2. Analyze the current Screenplay. Make sure to write paragraphs based on the Screenplay if available.
+2. Analyze the current Screenplay. It is divided into multiple scenes using a Title. Make sure to write paragraphs based on the Screenplay if available.
 3. Ensure continuity with previous paragraph.
 4. Write {numParagraphs} new paragraph(s) that fit perfectly between the previous and next paragraphs, maintaining a natural flow and seamless continuity.
 5. Double-check that your content does not overlap with the next outline.
@@ -928,40 +933,91 @@ def update_summary_rewrite():
     summary = summary.replace("\n\n", " ")
     return jsonify({'newSummary': summary})
 
+SYSTEM_PROMPT_SCENE_WRITER = """You are an expert screenplay writer with a talent for creating vivid, detailed scenes in JSON format. Your task is to create rich, engaging screenplay scenes that are both cinematically compelling and perfectly formatted for easy parsing. When writing, adhere to these guidelines:
+
+1. Structure your entire output as a valid JSON object.
+2. Include a "title" object with "type" as "title" and "text" field. This is a small title which represents the scene.
+3. Create a "setting" object with "location", "time", and a detailed "description" field.
+4. Provide multiple "character" objects with "type" as "character", "name" field and a comprehensive "description" field.
+5. The main content of your screenplay should be in an "elements" array. Each element should be an object with a "type" field (e.g., "action", "dialogue", "transition", "internal_monologue") and appropriate additional fields based on the type.
+6. For "dialogue" elements, include "character", "line", and when appropriate, a "parenthetical" field for acting directions.
+7. For all other fields, include a "description" field.
+7. Use vivid, specific language in your descriptions and dialogue. Paint a clear picture of the scene, characters' emotions, and subtle details of their interactions.
+8. Develop the scene with a clear beginning, middle, and end, showcasing character development and advancing the plot.
+9. Include internal monologues, detailed environmental descriptions, and character reactions to add depth to the scene.
+
+Remember to maintain proper screenplay conventions within the JSON structure, such as using present tense for action descriptions."""
+
 @app.route('/chapter/scene/new', methods=['POST'])
 def generate_new_scene():
     data = request.get_json()
     context = data.get('context')
     instruction = data.get('instruction')
+    num_elements = 15
     
-    system_prompt = f"""
-    You are an expert screenplay writer with a talent for creating vivid, detailed scenes in JSON format. Your task is to create rich, engaging screenplay scenes that are both cinematically compelling and perfectly formatted for easy parsing. When writing, adhere to these guidelines:
-
-1. Structure your entire output as a valid JSON object.
-2. Include a "title" field for the scene or screenplay, which is a small title which represents the scene.
-3. Create a "setting" object with "location", "time", and a detailed "description" field.
-4. Provide a "characters" array, where each character is an object with "name" and a comprehensive "description" field.
-5. The main content of your screenplay should be in an "elements" array. Each element should be an object with a "type" field (e.g., "action", "dialogue", "transition", "internal_monologue") and appropriate additional fields based on the type.
-6. For "dialogue" elements, include "character", "line", and when appropriate, a "parenthetical" field for acting directions.
-7. For all other fields, include a "description" field.
-7. Use vivid, specific language in your descriptions and dialogue. Paint a clear picture of the scene, characters' emotions, and subtle details of their interactions.
-8. Create a minimum of 5 elements in your scene, balancing action and dialogue to create a rich, immersive experience.
-9. Develop the scene with a clear beginning, middle, and end, showcasing character development and advancing the plot.
-10. Include internal monologues, detailed environmental descriptions, and character reactions to add depth to the scene.
-
-Remember to maintain proper screenplay conventions within the JSON structure, such as capitalizing character names when first introduced and using present tense for action descriptions."""
+    system_prompt = SYSTEM_PROMPT_SCENE_WRITER
     
-    user_prompt = f"""Create a screenplay scene in JSON format based on the instruction `{instruction}` and additional context (in priority order):
-1. Current Section Outline: `{context.get('overall_outline', "")}`
-2. Current Screenplays: `{context.get('current_screenplay', "")}`
+    user_prompt = f"""Create a new scene in JSON format based on the instruction `{instruction}` and additional context (in priority order):
+1. Current Screenplays: `{context.get('current_screenplay', "")}`
+2. Current Section Outline: `{context.get('overall_outline', "")}`
 3. Previous Section Summary: `{context.get('previous_summary', "")}`
 4. Synopsis for the entire chapter: `{context.get('synopsis', '')}`
 5. Overall story parameters: `{context.get('parameters', '')}`
 
 Instructions:
-- Generate an extensive, richly detailed screenplay scene that expands on the events described in the Current Section Outline.
+- Analyze the current screenplays (which are in sequence).
+- Generate an extensive, richly detailed screenplay scene that expands on the events that happen during the Current Section Outline.
 - If current screenplay is available, write the next scene which flows logically and tonally with the previous screenplays.
-- Ensure the scene follows logically and tonally from the Previous Section Summary.
+- Ensure the new scene especially the "sequence" part, does not repeat anything that has already happened in the "sequence" part of Previous Section Summary.
+- Maintain consistency with the overall theme and character development described in the Chapter Synopsis and Parameters.
+- The scene should include:
+  1. A vividly described setting with sensory details
+  2. In-depth character descriptions and development
+  3. Extensive dialogue that reveals character personalities and advances the plot
+  4. Detailed actions and reactions, including subtle gestures and expressions
+  5. Internal monologues to provide insight into characters' thoughts and emotions
+  6. An appropriate tone that matches the story's context
+- Aim for a minimum of {num_elements} elements in the scene, balancing action, dialogues and internal monologues. Do not try to finish the scene quickly by rushing the scene, if you run out of elements.
+- Explore the character's emotional journey throughout the scene, showing their internal conflict and decision-making process.
+- Do not try to end or conclude the scene, unless specifically asked for in the instruction.
+- If the instruction makes changes to characters, time or location modify those fields as well.
+
+Remember to structure your output as a JSON object according to the format specified in the system prompt, including title, setting, characters, and scene elements.
+    """
+    print(user_prompt)
+
+    def generate():
+        partial_result = ""
+        try:
+            for chunk in hermes_ai_streamed_output(user_prompt, system_prompt, [], "", "json"):
+                if isinstance(chunk, dict) and 'error' in chunk:
+                    return jsonify(chunk), 500
+                partial_result += chunk
+                yield json.dumps({'chunk': chunk}) + '\n'
+        except Exception as e:
+            yield json.dumps({'error': "An error occured"})
+
+    return Response(stream_with_context(generate()), content_type='application/x-ndjson')
+    
+@app.route('/chapter/scene/rewrite', methods=['POST'])
+def generate_rewritten_scene():
+    data = request.get_json()
+    context = data.get('context')
+    instruction = data.get('instruction')
+    num_elements = 15
+    
+    system_prompt = SYSTEM_PROMPT_SCENE_WRITER
+    
+    user_prompt = f"""Rewrite the screenplay scene in JSON format based on the instruction `{instruction}` and additional context (in priority order):
+1. Current screenplay to rewrite: `{context.get('current_screenplay', "")}`
+2. Previous Section Summary: `{context.get('previous_summary', "")}`
+3. Synopsis for the entire chapter: `{context.get('synopsis', '')}`
+4. Overall story parameters: `{context.get('parameters', '')}`
+
+Instructions:
+- Generate an extensive, richly detailed screenplay scene that follows instructions precisely to alter the scene.
+- If the instruction needs rewrite of the entire screenplay, then do that.
+- Ensure the scene follows logically and tonally from the Previous Section Summary, especially the "sequence" part, so you dont repeat anything that has already happened in the sequence.
 - Maintain consistency with the overall theme and character development described in the Chapter Synopsis and Context.
 - The scene should include:
   1. A vividly described setting with sensory details
@@ -970,9 +1026,10 @@ Instructions:
   4. Detailed actions and reactions, including subtle gestures and expressions
   5. Internal monologues to provide insight into characters' thoughts and emotions
   6. An appropriate tone that matches the story's context
-- Aim for a minimum of 5 elements in the scene, balancing action, dialogues and internal monologues.
+- Aim for exactly {num_elements} elements in the screenplay, balancing action, dialogues and internal monologues. Do not try to finish the scene quickly by rushing the scene, if you run out of elements.
 - Explore the character's emotional journey throughout the scene, showing their internal conflict and decision-making process.
-- End the scene at a point that creates anticipation for the next part of the story, but do not add anything that is not mentioned in the outline or instructions.
+- Do not try to end or conclude the scene, unless specifically asked for in the instruction.
+- If the instruction makes changes to characters, time or location modify those fields as well.
 
 Remember to structure your output as a JSON object according to the format specified in the system prompt, including title, setting, characters, and scene elements.
     """
@@ -991,12 +1048,111 @@ Remember to structure your output as a JSON object according to the format speci
 
     return Response(stream_with_context(generate()), content_type='application/x-ndjson')
 
-    # result = hermes_ai_output(user_prompt, system_prompt, [], "")
-    # if isinstance(result, dict) and 'error' in result:
-    #     return jsonify(result), 500
-    # result = clean_json_string(result)
-    # return jsonify({'scene': result})
+@app.route('/chapter/scene/continue', methods=['POST'])
+def generate_continue_scene():
+    data = request.get_json()
+    context = data.get('context')
+    instruction = data.get('instruction')
+    num_elements = 15
     
+    system_prompt = SYSTEM_PROMPT_SCENE_WRITER
+    
+    user_prompt = f"""Continue the screenplay scene in JSON format (only scene elements) based on the instruction `{instruction}` and additional context (in priority order), by adding more elements only:
+1. Current screenplay to continue: `{context.get('current_screenplay', "")}`
+2. Previous Section Summary: `{context.get('previous_summary', "")}`
+3. Synopsis for the entire chapter: `{context.get('synopsis', '')}`
+4. Overall story parameters: `{context.get('parameters', '')}`
+
+Instructions:
+- Continue the extensive, richly detailed screenplay scene that follows instructions precisely.
+- Ensure the continued scene follows logically and tonally from the Current Screenplay.
+- Ensure the continued scene especially the "sequence" part, does not repeat anything that has already happened in the "sequence" part of Previous Section Summary.
+- Maintain consistency with the overall theme and character development described in the Chapter Synopsis and Context.
+- The scene should include:
+  1. A vividly described setting with sensory details
+  2. In-depth character descriptions and development
+  3. Extensive dialogue that reveals character personalities and advances the plot
+  4. Detailed actions and reactions, including subtle gestures and expressions
+  5. Internal monologues to provide insight into characters' thoughts and emotions
+  6. An appropriate tone that matches the story's context
+- Aim for exactly {num_elements} elements in the screenplay, balancing action, dialogues and internal monologues. Do not try to finish the scene quickly by rushing the scene, if you run out of elements.
+- Explore the character's emotional journey throughout the scene, showing their internal conflict and decision-making process.
+- Do not try to end or conclude the scene, unless specifically asked for in the instruction.
+
+Remember to structure your output as a JSON object according to the format specified in the system prompt and only generate scene elements.
+    """
+    print(user_prompt)
+
+    def generate():
+        partial_result = ""
+        try:
+            for chunk in hermes_ai_streamed_output(user_prompt, system_prompt, [], "", "json"):
+                if isinstance(chunk, dict) and 'error' in chunk:
+                    return jsonify(chunk), 500
+                partial_result += chunk
+                yield json.dumps({'chunk': chunk}) + '\n'
+        except Exception as e:
+            yield json.dumps({'error': "An error occured"})
+
+    return Response(stream_with_context(generate()), content_type='application/x-ndjson')
+
+SYSTEM_PROMPT_SCENE_PARAGRAPH_WRITER = """You are an expert novel writer with a talent for transforming screenplay scenes into vivid, engaging prose. Your task is to create rich, detailed paragraphs that accurately represent the content of a given screenplay scene without adding any new plot elements or character interactions. When writing, adhere to these guidelines:
+
+1. Transform the screenplay format into flowing prose, maintaining the scene's structure and pacing.
+2. Use descriptive language to paint a clear picture of the setting, characters, and actions.
+3. Incorporate dialogue seamlessly into the narrative, using appropriate dialogue tags and action beats.
+4. Convey characters' emotions, thoughts, and internal monologues through narrative prose rather than explicit screenplay directions.
+5. Maintain the present tense typically used in screenplays, unless the story context requires otherwise.
+6. Ensure that your prose accurately reflects all elements of the screenplay, including actions, dialogues, and transitions.
+7. Do not add any new plot elements, character interactions, or significant details not present in the original screenplay.
+8. Organize your writing into paragraphs that flow logically and maintain the rhythm of the scene.
+9. Use a variety of sentence structures to create engaging prose that captures the essence of the screenplay's style.
+
+Remember to stay true to the tone, atmosphere, and character voices established in the screenplay while translating the content into a novel format."""
+
+@app.route('/chapter/scene/paragraph/new', methods=['POST'])
+def generate_new_scene_paragraphs():
+    data = request.get_json()
+    context = data.get('context')
+    instruction = data.get('instruction')
+    num_elements = 10
+    
+    system_prompt = SYSTEM_PROMPT_SCENE_PARAGRAPH_WRITER
+    
+    user_prompt = f"""Transform the following screenplay scene into novel-style paragraphs. Your task is to accurately represent all elements of the screenplay in prose form without altering or adding any major plot points or significant details. Use the following context:
+1. Current Screenplay: `{context.get('current_screenplay', "")}`
+2. Additional Instructions: `{instruction}`
+3. Synopsis for the entire chapter: `{context.get('synopsis', '')}`
+4. Overall story parameters: `{context.get('parameters', '')}`
+
+Instructions:
+1. Begin your prose with a paragraph that sets the scene, incorporating the details from the "setting" object in the JSON.
+2. Generate maximum {num_elements} paragraphs. Do not try to rush your paragraphs to complete the screenplay exactly, it's ok if the screenplay is not finished entirely.
+3. Introduce characters naturally within the narrative, weaving in their descriptions from the "character" objects as they appear in the scene.
+4. Try to incorporate each element from the screenplay into a prose:
+   - For "action" elements, describe the events in vivid detail.
+   - For "dialogue" elements, incorporate the speech into the narrative and get the tone and personality of the character.
+   - For "internal_monologue" elements, convey the character's thoughts within the narrative flow and make it fit within the paragraphs naturally.
+5. Maintain the scene's pacing and emotional tone throughout your writing.
+6. Ensure that your prose covers all aspects of the screenplay without introducing new events or new character interactions.
+7. Organize your writing into paragraphs that correspond to natural breaks or shifts in the scene.
+8. Do not write short paragraphs.
+    """
+    print(user_prompt)
+
+    def generate():
+        partial_result = ""
+        try:
+            for chunk in hermes_ai_streamed_output(user_prompt, system_prompt, [], ""):
+                if isinstance(chunk, dict) and 'error' in chunk:
+                    return jsonify(chunk), 500
+                partial_result += chunk
+                yield json.dumps({'chunk': chunk}) + '\n'
+        except Exception as e:
+            yield json.dumps({'error': "An error occured"})
+
+    return Response(stream_with_context(generate()), content_type='application/x-ndjson')
+
 CHAT_HISTORY_FILE = 'chat_history.json'
 @app.route('/history/save', methods=['POST'])
 def save_chat_history():
