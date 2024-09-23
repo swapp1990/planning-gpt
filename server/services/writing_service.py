@@ -340,7 +340,8 @@ CRITICAL INSTRUCTIONS:
 
 Instructions:
 - Analyze the current screenplays (which are in sequence).
-- Generate an extensive, richly detailed screenplay scene that expands on the events that happen during the Current Section Outline.
+- Generate an extensive, richly detailed screenplay scene that follow the instruction exactly.
+- If specific instructions are unavailable, then follow the current section outline.
 - If current screenplay is available, write the next scene which flows logically and tonally with the previous screenplays.
 - Do not repeat any content from the previous section summary, those things have already happened, use them as guidance for the new scene.
 - Ensure the new scene especially the "sequence" part, does not repeat anything that has already happened in the "sequence" part of Previous Section Summary.
