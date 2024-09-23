@@ -56,7 +56,7 @@ const ContentGenerator = ({
       ...baseContext,
       previous_paragraph: prev_para,
       next_paragraph: next_para,
-      paragraph_to_update: paraInfo.paragraphText,
+      paragraph: paraInfo.paragraphText,
     };
   };
 
@@ -255,8 +255,6 @@ const ContentGenerator = ({
 
         let generatedContent = [];
         if (generationType === "rewrite_paragraphs") {
-          const paragraphToUpdate = paraInfo.paragraphText;
-
           const onRewriteProgress = (intermediateResult) => {
             let generatedContent = [...intermediateResult];
             setGeneratedContent(generatedContent);
@@ -265,10 +263,10 @@ const ContentGenerator = ({
           generatedContent = await getRewrittenParagraphs(
             context,
             instruction,
-            paragraphToUpdate,
             count,
             onRewriteProgress,
-            isRetry
+            isRetry,
+            true
           );
         } else {
           const handleProgress = (intermediateResult) => {
@@ -280,15 +278,8 @@ const ContentGenerator = ({
               instruction,
               count,
               handleProgress,
-              isRetry
-            );
-          } else if (generationType == "new_paragraphs") {
-            generatedContent = await getNewSceneParagraphs(
-              context,
-              instruction,
-              count,
-              handleProgress,
-              isRetry
+              isRetry,
+              true
             );
           } else if (generationType == "outlines") {
             generatedContent = await getSuggestedOutlines(
@@ -326,7 +317,8 @@ const ContentGenerator = ({
               context,
               instruction,
               count,
-              onProgress
+              onProgress,
+              true
             );
             onFinished(generatedContent);
           }

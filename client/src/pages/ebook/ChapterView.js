@@ -4,7 +4,6 @@ import { useEbook } from "../../context/EbookContext";
 import Synopsis from "./Synopsis";
 import Section from "./Section";
 import ContentGenerator from "./ContentGenerator";
-import { toggleNsfw } from "../../server/ebook";
 
 const OutlineCard = ({ outline, onEdit, onDelete }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -78,19 +77,6 @@ const ChapterView = ({ chapter }) => {
   const [editedTitle, setEditedTitle] = useState(chapter.title);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isNSFW, setIsNSFW] = useState(false);
-
-  const toggleNSFW = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await toggleNsfw();
-      setIsNSFW(response);
-    } catch (err) {
-      setError("Failed to toggle NSFW status. Please try again.");
-    }
-    setIsLoading(false);
-  }, [isNSFW]);
 
   const handleTitleSave = async () => {
     setIsLoading(true);
@@ -173,24 +159,6 @@ const ChapterView = ({ chapter }) => {
             >
               <FaEdit className="w-5 h-5" />
             </button>
-            {/* <div className="flex items-center ml-4">
-              <span className="mr-2 text-sm font-medium text-gray-700">
-                {isNSFW ? "NSFW" : "SFW"}
-              </span>
-              <button
-                onClick={toggleNSFW}
-                disabled={isLoading}
-                className={`relative inline-flex items-center h-6 rounded-full w-11 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${
-                  isNSFW ? "bg-indigo-600" : "bg-gray-200"
-                }`}
-              >
-                <span
-                  className={`${
-                    isNSFW ? "translate-x-6" : "translate-x-1"
-                  } inline-block w-4 h-4 transform bg-white rounded-full transition-transform`}
-                />
-              </button>
-            </div> */}
           </div>
         )}
       </div>

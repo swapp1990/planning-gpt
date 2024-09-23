@@ -92,7 +92,7 @@ class LLMClient:
 		self,
 		prompt: str,
 		system_prompt: str,
-		model: str = "gpt-4o-2024-08-06",
+		model: str = MODEL,
 		temperature: float = 0.7,
 		max_tokens: int = 1000,
 	) -> Generator[Dict[str, Any], None, None]:
@@ -107,9 +107,34 @@ class LLMClient:
 				max_tokens=max_tokens,
 				stream=True
 			)
+			print(response)
 			yield from self._process_json_stream(response)
 		except Exception as e:
 			self.logger.error(f"Error in generate_streamed_json: {str(e)}")
+			yield {"error": f"An error occurred: {str(e)}"}
+	
+	def generate_streamed_text(
+		self,
+		prompt: str,
+		system_prompt: str,
+		model: str = MODEL,
+		temperature: float = 0.7,
+		max_tokens: int = 1000,
+	) -> Generator[Dict[str, Any], None, None]:
+		try:
+			response = self.client.chat.completions.create(
+				model=model,
+				messages=[
+					{"role": "system", "content": system_prompt},
+					{"role": "user", "content": prompt}
+				],
+				temperature=temperature,
+				max_tokens=max_tokens,
+				stream=True
+			)
+			yield from self._process_text_stream(response)
+		except Exception as e:
+			self.logger.error(f"Error in generate_streamed_text: {str(e)}")
 			yield {"error": f"An error occurred: {str(e)}"}
 	
 	def _process_json_stream(self, response):
@@ -141,5 +166,36 @@ class LLMClient:
 				yield {"chunk": json.dumps(json_obj)}
 			except json.JSONDecodeError:
 				pass
+
+		yield {"chunk": "[DONE]"}
+	
+	def _process_text_stream(self, response):
+		current_sentence = ""
+		final_response = ""
+		for chunk in response:
+			if chunk.choices[0].delta.content:
+				msg = chunk.choices[0].delta.content or ""
+				
+				# Check for "I'm sorry" at the beginning of the response
+				if not current_sentence and msg.lstrip().startswith("I'm sorry"):
+					raise ValueError("I'm sorry phrase detected")
+				
+				current_sentence += msg
+				current_sentence = current_sentence.replace("\n\n", "\\n\\n")
+				
+				sentences = re.split(r'(?<=[.!?])\s+', current_sentence)
+				
+				if len(sentences) > 1:
+					complete_sentences = sentences[:-1]
+					for sentence in complete_sentences:
+						yield {"chunk": sentence.strip()}
+						final_response += sentence + " "
+					
+					current_sentence = sentences[-1]
+		
+		# Yield any remaining content in current_sentence
+		if current_sentence.strip():
+			yield {"chunk": current_sentence.strip()}
+			final_response += current_sentence
 
 		yield {"chunk": "[DONE]"}

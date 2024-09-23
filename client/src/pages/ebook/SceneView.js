@@ -146,7 +146,10 @@ const SceneView = ({
   }, []);
 
   const handleSceneContinueStarted = () => {};
-  const handleSceneContinueFinished = () => {};
+  const handleSceneContinueFinished = useCallback((newContent) => {
+    //TODO: Handle handleSceneContinueFinished
+    console.log("handleSceneContinueFinished ", newContent);
+  }, []);
 
   const handleContentFinished = useCallback((scene) => {
     if (scene) {

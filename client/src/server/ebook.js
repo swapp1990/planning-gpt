@@ -1,18 +1,14 @@
-import {
-  streamedApiCall,
-  streamedApiCallBasic,
-  regularApiCall,
-} from "../utils/api";
+import { streamedApiCall, regularApiCall } from "../utils/api";
 
 const API_VER = "api/v1/";
 const API_ENDPOINTS = {
-  INSERT: API_VER + "chapters/insert",
   CONTINUE: API_VER + "chapters/continue",
-  REWRITE: API_VER + "chapters/rewrite",
   NEWSCENE: API_VER + "chapters/scene/new",
   REWRITESCENE: API_VER + "chapters/scene/rewrite",
   CONTINUESCENE: API_VER + "chapters/scene/continue",
   NEWSCENEPARAGRAPHS: API_VER + "chapters/scene/paragraph/new",
+  REWRITESCENEPARAGRAPHS: API_VER + "chapters/scene/paragraph/rewrite",
+  INSERTSCENEPARAGRAPHS: API_VER + "chapters/scene/paragraph/insert",
 };
 
 const streamChapterApiCall = async (
@@ -198,7 +194,8 @@ export const getContinuedScene = async (
   context,
   instruction,
   count,
-  onProgress
+  onProgress,
+  stream = false
 ) => {
   let scene = {
     title: null,
@@ -231,14 +228,25 @@ export const getContinuedScene = async (
 
   try {
     onProgress(null);
-    await streamChapterApiCall(
-      API_ENDPOINTS.CONTINUESCENE,
-      context,
-      instruction,
-      count,
-      onChunk,
-      handleError
-    );
+    if (stream) {
+      await streamChapterApiCall(
+        API_ENDPOINTS.CONTINUESCENE,
+        context,
+        instruction,
+        count,
+        onChunk,
+        handleError,
+        false,
+        true
+      );
+    } else {
+      scene = await regularChapterApiCall(
+        API_ENDPOINTS.CONTINUESCENE,
+        context,
+        instruction,
+        count
+      );
+    }
 
     return scene;
   } catch (error) {
@@ -377,9 +385,10 @@ export const getNewParagraphs = async (
 export const getNewSceneParagraphs = async (
   context,
   instruction,
-  numParagraphs,
+  count,
   onProgress,
-  isNsfw = false
+  isNsfw = false,
+  stream = true
 ) => {
   let newParagraphs = [];
   let currentParagraph = "";
@@ -411,15 +420,26 @@ export const getNewSceneParagraphs = async (
   };
 
   try {
-    await streamChapterApiCall(
-      API_ENDPOINTS.NEWSCENEPARAGRAPHS,
-      context,
-      instruction,
-      numParagraphs,
-      onChunk,
-      handleError,
-      isNsfw
-    );
+    if (stream) {
+      await streamChapterApiCall(
+        API_ENDPOINTS.NEWSCENEPARAGRAPHS,
+        context,
+        instruction,
+        count,
+        onChunk,
+        handleError,
+        isNsfw,
+        stream
+      );
+    } else {
+      scene = await regularChapterApiCall(
+        API_ENDPOINTS.NEWSCENEPARAGRAPHS,
+        context,
+        instruction,
+        count,
+        isNsfw
+      );
+    }
 
     return newParagraphs;
   } catch (error) {
@@ -431,10 +451,10 @@ export const getNewSceneParagraphs = async (
 export const getRewrittenParagraphs = async (
   context,
   instruction,
-  originalParagraph,
-  numParagraphs,
+  count,
   onProgress,
-  isNsfw = false
+  isNsfw = false,
+  stream = true
 ) => {
   let rewrittenSentences = [];
 
@@ -463,14 +483,14 @@ export const getRewrittenParagraphs = async (
 
   try {
     await streamChapterApiCall(
-      API_ENDPOINTS.REWRITE,
+      API_ENDPOINTS.REWRITESCENEPARAGRAPHS,
       context,
       instruction,
-      numParagraphs,
+      count,
       onChunk,
       handleError,
       isNsfw,
-      { paragraph: originalParagraph }
+      stream
     );
 
     return rewrittenSentences;
@@ -483,9 +503,10 @@ export const getRewrittenParagraphs = async (
 export const getInsertedParagraphs = async (
   context,
   instruction,
-  numParagraphs,
+  count,
   onProgress,
-  isNsfw = false
+  isNsfw = false,
+  stream = true
 ) => {
   let newParagraphs = [];
   let currentParagraph = "";
@@ -518,13 +539,14 @@ export const getInsertedParagraphs = async (
 
   try {
     await streamChapterApiCall(
-      API_ENDPOINTS.INSERT,
+      API_ENDPOINTS.INSERTSCENEPARAGRAPHS,
       context,
       instruction,
-      numParagraphs,
+      count,
       onChunk,
       handleError,
-      isNsfw
+      isNsfw,
+      stream
     );
 
     return newParagraphs;
@@ -554,64 +576,6 @@ export const getSectionSummary = async (
       throw new Error(response.error);
     }
     return JSON.parse(response.summary);
-  } catch (error) {
-    throw new Error(error);
-  }
-};
-
-export const rewriteSentence = async (
-  sentence,
-  instruction,
-  paragraph,
-  parameters,
-  chapter_synopsis
-) => {
-  try {
-    let revised_sentence = null;
-    const onChunk = (data) => {
-      let response = JSON.parse(data);
-      if (response.status == "rewriting") {
-      } else if (response.status == "complete") {
-        revised_sentence = response.revised_sentence;
-      } else if (response.status == "ok") {
-        revised_sentence = null;
-      }
-    };
-
-    const onError = (error) => {
-      console.error("Error fetching revised sentence:", error);
-      return null;
-    };
-    await streamedApiCallBasic(
-      `${process.env.REACT_APP_API_URL}/sentence/rewrite`,
-      "POST",
-      {
-        sentence: sentence,
-        instruction: instruction,
-        paragraph: paragraph,
-        parameters: parameters,
-        chapter_synopsis: chapter_synopsis,
-      },
-      onChunk,
-      onError
-    );
-    return { sentence: revised_sentence };
-  } catch (error) {
-    return null;
-  }
-};
-
-export const toggleNsfw = async () => {
-  try {
-    const response = await regularApiCall(
-      `${process.env.REACT_APP_API_URL}/nsfw`,
-      "POST"
-    );
-
-    if (response.error) {
-      throw new Error(response.error);
-    }
-    return response.flag;
   } catch (error) {
     throw new Error(error);
   }

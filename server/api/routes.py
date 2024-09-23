@@ -117,22 +117,158 @@ def init_routes(
 		"""
 		Continue an existing scene in a chapter.
 		"""
-		pass
+		data = request.get_json()
+		context = data.get('context', {})
+		instruction = data.get('instruction', '')
+		num_elements = data.get('count', 10)
+		stream = data.get('stream', False)
 
+		print("continue_scene " + str(num_elements) + " streaming: " + str(stream))
+
+		if stream:
+			def generate():
+				try:
+					for chunk in writing_service.continue_scene(
+						context=context,
+						instruction=instruction,
+						num_elements=num_elements,
+						stream=True
+					):
+						yield json.dumps(chunk) + '\n'
+				except Exception as e:
+					yield json.dumps({'error': str(e)}) + '\n'
+
+			return Response(stream_with_context(generate()), content_type='application/x-ndjson')
+		else:
+			try:
+				scene = writing_service.continue_scene(
+					context=context,
+					instruction=instruction,
+					num_elements=num_elements,
+					stream=False
+				)
+				return jsonify(scene)
+			except Exception as e:
+				return jsonify({'error': str(e)}), 500
+			
 	@api.route("/chapters/scene/paragraph/new", methods=["POST"])
 	def generate_scene_paragraphs():
 		"""
 		Generate paragraphs for a scene.
 		"""
-		pass
+		data = request.get_json()
+		context = data.get('context', {})
+		instruction = data.get('instruction', '')
+		num_paragraphs = data.get('count', 10)
+		stream = data.get('stream', False)
+
+		print("generate_scene_paragraphs " + str(num_paragraphs) + " streaming: " + str(stream))
+
+		if stream:
+			def generate():
+				try:
+					for chunk in writing_service.new_scene_paragraphs(
+						context=context,
+						instruction=instruction,
+						num_paragraphs=num_paragraphs,
+						stream=True
+					):
+						yield json.dumps(chunk) + '\n'
+				except Exception as e:
+					yield json.dumps({'error': str(e)}) + '\n'
+
+			return Response(stream_with_context(generate()), content_type='application/x-ndjson')
+		else:
+			try:
+				scene = writing_service.continue_scene(
+					context=context,
+					instruction=instruction,
+					num_elements=num_elements,
+					stream=False
+				)
+				return jsonify(scene)
+			except Exception as e:
+				return jsonify({'error': str(e)}), 500
+		
 	
 	@api.route("/chapters/scene/paragraph/rewrite", methods=["POST"])
 	def rewrite_scene_paragraphs():
 		"""
 		Rewrite paragraphs for a scene.
 		"""
-		pass
+		data = request.get_json()
+		context = data.get('context')
+		instruction = data.get('instruction')
+		num_paragraphs = data.get('count', 1)
+		stream = data.get('stream', False)
+		isNsfw = data.get('isNsfw', False)
+		print("rewrite_scene_paragraphs " + str(num_paragraphs) + " streaming: " + str(stream))
 
+		if stream:
+			def generate():
+				try:
+					for chunk in writing_service.rewrite_scene_paragraphs(
+						context=context,
+						instruction=instruction,
+						num_paragraphs=num_paragraphs,
+						stream=True
+					):
+						yield json.dumps(chunk) + '\n'
+				except Exception as e:
+					yield json.dumps({'error': str(e)}) + '\n'
+
+			return Response(stream_with_context(generate()), content_type='application/x-ndjson')
+		else:
+			try:
+				scene = writing_service.rewrite_scene_paragraphs(
+					context=context,
+					instruction=instruction,
+					num_paragraphs=num_paragraphs,
+					stream=False
+				)
+				return jsonify(scene)
+			except Exception as e:
+				return jsonify({'error': str(e)}), 500
+	
+	@api.route("/chapters/scene/paragraph/insert", methods=["POST"])
+	def insert_scene_paragraphs():
+		"""
+		Insert paragraphs for a scene.
+		"""
+		data = request.get_json()
+		context = data.get('context')
+		instruction = data.get('instruction')
+		num_paragraphs = data.get('count', 1)
+		stream = data.get('stream', False)
+		isNsfw = data.get('isNsfw', False)
+		print("insert_scene_paragraphs " + str(num_paragraphs) + " streaming: " + str(stream))
+
+		if stream:
+			def generate():
+				try:
+					for chunk in writing_service.insert_scene_paragraphs(
+						context=context,
+						instruction=instruction,
+						num_paragraphs=num_paragraphs,
+						stream=True
+					):
+						yield json.dumps(chunk) + '\n'
+				except Exception as e:
+					yield json.dumps({'error': str(e)}) + '\n'
+
+			return Response(stream_with_context(generate()), content_type='application/x-ndjson')
+		else:
+			try:
+				scene = writing_service.rewrite_scene_paragraphs(
+					context=context,
+					instruction=instruction,
+					num_paragraphs=num_paragraphs,
+					stream=False
+				)
+				return jsonify(scene)
+			except Exception as e:
+				return jsonify({'error': str(e)}), 500
+		
 	@api.route("/chapters/scene/paragraph/continue", methods=["POST"])
 	def continue_scene_paragraphs():
 		"""
