@@ -69,6 +69,7 @@ export const useSceneState = (initialScenes, onUpdateScene, onDeleteScene) => {
     isGenerating,
     setIsGenerating,
     editingSceneIndex,
+    expandedSceneIndex,
     setEditingSceneIndex,
     handleContentProgress,
     handleFinalizeDraft,

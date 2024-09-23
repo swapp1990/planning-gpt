@@ -9,11 +9,13 @@ import {
 import { RiWalkLine, RiChatQuoteLine, RiArrowRightLine } from "react-icons/ri";
 import { FaCommentDots } from "react-icons/fa";
 import { useElementInteractions } from "../../hooks/useElementInteractions";
+import ContentGenerator from "./ContentGenerator";
 
 const SceneElement = ({
   element,
   elemIndex,
   isSelected,
+  isAddContent,
   isDeleting,
   isHovering,
   isNewElement,
@@ -80,6 +82,21 @@ const SceneElement = ({
       {renderElementContent(element)}
 
       {children}
+
+      {isAddContent && (
+        <ContentGenerator
+          paraInfo={{}}
+          onStarted={() => {
+            /* Handle generation started */
+          }}
+          onProgress={() => {}}
+          onFinished={(scene) => {
+            /* Handle finished */
+          }}
+          generationType="insert_elements"
+          title="Generate Inserted Elements"
+        />
+      )}
     </div>
   );
 };

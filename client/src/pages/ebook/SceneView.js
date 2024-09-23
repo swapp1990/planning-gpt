@@ -39,9 +39,11 @@ const SceneView = ({
 
   const {
     selectedElementIndex,
+    addElementIndex,
     deletingIndex,
     hoverIndex,
     handleElementSelect,
+    handleElementAddContent,
     handleElementDelete,
     handleElementEdit,
   } = useElementInteractions();
@@ -62,7 +64,9 @@ const SceneView = ({
         element={element}
         elemIndex={elemIndex}
         isSelected={selectedElementIndex === elemIndex}
+        isAddContent={addElementIndex === elemIndex}
         onSelect={(index) => handleElementSelect(index)}
+        onAddContent={(index) => handleElementAddContent(index)}
       />
     ));
   };
