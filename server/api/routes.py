@@ -8,6 +8,35 @@ api = Blueprint('api', __name__, url_prefix='/api/v1')
 def init_routes(
 	writing_service: WritingService
 ) -> None:
+	@api.route("/parameters/suggestions", methods=["POST"])
+	def generate_parameter_suggestions():
+		"""
+		Generate parameter suggestions for ebook.
+		"""
+		data: Dict[str, Any] = request.get_json()
+		
+		field_type = data.get('fieldType')
+		current_value = data.get('currentValue')
+		context = data.get('context', {})
+
+		try:
+			result = writing_service.generate_parameter_suggestions(
+				context=context,
+				field_type=field_type,
+				current_value=current_value
+			)
+			print(result)
+			
+			return jsonify({'suggestions': result})
+		
+		except ValueError as ve:
+			# Handle validation errors
+			return jsonify({'error': str(ve)}), 400
+		
+		except Exception as e:
+			# Handle unexpected errors
+			return jsonify({'error': 'An unexpected error occurred', 'details': str(e)}), 500
+
 	@api.route("/chapters/suggestions", methods=["POST"])
 	def generate_chapter_suggestions():
 		"""
@@ -68,7 +97,7 @@ def init_routes(
 		except Exception as e:
 			# Handle unexpected errors
 			return jsonify({'error': 'An unexpected error occurred', 'details': str(e)}), 500
-
+	
 	@api.route("/chapters/scene/new", methods=["POST"])
 	def generate_new_scene():
 		data = request.get_json()

@@ -1,11 +1,17 @@
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
+import logging
 from core.llm_client import LLMClient
 from api.routes import api, init_routes
 from services.writing_service import WritingService
 
 app = Flask(__name__)
 CORS(app)
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 llm_client = LLMClient()
 writing_service = WritingService(llm_client)

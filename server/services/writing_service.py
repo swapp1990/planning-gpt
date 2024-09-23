@@ -6,10 +6,90 @@ from core.llm_client import LLMClient
 
 from core.prompts import SYSTEM_PROMPT_SCENE_WRITER, SYSTEM_PROMPT_SCENE_PARAGRAPH_WRITER
 
+def get_user_prompt(field_type, current_value, context):
+	base_prompt = f"Based on the current value '{current_value}' and the following context: {context}, "
+	print("get_user_prompt: " + field_type)
+	if field_type == 'Title':
+		return base_prompt + "suggest a creative and engaging title for the story."
+	elif field_type == 'Genre':
+		return base_prompt + "recommend a suitable genre or subgenre for the story."
+	elif field_type == 'Premise':
+		return base_prompt + "provide a compelling premise for the story."
+	elif field_type == 'synopsis':
+		return base_prompt + "provide a concise synopsis for the given chapter based on the context in one sentence."
+	elif field_type == 'Time':
+		return base_prompt + "suggest an interesting time period for the story to take place. (in 2-3 words)"
+	elif field_type == 'Place':
+		return base_prompt + "recommend a unique and fitting location for the story. (in 4-5 words)"
+	elif field_type == 'character':
+		return base_prompt + """generate a character profile with the following details:
+		- name
+		- age
+		- occupation
+		Ensure the character fits well within the story's context. An example of output is: {\"name\": \"Elara Windrider\", "age\": 28, \"occupation\": \"Sky Cartographer\"}"""
+	elif field_type == 'chapters':
+		return base_prompt + """generate a list of 3 chapters based on the context. Each chapter should have the following keys:
+		- title
+		- synopsis
+		Ensure the chapters fit well within the story's context. The synopsis should be maximum one sentence in length."""
+	elif field_type == 'continue_chapter': 
+		return base_prompt + """suggest an instruction or guidance on how the chapter should continue for the novel writer based on the context. The suggested instruction should focus on plot, character development, tone of the following paragraphs or a mixture of this elements. The instruction should be maximum one sentence in length. 
+		"""
+	else:
+		return base_prompt + f"provide a suggestion for the {field_type} of the story."
+
 class WritingService:
 	def __init__(self, llm_client: LLMClient):
 		self.llm_client = llm_client
 		self.logger = logging.getLogger(__name__)
+
+	@retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=1, min=4, max=10))
+	def generate_parameter_suggestions(
+		self,
+		context: Dict[str, Any],
+		field_type: str,
+		current_value: str,
+	) -> List[Dict[str, Any]]:
+		"""
+		Generate suggestions for new chapters based on the current story context.
+
+		Args:
+			chapters (List[Dict[str, Any]]): List of existing chapters
+			parameters (Dict[str, Any]): Story parameters
+			number_of_chapters (int): Number of new chapters to generate
+			total_chapters (int): Total number of chapters in the story
+
+		Returns:
+			List[Dict[str, Any]]: List of suggested chapters
+		"""
+		system_prompt = """You are an AI assistant specialized in creative writing and story development. 
+    Your task is to provide suggestions for various aspects of a story, including plot elements, 
+    character details, and setting descriptions. Ensure your suggestions are creative, diverse, 
+    and contextually appropriate.
+    
+    Your output should be a valid JSON object where each element is an object containing 'text' which is the suggested output. Only return the json output, nothing else. An example of output is: {"text\": \"Echoes of the Forgotten Realm\"}
+    """
+		
+		user_prompt = get_user_prompt(field_type, current_value, context)
+		
+		try:
+			response = self.llm_client.generate_json(
+				prompt=user_prompt,
+				system_prompt=system_prompt,
+			)
+
+			parameters = json.loads(response)
+
+			self.logger.info(f"Successfully generated {len(parameters)} parameter suggestions")
+			return parameters
+
+		except json.JSONDecodeError as e:
+			self.logger.error(f"Failed to parse LLM response as JSON: {e}")
+			raise ValueError("Invalid response format from LLM") from e
+
+		except Exception as e:
+			self.logger.error(f"Unexpected error in generate_chapter_suggestions: {e}")
+			raise
 
 	@retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=1, min=4, max=10))
 	def generate_chapter_suggestions(

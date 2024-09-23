@@ -13,12 +13,7 @@ import { v4 as uuidv4 } from "uuid";
 import GenerationMenu from "./GenerationMenu";
 import CollapsiblePanel from "../../components/CollapsiblePanel";
 import { useEbook } from "../../context/EbookContext";
-import { getSugggestedList } from "../../server/ebook";
-
-const fetchSuggestedChapters = async (context) => {
-  let chapters = (await getSugggestedList("chapters", "", context)).chapters;
-  return chapters;
-};
+import { getSugggestedList, getSuggestedChapters } from "../../server/ebook";
 
 const ChapterList = () => {
   const { ebookState, chapterActions } = useEbook();
@@ -45,7 +40,7 @@ const ChapterList = () => {
     setSuggestedChapters([]);
     setIsLoading(true);
     try {
-      const suggestions = await fetchSuggestedChapters(chapterContext);
+      const suggestions = await getSuggestedChapters(chapterContext);
       setSuggestedChapters(suggestions);
     } catch (error) {
       console.error("Error fetching chapter suggestions:", error);

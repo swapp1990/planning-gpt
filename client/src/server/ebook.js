@@ -2,6 +2,9 @@ import { streamedApiCall, regularApiCall } from "../utils/api";
 
 const API_VER = "api/v1/";
 const API_ENDPOINTS = {
+  PAREMETERSUGGESTIONS: API_VER + "parameters/suggestions",
+  CHAPTERSUGGESTIONS: API_VER + "chapters/suggestions",
+  CHAPTEROUTLINES: API_VER + "chapters/outlines",
   CONTINUE: API_VER + "chapters/continue",
   NEWSCENE: API_VER + "chapters/scene/new",
   REWRITESCENE: API_VER + "chapters/scene/rewrite",
@@ -70,6 +73,54 @@ const regularChapterApiCall = async (
 const handleError = (error) => {
   console.log(error);
   throw new Error(error.message || "Error generating content");
+};
+
+export const getSuggestedChapters = async (
+  context,
+  instruction = "",
+  num_chapters = 3,
+  total_chapters = 10
+) => {
+  try {
+    const response = await regularApiCall(
+      `${process.env.REACT_APP_API_URL}/${API_ENDPOINTS.CHAPTERSUGGESTIONS}`,
+      "POST",
+      {
+        context: context,
+        instruction: instruction,
+        number_of_chapters: num_chapters,
+        total_chapters: total_chapters,
+      }
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return response.suggestions;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+export const getSuggestedOutlines = async (context, instruction, count) => {
+  try {
+    const response = await regularApiCall(
+      `${process.env.REACT_APP_API_URL}/${API_ENDPOINTS.CHAPTEROUTLINES}`,
+      "POST",
+      {
+        context: context,
+        instruction: instruction,
+        count: count,
+      }
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return response.outlines;
+  } catch (error) {
+    throw new Error(error);
+  }
 };
 
 export const getGeneratedScene = async (
@@ -258,7 +309,7 @@ export const getContinuedScene = async (
 export const getSugggestedText = async (fieldType, current_value, context) => {
   try {
     const response = await regularApiCall(
-      `${process.env.REACT_APP_API_URL}/parameters/suggestions`,
+      `${process.env.REACT_APP_API_URL}/${API_ENDPOINTS.PAREMETERSUGGESTIONS}`,
       "POST",
       {
         fieldType: fieldType,
@@ -271,7 +322,7 @@ export const getSugggestedText = async (fieldType, current_value, context) => {
       throw new Error(response.error);
     }
     // console.log(response);
-    let suggestions = JSON.parse(response.suggestions);
+    let suggestions = response.suggestions;
     if (suggestions.text) {
       return suggestions.text;
     } else {
@@ -298,31 +349,6 @@ export const getSugggestedList = async (fieldType, current_value, context) => {
       throw new Error(response.error);
     }
     return JSON.parse(response.suggestions);
-  } catch (error) {
-    throw new Error(error);
-  }
-};
-
-export const getSuggestedOutlines = async (
-  context,
-  instruction,
-  num_outlines
-) => {
-  try {
-    const response = await regularApiCall(
-      `${process.env.REACT_APP_API_URL}/chapter/continue/outlines`,
-      "POST",
-      {
-        context: context,
-        instruction: instruction,
-        num_outlines: num_outlines,
-      }
-    );
-
-    if (response.error) {
-      throw new Error(response.error);
-    }
-    return JSON.parse(response.outlines);
   } catch (error) {
     throw new Error(error);
   }
