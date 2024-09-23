@@ -4,7 +4,7 @@ from typing import Dict, List, Any
 from tenacity import retry, stop_after_attempt, wait_exponential
 from core.llm_client import LLMClient
 
-from core.prompts import SYSTEM_PROMPT_SCENE_WRITER, SYSTEM_PROMPT_SCENE_PARAGRAPH_WRITER
+from core.prompts import SYSTEM_PROMPT_SCENE_WRITER, SYSTEM_PROMPT_SCENE_PARAGRAPH_WRITER, SYSTEM_PROMPT_SCENE_SUMMARY_WRITER
 
 def get_user_prompt(field_type, current_value, context):
 	base_prompt = f"Based on the current value '{current_value}' and the following context: {context}, "
@@ -249,6 +249,62 @@ Your output must be a valid JSON array where each element is an object containin
 
 		except Exception as e:
 			self.logger.error(f"Unexpected error in generate_chapter_outlines: {e}")
+			raise
+
+	@retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=1, min=4, max=10))
+	def generate_section_summary(
+		self,
+		context: Dict[str, Any],
+		stream: bool = False
+	) -> Dict[str, Any]:
+		"""
+		Generate a summary based on the given context.
+
+		Args:
+			context (Dict[str, Any]): Context information for the scene
+
+		Returns:
+			Dict[str, Any]: Generated summary as a JSON object
+		"""
+
+		system_prompt = SYSTEM_PROMPT_SCENE_SUMMARY_WRITER
+
+		user_prompt = f"""
+Summarize the following paragraphs in JSON format as specified in the system message: `{context.get('paragraphs', "")}`
+
+Here's the relevant context:
+
+Novel Parameters: `{context.get('parameters', "")}`
+
+Current Chapter Synopsis: `{context.get('synopsis', "")}`
+
+Previous Section Summary: `{context.get('previous_summary', "")}`
+
+Ensure your summary captures all key elements without introducing any new information or speculation about future events.
+
+CRITICAL INSTRUCTIONS:
+1. For "sequence" list, make sure the new events/revelations are added after all the events/revelations are already compressed and give a proper sequence of the story so far. Keep the list to maximum 5 entries.
+"""
+		# print(user_prompt)
+		try:
+			if stream:
+				return self.llm_client.generate_streamed_json(
+					prompt=user_prompt,
+					system_prompt=system_prompt,
+				)
+			else:
+				response = self.llm_client.generate_json(
+					prompt=user_prompt,
+					system_prompt=system_prompt,
+				)
+				return json.loads(response)
+
+		except json.JSONDecodeError as e:
+			self.logger.error(f"Failed to parse LLM response as JSON: {e}")
+			raise ValueError("Invalid response format from LLM") from e
+
+		except Exception as e:
+			self.logger.error(f"Unexpected error in generate_new_scene: {e}")
 			raise
 
 	@retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=1, min=4, max=10))

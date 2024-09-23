@@ -118,7 +118,7 @@ class LLMClient:
 		system_prompt: str,
 		model: str = MODEL,
 		temperature: float = 0.7,
-		max_tokens: int = 1000,
+		max_tokens: int = 10000,
 	) -> Generator[Dict[str, Any], None, None]:
 		try:
 			response = self.client.chat.completions.create(

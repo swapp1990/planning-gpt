@@ -5,6 +5,7 @@ const API_ENDPOINTS = {
   PAREMETERSUGGESTIONS: API_VER + "parameters/suggestions",
   CHAPTERSUGGESTIONS: API_VER + "chapters/suggestions",
   CHAPTEROUTLINES: API_VER + "chapters/outlines",
+  CHAPTERSUMMARY: API_VER + "chapters/summary",
   CONTINUE: API_VER + "chapters/continue",
   NEWSCENE: API_VER + "chapters/scene/new",
   REWRITESCENE: API_VER + "chapters/scene/rewrite",
@@ -118,6 +119,25 @@ export const getSuggestedOutlines = async (context, instruction, count) => {
       throw new Error(response.error);
     }
     return response.outlines;
+  } catch (error) {
+    throw new Error(error);
+  }
+};
+
+export const getSectionSummary = async (context) => {
+  try {
+    const response = await regularApiCall(
+      `${process.env.REACT_APP_API_URL}/${API_ENDPOINTS.CHAPTERSUMMARY}`,
+      "POST",
+      {
+        context: context,
+      }
+    );
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+    return response.summary;
   } catch (error) {
     throw new Error(error);
   }
@@ -585,27 +605,27 @@ export const getInsertedParagraphs = async (
   }
 };
 
-export const getSectionSummary = async (
-  context,
-  paragraphs,
-  previous_summary
-) => {
-  try {
-    const response = await regularApiCall(
-      `${process.env.REACT_APP_API_URL}/chapter/section/summary`,
-      "POST",
-      {
-        context: context,
-        paragraphs: paragraphs,
-        previous_summary: previous_summary,
-      }
-    );
+// export const getSectionSummary = async (
+//   context,
+//   paragraphs,
+//   previous_summary
+// ) => {
+//   try {
+//     const response = await regularApiCall(
+//       `${process.env.REACT_APP_API_URL}/chapter/section/summary`,
+//       "POST",
+//       {
+//         context: context,
+//         paragraphs: paragraphs,
+//         previous_summary: previous_summary,
+//       }
+//     );
 
-    if (response.error) {
-      throw new Error(response.error);
-    }
-    return JSON.parse(response.summary);
-  } catch (error) {
-    throw new Error(error);
-  }
-};
+//     if (response.error) {
+//       throw new Error(response.error);
+//     }
+//     return JSON.parse(response.summary);
+//   } catch (error) {
+//     throw new Error(error);
+//   }
+// };

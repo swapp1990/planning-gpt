@@ -70,6 +70,30 @@ def init_routes(
 			# Handle unexpected errors
 			return jsonify({'error': 'An unexpected error occurred', 'details': str(e)}), 500
 
+	@api.route("/chapters/summary", methods=["POST"])
+	def generate_section_summary():
+		"""
+		Generate section summary.
+		"""
+		data: Dict[str, Any] = request.get_json()
+		
+		context = data.get('context', {})
+
+		try:
+			summary = writing_service.generate_section_summary(
+				context=context
+			)
+			
+			return jsonify({'summary': summary})
+		
+		except ValueError as ve:
+			# Handle validation errors
+			return jsonify({'error': str(ve)}), 400
+		
+		except Exception as e:
+			# Handle unexpected errors
+			return jsonify({'error': 'An unexpected error occurred', 'details': str(e)}), 500
+	
 	@api.route("/chapters/outlines", methods=["POST"])
 	def generate_chapter_outlines():
 		"""
@@ -250,8 +274,7 @@ def init_routes(
 				return jsonify(scene)
 			except Exception as e:
 				return jsonify({'error': str(e)}), 500
-		
-	
+			
 	@api.route("/chapters/scene/paragraph/rewrite", methods=["POST"])
 	def rewrite_scene_paragraphs():
 		"""

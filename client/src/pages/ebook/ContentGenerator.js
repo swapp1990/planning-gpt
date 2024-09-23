@@ -137,7 +137,7 @@ const ContentGenerator = ({
     const screenplayTextArray = convertScenesToScreenplayText([current_scene]);
     // console.log(screenplayTextArray);
     let screenplayText = screenplayTextArray.join("\n\n");
-    console.log(screenplayText);
+    // console.log(screenplayText);
 
     return {
       ...baseContext,
@@ -272,7 +272,16 @@ const ContentGenerator = ({
           const handleProgress = (intermediateResult) => {
             setGeneratedContent(intermediateResult);
           };
-          if (generationType == "insert_paragraphs") {
+          if (generationType == "new_paragraphs") {
+            generatedContent = await getNewSceneParagraphs(
+              context,
+              instruction,
+              count,
+              handleProgress,
+              isRetry,
+              true
+            );
+          } else if (generationType == "insert_paragraphs") {
             generatedContent = await getInsertedParagraphs(
               context,
               instruction,

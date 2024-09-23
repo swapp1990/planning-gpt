@@ -80,13 +80,10 @@ const Section = ({ section, index: sectionIndex, chapterId }) => {
       sectionIndex > 0 && chapter.sections[sectionIndex - 1]
         ? chapter.sections[sectionIndex - 1].summary
         : null;
-
+    context.paragraphs = paragraphs;
+    context.previous_summary = previous_summary;
     try {
-      const generatedSummary = await getSectionSummary(
-        context,
-        paragraphs,
-        previous_summary
-      );
+      const generatedSummary = await getSectionSummary(context);
       // setSummary(generatedSummary);
       const result = await chapterActions.updateSection(
         chapterId,
