@@ -1,9 +1,13 @@
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import logging
+from dotenv import load_dotenv
 from core.llm_client import LLMClient
 from api.routes import api, init_routes
 from services.writing_service import WritingService
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)

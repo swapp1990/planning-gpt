@@ -12,7 +12,6 @@ MODEL = "gpt-4o-mini"
 class LLMClient:
 	def __init__(self):
 		self.openai_api_key = os.getenv('OPENAI_API_KEY')
-		print(self.openai_api_key)
 		self.client = OpenAI(api_key=self.openai_api_key)
 		self.logger = logging.getLogger(__name__)
 
