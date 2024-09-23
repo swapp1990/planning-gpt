@@ -192,7 +192,8 @@ export const getRewrittenScene = async (
   context,
   instruction,
   count,
-  onProgress
+  onProgress,
+  stream = True
 ) => {
   let scene = {
     title: null,
@@ -231,7 +232,9 @@ export const getRewrittenScene = async (
       instruction,
       count,
       onChunk,
-      handleError
+      handleError,
+      false,
+      stream
     );
 
     return scene;

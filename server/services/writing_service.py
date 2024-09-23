@@ -397,6 +397,79 @@ Remember to structure your output as a JSON object according to the format speci
 			raise
 
 	@retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=1, min=4, max=10))
+	def rewrite_scene(
+		self,
+		context: Dict[str, Any],
+		instruction: str,
+		num_elements: int,
+		stream: bool = False
+	) -> Dict[str, Any]:
+		"""
+		Generate a rewritten scene based on the given context and instruction.
+
+		Args:
+			context (Dict[str, Any]): Context information for the scene
+			instruction (str): Specific instruction for generating the scene
+			num_elements (int): Number of elements to generate in the scene
+
+		Returns:
+			Dict[str, Any]: Generated scene as a JSON object
+		"""
+		self.logger.info(f"Generating a rewritten scene with minimum {num_elements} elements")
+
+		if num_elements <= 0:
+			raise ValueError("Number of elements must be positive")
+
+		system_prompt = SYSTEM_PROMPT_SCENE_WRITER
+
+		user_prompt = f"""Rewrite the screenplay scene in JSON format based on the instruction `{instruction}` and additional context (in priority order):
+1. Current screenplay to rewrite: `{context.get('current_screenplay', "")}`
+2. Previous Section Summary: `{context.get('previous_summary', "")}`
+3. Synopsis for the entire chapter: `{context.get('synopsis', '')}`
+4. Overall story parameters: `{context.get('parameters', '')}`
+
+Instructions:
+- Generate an extensive, richly detailed screenplay scene that follows instructions precisely to alter the scene.
+- If the instruction needs rewrite of the entire screenplay, then do that.
+- Ensure the scene follows logically and tonally from the Previous Section Summary, especially the "sequence" part, so you dont repeat anything that has already happened in the sequence.
+- Maintain consistency with the overall theme and character development described in the Chapter Synopsis and Context.
+- The scene should include:
+  1. A vividly described setting with sensory details
+  2. In-depth character descriptions and development
+  3. Extensive dialogue that reveals character personalities and advances the plot
+  4. Detailed actions and reactions, including subtle gestures and expressions
+  5. Internal monologues to provide insight into characters' thoughts and emotions
+  6. An appropriate tone that matches the story's context
+- Aim for exactly {num_elements} elements in the screenplay, balancing action, dialogues and internal monologues. Do not try to finish the scene quickly by rushing the scene, if you run out of elements.
+- Explore the character's emotional journey throughout the scene, showing their internal conflict and decision-making process.
+- Do not try to end or conclude the scene, unless specifically asked for in the instruction.
+- If the instruction makes changes to characters, time or location modify those fields as well.
+
+Remember to structure your output as a JSON object according to the format specified in the system prompt, including title, setting, characters, and scene elements.
+    """
+		# print(user_prompt)
+		try:
+			if stream:
+				return self.llm_client.generate_streamed_json(
+					prompt=user_prompt,
+					system_prompt=system_prompt,
+				)
+			else:
+				response = self.llm_client.generate_json(
+					prompt=user_prompt,
+					system_prompt=system_prompt,
+				)
+				return json.loads(response)
+
+		except json.JSONDecodeError as e:
+			self.logger.error(f"Failed to parse LLM response as JSON: {e}")
+			raise ValueError("Invalid response format from LLM") from e
+
+		except Exception as e:
+			self.logger.error(f"Unexpected error in generate_new_scene: {e}")
+			raise
+
+	@retry(stop=stop_after_attempt(1), wait=wait_exponential(multiplier=1, min=4, max=10))
 	def new_scene_paragraphs(
 		self,
 		context: Dict[str, Any],

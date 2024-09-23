@@ -107,7 +107,6 @@ class LLMClient:
 				max_tokens=max_tokens,
 				stream=True
 			)
-			print(response)
 			yield from self._process_json_stream(response)
 		except Exception as e:
 			self.logger.error(f"Error in generate_streamed_json: {str(e)}")

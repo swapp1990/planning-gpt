@@ -307,7 +307,8 @@ const ContentGenerator = ({
               context,
               instruction,
               count,
-              onProgress
+              onProgress,
+              true
             );
             onFinished(generatedContent);
           } else if (generationType == "continue_scene") {
