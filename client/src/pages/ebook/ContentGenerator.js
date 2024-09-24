@@ -10,6 +10,7 @@ import {
   getGeneratedScene,
   getRewrittenScene,
   getContinuedScene,
+  getInsertedScene,
 } from "../../server/ebook";
 import { useEbook } from "../../context/EbookContext";
 
@@ -249,6 +250,7 @@ const ContentGenerator = ({
           continue_scene: () =>
             prepareRewriteSceneContext(chapter, paraInfo, baseContext),
           outlines: () => prepareOutlinesContext(chapter, baseContext),
+          inserted_scene: () => baseContext,
         };
 
         const context = contextPreparation[generationType]();
@@ -331,12 +333,24 @@ const ContentGenerator = ({
               true
             );
             onFinished(generatedContent);
+          } else if (generationType == "inserted_scene") {
+            onStarted();
+            setGeneratedContent([]);
+            generatedContent = await getInsertedScene(
+              context,
+              instruction,
+              count,
+              onProgress,
+              true
+            );
+            onFinished(generatedContent);
           }
         }
         setGeneratedContent(generatedContent);
       } catch (error) {
-        console.error(`Error generating ${generationType}:`, error);
+        // console.error(`Error generating ${generationType}:`, error);
         setError("Error generating content");
+        onFinished([]);
       }
       setIsGenerating(false);
     },
@@ -410,7 +424,10 @@ const ContentGenerator = ({
       <div className="flex justify-between items-start mb-2">
         <h4 className="text-md font-semibold text-yellow-700">{title}</h4>
         <button
-          onClick={onClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
           className="p-2 text-gray-500 hover:text-red-500 transition-colors duration-200"
           aria-label={`Close generated ${generationType}`}
         >

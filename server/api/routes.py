@@ -235,7 +235,36 @@ def init_routes(
 				return jsonify(scene)
 			except Exception as e:
 				return jsonify({'error': str(e)}), 500
-			
+
+	@api.route("/chapters/scene/insert", methods=["POST"])
+	def insert_scene():
+		"""
+		Insert into existing scene in a chapter.
+		"""
+		data = request.get_json()
+		context = data.get('context', {})
+		instruction = data.get('instruction', '')
+		num_elements = data.get('count', 10)
+		stream = data.get('stream', False)
+
+		print("insert_scene " + str(num_elements) + " streaming: " + str(stream))
+
+		if stream:
+			def generate():
+				try:
+					for chunk in writing_service.insert_scene(
+						context=context,
+						instruction=instruction,
+						num_elements=num_elements,
+						stream=True
+					):
+						yield json.dumps(chunk) + '\n'
+				except Exception as e:
+					yield json.dumps({'error': str(e)}) + '\n'
+
+			return Response(stream_with_context(generate()), content_type='application/x-ndjson')
+
+
 	@api.route("/chapters/scene/paragraph/new", methods=["POST"])
 	def generate_scene_paragraphs():
 		"""

@@ -43,9 +43,21 @@ const ClearableTextarea = ({
     <div className="relative">
       <textarea
         value={value}
-        onChange={handleChange}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
+        onChange={(e) => {
+          e.stopPropagation();
+          handleChange(e);
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+        onFocus={(e) => {
+          e.stopPropagation();
+          setIsFocused(true);
+        }}
+        onBlur={(e) => {
+          e.stopPropagation();
+          setIsFocused(false);
+        }}
         placeholder={placeholder}
         className={`w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none ${className}`}
         rows={rows}

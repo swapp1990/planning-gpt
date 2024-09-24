@@ -28,7 +28,10 @@ const GenerationMenu = ({
     <div className="bg-white rounded-lg shadow-md p-4">
       <div className="mb-4">
         <button
-          onClick={() => setShowInstruction(!showInstruction)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowInstruction(!showInstruction);
+          }}
           className="w-full text-left px-4 py-2 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors duration-200 flex items-center justify-between"
         >
           <span>{showInstruction ? "Hide" : "Add more instructions"} </span>
@@ -60,13 +63,22 @@ const GenerationMenu = ({
             min="1"
             max="10"
             value={count}
-            onChange={(e) => setCount(parseInt(e.target.value))}
+            onChange={(e) => {
+              e.stopPropagation();
+              setCount(parseInt(e.target.value));
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
             className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
           />
         </div>
 
         <button
-          onClick={onGenerate}
+          onClick={(e) => {
+            e.stopPropagation();
+            onGenerate();
+          }}
           disabled={isLoading}
           className="w-full px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-colors duration-200 flex items-center justify-center"
         >

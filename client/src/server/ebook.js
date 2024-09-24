@@ -10,6 +10,7 @@ const API_ENDPOINTS = {
   NEWSCENE: API_VER + "chapters/scene/new",
   REWRITESCENE: API_VER + "chapters/scene/rewrite",
   CONTINUESCENE: API_VER + "chapters/scene/continue",
+  INSERTSCENE: API_VER + "chapters/scene/insert",
   NEWSCENEPARAGRAPHS: API_VER + "chapters/scene/paragraph/new",
   REWRITESCENEPARAGRAPHS: API_VER + "chapters/scene/paragraph/rewrite",
   INSERTSCENEPARAGRAPHS: API_VER + "chapters/scene/paragraph/insert",
@@ -325,6 +326,63 @@ export const getContinuedScene = async (
     return scene;
   } catch (error) {
     console.error("Failed to generate paragraphs:", error);
+    throw error;
+  }
+};
+
+export const getInsertedScene = async (
+  context,
+  instruction,
+  count,
+  onProgress,
+  stream = false
+) => {
+  let scene = {
+    elements: [],
+  };
+
+  const onChunk = (data) => {
+    if (data.chunk) {
+      if (data.chunk === "[DONE]") {
+        // onProgress(scene);
+      } else {
+        try {
+          let parsedChunk = JSON.parse(data.chunk);
+          // console.log(parsedChunk);
+          if (parsedChunk.type == "title") {
+            scene.title = parsedChunk.text;
+          }
+          if (parsedChunk.location) {
+            scene.setting = parsedChunk;
+          }
+          scene.elements.push(parsedChunk);
+          onProgress(scene);
+        } catch (error) {
+          console.error("Error parsing chunk:", error);
+        }
+      }
+    }
+  };
+
+  try {
+    console.log("getInsertedScene");
+    onProgress(null);
+    if (stream) {
+      await streamChapterApiCall(
+        API_ENDPOINTS.INSERTSCENE,
+        context,
+        instruction,
+        count,
+        onChunk,
+        handleError,
+        false,
+        stream
+      );
+    }
+
+    return scene;
+  } catch (error) {
+    console.error("Failed to insert scene:", error);
     throw error;
   }
 };

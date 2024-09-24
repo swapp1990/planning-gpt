@@ -5,6 +5,7 @@ export const useSceneState = (initialScenes, onUpdateScene, onDeleteScene) => {
   const [expandedSceneIndex, setExpandedSceneIndex] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [editingSceneIndex, setEditingSceneIndex] = useState(null);
+  const [newElementsMap, setNewElementsMap] = useState({});
 
   const toggleScene = useCallback((index) => {
     setExpandedSceneIndex((prevIndex) => (prevIndex === index ? null : index));
@@ -31,6 +32,37 @@ export const useSceneState = (initialScenes, onUpdateScene, onDeleteScene) => {
       return updatedDraftScene;
     });
   }, []);
+
+  const handleNewElementsFinished = useCallback((newContent, elementIndex) => {
+    console.log(newContent);
+    setNewElementsMap((prevMap) => ({
+      ...prevMap,
+      [elementIndex]: newContent.elements,
+    }));
+  }, []);
+
+  const handleAcceptNewElements = useCallback(
+    (elementIndex) => {
+      setDraftScene((prevDraftScene) => {
+        const updatedElements = [...prevDraftScene.elements];
+        updatedElements.splice(
+          elementIndex + 1,
+          0,
+          ...newElementsMap[elementIndex]
+        );
+        return {
+          ...prevDraftScene,
+          elements: updatedElements,
+        };
+      });
+      setNewElementsMap((prevMap) => {
+        const newMap = { ...prevMap };
+        delete newMap[elementIndex];
+        return newMap;
+      });
+    },
+    [newElementsMap]
+  );
 
   const handleDeleteScene = useCallback(
     (index) => {
@@ -72,11 +104,14 @@ export const useSceneState = (initialScenes, onUpdateScene, onDeleteScene) => {
     expandedSceneIndex,
     setEditingSceneIndex,
     handleContentProgress,
+    handleNewElementsFinished,
+    handleAcceptNewElements,
     handleFinalizeDraft,
     handleCancelDraft,
     handleReloadDraft,
     toggleScene,
     handleEditScene,
     handleDeleteScene,
+    newElementsMap,
   };
 };

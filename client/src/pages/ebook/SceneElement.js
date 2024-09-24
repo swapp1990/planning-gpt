@@ -1,53 +1,98 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   FaChevronRight,
   FaTrash,
   FaEdit,
   FaPlus,
   FaCheck,
+  FaTimes,
 } from "react-icons/fa";
 import { RiWalkLine, RiChatQuoteLine, RiArrowRightLine } from "react-icons/ri";
 import { FaCommentDots } from "react-icons/fa";
-import { useElementInteractions } from "../../hooks/useElementInteractions";
 import ContentGenerator from "./ContentGenerator";
+import { useSceneContext } from "../../context/SceneContext";
+
+const NewElementsBlock = ({ newElements, onAccept, onReject }) => {
+  return (
+    <div className="bg-green-50 border border-green-200 rounded-md p-4 mb-4">
+      <h4 className="text-green-700 font-semibold mb-2">New Elements</h4>
+      {newElements.map((element, index) => (
+        <div key={index} className="mb-2 pl-2 border-l-2 border-green-300">
+          {renderElementContent(element)}
+        </div>
+      ))}
+      <div className="flex justify-end space-x-2 mt-2">
+        <button
+          onClick={onAccept}
+          className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors"
+        >
+          <FaCheck className="inline-block mr-1" /> Accept
+        </button>
+        <button
+          onClick={onReject}
+          className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors"
+        >
+          <FaTimes className="inline-block mr-1" /> Reject
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const SceneElement = ({
   element,
   elemIndex,
-  isSelected,
-  isAddContent,
+  newElements,
   isDeleting,
   isHovering,
   isNewElement,
   onEdit,
   onDelete,
-  onSelect,
-  onAddContent,
   children,
 }) => {
+  const {
+    selectedElementIndex,
+    addElementIndex,
+    handleElementSelect,
+    handleElementAddContent,
+    handleNewElementsFinished,
+    handleAcceptNewElements,
+  } = useSceneContext();
+
   const getBorderColor = () => {
     if (isDeleting || isHovering) return "border-red-200";
     if (isNewElement) return "border-green-500";
-    if (isSelected) return "border-blue-500";
+    if (selectedElementIndex == elemIndex) return "border-blue-500";
     return "border-gray-200";
+  };
+
+  const elementRef = useRef(null);
+
+  const handleClick = (e) => {
+    handleElementSelect(elemIndex);
+  };
+
+  const handleContentProgress = (content) => {
+    console.log(content);
   };
 
   return (
     <div
+      ref={elementRef}
       className={`pl-4 border-l-4 ${getBorderColor()} relative group cursor-pointer`}
-      onClick={() => onSelect(elemIndex)}
+      onClick={handleClick}
     >
       <button className="absolute -left-3 top-1/2 transform -translate-y-1/2 bg-gray-200 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <FaChevronRight className="text-gray-600" />
       </button>
 
-      {isSelected && (
+      {selectedElementIndex == elemIndex && (
         <div className="absolute right-0 top-0 space-x-2">
           <button
             className="text-green-500 hover:text-green-700"
             onClick={(e) => {
               e.stopPropagation();
-              onAddContent(elemIndex);
+              handleElementAddContent(elemIndex);
             }}
           >
             <FaPlus />
@@ -83,18 +128,27 @@ const SceneElement = ({
 
       {children}
 
-      {isAddContent && (
+      {newElements && newElements.length > 0 && (
+        <NewElementsBlock
+          newElements={newElements}
+          onAccept={() => handleAcceptNewElements(elemIndex)}
+          onReject={() => onRejectNewElements(elemIndex)}
+        />
+      )}
+
+      {addElementIndex === elemIndex && (
         <ContentGenerator
           paraInfo={{}}
+          onClose={() => {}}
           onStarted={() => {
             /* Handle generation started */
           }}
-          onProgress={() => {}}
-          onFinished={(scene) => {
-            /* Handle finished */
-          }}
-          generationType="insert_elements"
-          title="Generate Inserted Elements"
+          onProgress={handleContentProgress}
+          onFinished={(newElements) =>
+            handleNewElementsFinished(newElements, elemIndex)
+          }
+          generationType="inserted_scene"
+          title="Generate Inserted Scene"
         />
       )}
     </div>

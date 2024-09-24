@@ -2,16 +2,13 @@
 import React, { useState, useCallback } from "react";
 import { FaChevronRight, FaEdit, FaTrash, FaChevronDown } from "react-icons/fa";
 import { MdLocationOn, MdAccessTime, MdDescription } from "react-icons/md";
-import { RiChatQuoteLine, RiWalkLine, RiArrowRightLine } from "react-icons/ri";
 import { useSceneState } from "../../hooks/useSceneState";
 import { useElementInteractions } from "../../hooks/useElementInteractions";
 import { useNewElements } from "../../hooks/useNewElements";
 import SceneElement from "./SceneElement";
-import SceneSettings from "./SceneSettings";
 import DraftSceneControls from "./DraftSceneControls";
-import ElementContentGenerator from "./ElementContentGenerator";
 import ContentGenerator from "./ContentGenerator";
-import NewElementsControls from "./NewElementsControls";
+import { SceneProvider } from "../../context/SceneContext";
 
 const SceneView = ({
   scenes,
@@ -35,6 +32,9 @@ const SceneView = ({
     handleEditScene,
     handleDeleteScene,
     handleContentProgress,
+    handleNewElementsFinished,
+    handleAcceptNewElements,
+    newElementsMap,
   } = useSceneState(scenes, onUpdateScene, onDeleteScene);
 
   const {
@@ -48,14 +48,14 @@ const SceneView = ({
     handleElementEdit,
   } = useElementInteractions();
 
-  const {
-    newElements,
-    elementWithGenerator,
-    handleElementInsert,
+  const contextValue = {
+    selectedElementIndex,
+    addElementIndex,
+    handleElementSelect,
+    handleElementAddContent,
+    handleNewElementsFinished,
     handleAcceptNewElements,
-    handleRejectNewElements,
-    setElementWithGenerator,
-  } = useNewElements(draftScene, handleFinalizeDraft);
+  };
 
   const renderElements = (elements, isNewElement = false) => {
     return elements.map((element, elemIndex) => (
@@ -65,6 +65,7 @@ const SceneView = ({
         elemIndex={elemIndex}
         isSelected={selectedElementIndex === elemIndex}
         isAddContent={addElementIndex === elemIndex}
+        newElements={newElementsMap[elemIndex]}
         onSelect={(index) => handleElementSelect(index)}
         onAddContent={(index) => handleElementAddContent(index)}
       />
@@ -163,6 +164,7 @@ const SceneView = ({
           <DraftSceneControls
             onCancel={handleCancelDraft}
             onReload={handleReloadDraft}
+            onFinalize={handleFinalizeDraft}
           />
         </div>
 
@@ -172,28 +174,30 @@ const SceneView = ({
   };
 
   return (
-    <div className="space-y-4">
-      {scenes.map((scene, index) => renderScene(scene, index))}
-      {renderDraftScene()}
-      {editingSceneIndex == null && (
-        <ContentGenerator
-          paraInfo={{
-            chapterId: chapterId,
-            sectionIndex: sectionIndex,
-            outline: outline,
-          }}
-          onStarted={() => {
-            /* Handle generation started */
-          }}
-          onProgress={handleContentProgress}
-          onFinished={(scene) => {
-            /* Handle finished */
-          }}
-          generationType="new_scene"
-          title="Generate New Scene"
-        />
-      )}
-    </div>
+    <SceneProvider value={contextValue}>
+      <div className="space-y-4">
+        {scenes.map((scene, index) => renderScene(scene, index))}
+        {renderDraftScene()}
+        {editingSceneIndex == null && (
+          <ContentGenerator
+            paraInfo={{
+              chapterId: chapterId,
+              sectionIndex: sectionIndex,
+              outline: outline,
+            }}
+            onStarted={() => {
+              /* Handle generation started */
+            }}
+            onProgress={handleContentProgress}
+            onFinished={(scene) => {
+              /* Handle finished */
+            }}
+            generationType="new_scene"
+            title="Generate New Scene"
+          />
+        )}
+      </div>
+    </SceneProvider>
   );
 };
 
