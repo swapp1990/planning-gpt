@@ -7,8 +7,8 @@ from openai import OpenAI
 from flask import jsonify
 from core.utils import clean_json_string
 
-# MODEL = "gpt-4o-2024-08-06"
-MODEL = "gpt-4o-mini"
+MODEL = "gpt-4o-2024-08-06"
+# MODEL = "gpt-4o-mini"
 class LLMClient:
 	def __init__(self):
 		self.openai_api_key = os.getenv('OPENAI_API_KEY')

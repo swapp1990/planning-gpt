@@ -21,11 +21,15 @@ export const useSceneState = (initialScenes, onUpdateScene, onDeleteScene) => {
   );
 
   const handleContentProgress = useCallback((newContent) => {
+    if (!newContent) {
+      return;
+    }
     setDraftScene((prevDraftScene) => {
       const updatedDraftScene = prevDraftScene
         ? {
             ...prevDraftScene,
             elements: newContent.elements,
+            setting: newContent.setting,
           }
         : newContent;
 
@@ -34,7 +38,6 @@ export const useSceneState = (initialScenes, onUpdateScene, onDeleteScene) => {
   }, []);
 
   const handleNewElementsFinished = useCallback((newContent, elementIndex) => {
-    console.log(newContent);
     setNewElementsMap((prevMap) => ({
       ...prevMap,
       [elementIndex]: newContent.elements,
@@ -63,6 +66,14 @@ export const useSceneState = (initialScenes, onUpdateScene, onDeleteScene) => {
     },
     [newElementsMap]
   );
+
+  const handleElementDelete = (index) => {
+    const updatedElements = draftScene.elements.slice(0, index);
+    setDraftScene({
+      ...draftScene,
+      elements: updatedElements,
+    });
+  };
 
   const handleDeleteScene = useCallback(
     (index) => {
@@ -106,6 +117,7 @@ export const useSceneState = (initialScenes, onUpdateScene, onDeleteScene) => {
     handleContentProgress,
     handleNewElementsFinished,
     handleAcceptNewElements,
+    handleElementDelete,
     handleFinalizeDraft,
     handleCancelDraft,
     handleReloadDraft,

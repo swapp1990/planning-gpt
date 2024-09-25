@@ -326,25 +326,24 @@ CRITICAL INSTRUCTIONS:
 		Returns:
 			Dict[str, Any]: Generated scene as a JSON object
 		"""
-		self.logger.info(f"Generating new scene with minimum {num_elements} elements")
+		# self.logger.info(f"Generating new scene with minimum {num_elements} elements")
 
 		if num_elements <= 0:
 			raise ValueError("Number of elements must be positive")
 
 		user_prompt = f"""Create a new scene in JSON format based on the instruction `{instruction}` and additional context (in priority order):
-1. Current Screenplays: `{context.get('current_screenplay', "")}`
-2. Current Section Outline: `{context.get('overall_outline', "")}`
+1. Previous Screenplay: `{context.get('previous_screenplay', "")}`
+2. Overall Section Outline: `{context.get('overall_outline', "")}`
 3. Previous Section Summary: `{context.get('previous_summary', "")}`
 4. Synopsis for the entire chapter: `{context.get('synopsis', '')}`
 5. Overall story parameters: `{context.get('parameters', '')}`
 
-Instructions:
-- Analyze the current screenplays (which are in sequence).
-- Generate an extensive, richly detailed screenplay scene that follow the instruction exactly.
-- If specific instructions are unavailable, then follow the current section outline.
-- If current screenplay is available, write the next scene which flows logically and tonally with the previous screenplays.
-- Do not repeat any content from the previous section summary, those things have already happened, use them as guidance for the new scene.
-- Ensure the new scene especially the "sequence" part, does not repeat anything that has already happened in the "sequence" part of Previous Section Summary.
+CRITICAL Instructions:
+- Analyze the Previous Screenplay (Point 1 above). Make a note of where the previous screenplay ends. The new scene should start after the events of previous screenplay only. Add a field "previous_end_note" with a single line noting the previous end if available.
+- Generate an extensive, richly detailed screenplay scene that follow the instructions exactly.
+- If specific instructions are unavailable, then take guidance from the current section outline.
+- Do not repeat any content from the Previous Section Summary (Point 3 above), those things have already happened, use them as guidance for the new scene.
+- Ensure the new scene especially the "sequence" part, does not repeat anything that has already happened in the "sequence" part of Previous Section Summary (Point 3 above).
 - Maintain consistency with the overall theme and character development described in the Chapter Synopsis and Parameters.
 - The scene should include:
   1. A vividly described setting with sensory details
@@ -353,12 +352,13 @@ Instructions:
   4. Detailed actions and reactions, including subtle gestures and expressions
   5. Internal monologues to provide insight into characters' thoughts and emotions
   6. An appropriate tone that matches the story's context
-- Aim for a minimum of {num_elements} elements in the scene, balancing action, dialogues and internal monologues. Do not try to finish the scene quickly by rushing the scene, if you run out of elements.
+- Aim for exactly {num_elements} elements in the scene, balancing action, dialogues and internal monologues. Do not try to finish the scene quickly by rushing the scene, if you run out of elements to generate.
 - Explore the character's emotional journey throughout the scene, showing their internal conflict and decision-making process.
 - Do not try to end or conclude the scene, unless specifically asked for in the instruction.
-- If the instruction makes changes to characters, time or location modify those fields as well.
+- If the instruction asks to make changes to characters, time or location modify those fields as well.
 
 Remember to structure your output as a JSON object according to the format specified in the system prompt, including title, setting, characters, and scene elements."""
+		print(user_prompt)
 		try:
 			if stream:
 				return self.llm_client.generate_streamed_json(

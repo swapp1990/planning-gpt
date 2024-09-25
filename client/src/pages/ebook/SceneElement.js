@@ -73,7 +73,7 @@ const SceneElement = ({
   };
 
   const handleContentProgress = (content) => {
-    console.log(content);
+    // console.log(content);
   };
 
   return (

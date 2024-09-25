@@ -75,59 +75,52 @@ const ContentGenerator = ({
     };
   };
 
-  const convertScenesToScreenplayText = (scenes) => {
-    if (!Array.isArray(scenes)) {
-      console.error("Scenes is not an array:", scenes);
-      return [];
-    }
+  const convertSceneToScreenplayText = (scene) => {
+    let sceneText = [];
+    sceneText.push(`TITLE: ${scene.title}`);
+    // Scene heading
+    sceneText.push(
+      `INT. ${scene.setting.location.toUpperCase()} - ${scene.setting.time.toUpperCase()}`
+    );
+    sceneText.push("");
 
-    return scenes.map((scene, index) => {
-      let sceneText = [];
-      sceneText.push(`TITLE: ${scene.title}`);
-      // Scene heading
-      sceneText.push(
-        `INT. ${scene.setting.location.toUpperCase()} - ${scene.setting.time.toUpperCase()}`
-      );
-      sceneText.push("");
+    // Scene description
+    sceneText.push(scene.setting.description);
+    sceneText.push("");
 
-      // Scene description
-      sceneText.push(scene.setting.description);
-      sceneText.push("");
+    // Scene elements
+    scene.elements.forEach((element) => {
+      switch (element.type) {
+        case "action":
+          sceneText.push(element.description);
+          sceneText.push("");
+          break;
+        case "dialogue":
+          if (element.character) {
+            sceneText.push(element.character.toUpperCase());
+          }
 
-      // Scene elements
-      scene.elements.forEach((element) => {
-        switch (element.type) {
-          case "action":
-            sceneText.push(element.description);
-            sceneText.push("");
-            break;
-          case "dialogue":
-            if (element.character) {
-              sceneText.push(element.character.toUpperCase());
-            }
-
-            if (element.parenthetical) {
-              sceneText.push(`(${element.parenthetical})`);
-            }
-            sceneText.push(element.line);
-            sceneText.push("");
-            break;
-          case "internal_monologue":
-            sceneText.push(element.description);
-            sceneText.push("");
-            break;
-          case "transition":
-            sceneText.push(element.description.toUpperCase());
-            sceneText.push("");
-            break;
-          default:
-            console.warn(`Unknown element type: ${element.type}`);
-        }
-      });
-
-      // Join all lines with newline characters
-      return sceneText.join("\n");
+          if (element.parenthetical) {
+            sceneText.push(`(${element.parenthetical})`);
+          }
+          sceneText.push(element.line);
+          sceneText.push("");
+          break;
+        case "internal_monologue":
+          sceneText.push(element.description);
+          sceneText.push("");
+          break;
+        case "transition":
+          sceneText.push(element.description.toUpperCase());
+          sceneText.push("");
+          break;
+        default:
+          console.warn(`Unknown element type: ${element.type}`);
+      }
     });
+
+    // Join all lines with newline characters
+    return sceneText.join("\n");
   };
 
   const prepareNewParagraphsContext = (chapter, paraInfo, baseContext) => {
@@ -135,10 +128,7 @@ const ContentGenerator = ({
     const current_scene =
       chapter.sections[sectionIndex].scenes[paraInfo.sceneIndex] || "";
 
-    const screenplayTextArray = convertScenesToScreenplayText([current_scene]);
-    // console.log(screenplayTextArray);
-    let screenplayText = screenplayTextArray.join("\n\n");
-    // console.log(screenplayText);
+    const screenplayText = convertSceneToScreenplayText(current_scene);
 
     return {
       ...baseContext,
@@ -165,16 +155,22 @@ const ContentGenerator = ({
     if (paraInfo.sectionIndex != 0) {
       previous_summary = chapter.sections[paraInfo.sectionIndex - 1].summary;
     }
-    const current_scenes = chapter.sections[paraInfo.sectionIndex].scenes || "";
-
-    const screenplayTextArray = convertScenesToScreenplayText(current_scenes);
-    // console.log(screenplayTextArray);
+    const current_scenes = chapter.sections[paraInfo.sectionIndex].scenes || [];
+    let previous_screenplay = "";
+    let previous_scene = null;
+    if (current_scenes.length > 0) {
+      previous_scene = current_scenes[current_scenes.length - 1];
+    }
+    if (previous_scene != null) {
+      previous_screenplay = convertSceneToScreenplayText(previous_scene);
+    }
+    // console.log(previous_screenplay);
     // console.log({ previous_summary });
     return {
       ...baseContext,
       overall_outline: paraInfo.outline,
       previous_summary: previous_summary,
-      current_screenplay: screenplayTextArray,
+      previous_screenplay: previous_screenplay,
     };
   };
 
@@ -183,12 +179,10 @@ const ContentGenerator = ({
     if (paraInfo.sectionIndex != 0) {
       previous_summary = chapter.sections[paraInfo.sectionIndex - 1].summary;
     }
-    const screenplayTextArray = convertScenesToScreenplayText([paraInfo.scene]);
-    console.log(screenplayTextArray);
-    // console.log({ previous_summary });
+    const screenplayText = convertSceneToScreenplayText(paraInfo.scene);
     return {
       ...baseContext,
-      current_screenplay: screenplayTextArray,
+      current_screenplay: screenplayText,
       previous_summary: previous_summary,
     };
   };
@@ -348,7 +342,7 @@ const ContentGenerator = ({
         }
         setGeneratedContent(generatedContent);
       } catch (error) {
-        // console.error(`Error generating ${generationType}:`, error);
+        console.error(`Error generating ${generationType}:`, error);
         setError("Error generating content");
         onFinished([]);
       }

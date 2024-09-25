@@ -164,7 +164,9 @@ export const getGeneratedScene = async (
       } else {
         try {
           let parsedChunk = JSON.parse(data.chunk);
-          // console.log(parsedChunk);
+          if (parsedChunk.type == "notes") {
+            console.log(parsedChunk);
+          }
           if (parsedChunk.type == "title") {
             scene.title = parsedChunk.text;
           }
@@ -365,7 +367,6 @@ export const getInsertedScene = async (
   };
 
   try {
-    console.log("getInsertedScene");
     onProgress(null);
     if (stream) {
       await streamChapterApiCall(
